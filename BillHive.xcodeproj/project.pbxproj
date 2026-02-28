@@ -1,0 +1,548 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A101 /* SelfHiveApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A001 /* SelfHiveApp.swift */; };
+		A102 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A002 /* ContentView.swift */; };
+		A103 /* BillsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A003 /* BillsView.swift */; };
+		A104 /* SummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A004 /* SummaryView.swift */; };
+		A105 /* SendReceiveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A005 /* SendReceiveView.swift */; };
+		A106 /* TrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A006 /* TrendsView.swift */; };
+		A107 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A007 /* SettingsView.swift */; };
+		A108 /* ServerSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A008 /* ServerSetupView.swift */; };
+		A109 /* Person.swift in Sources */ = {isa = PBXBuildFile; fileRef = A009 /* Person.swift */; };
+		A110 /* Bill.swift in Sources */ = {isa = PBXBuildFile; fileRef = A010 /* Bill.swift */; };
+		A111 /* MonthData.swift in Sources */ = {isa = PBXBuildFile; fileRef = A011 /* MonthData.swift */; };
+		A112 /* EmailConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A012 /* EmailConfig.swift */; };
+		A113 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A013 /* APIClient.swift */; };
+		A114 /* AppViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A014 /* AppViewModel.swift */; };
+		A115 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A015 /* Assets.xcassets */; };
+		A116 /* LocalStorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B002 /* LocalStorageManager.swift */; };
+		C101 /* BillHiveApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B001 /* BillHiveApp.swift */; };
+		C102 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A002 /* ContentView.swift */; };
+		C103 /* BillsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A003 /* BillsView.swift */; };
+		C104 /* SummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A004 /* SummaryView.swift */; };
+		C105 /* SendReceiveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A005 /* SendReceiveView.swift */; };
+		C106 /* TrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A006 /* TrendsView.swift */; };
+		C107 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A007 /* SettingsView.swift */; };
+		C108 /* Person.swift in Sources */ = {isa = PBXBuildFile; fileRef = A009 /* Person.swift */; };
+		C109 /* Bill.swift in Sources */ = {isa = PBXBuildFile; fileRef = A010 /* Bill.swift */; };
+		C110 /* MonthData.swift in Sources */ = {isa = PBXBuildFile; fileRef = A011 /* MonthData.swift */; };
+		C111 /* EmailConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A012 /* EmailConfig.swift */; };
+		C112 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A013 /* APIClient.swift */; };
+		C113 /* AppViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A014 /* AppViewModel.swift */; };
+		C114 /* LocalStorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B002 /* LocalStorageManager.swift */; };
+		C115 /* MailComposeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B003 /* MailComposeView.swift */; };
+		C116 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A015 /* Assets.xcassets */; };
+		C117 /* ServerSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A008 /* ServerSetupView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A001 /* SelfHiveApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelfHiveApp.swift; sourceTree = "<group>"; };
+		A002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A003 /* BillsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BillsView.swift; sourceTree = "<group>"; };
+		A004 /* SummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SummaryView.swift; sourceTree = "<group>"; };
+		A005 /* SendReceiveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SendReceiveView.swift; sourceTree = "<group>"; };
+		A006 /* TrendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrendsView.swift; sourceTree = "<group>"; };
+		A007 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A008 /* ServerSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerSetupView.swift; sourceTree = "<group>"; };
+		A009 /* Person.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Person.swift; sourceTree = "<group>"; };
+		A010 /* Bill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bill.swift; sourceTree = "<group>"; };
+		A011 /* MonthData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthData.swift; sourceTree = "<group>"; };
+		A012 /* EmailConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailConfig.swift; sourceTree = "<group>"; };
+		A013 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
+		A014 /* AppViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppViewModel.swift; sourceTree = "<group>"; };
+		A015 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A016 /* SelfHive.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SelfHive.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B001 /* BillHiveApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BillHiveApp.swift; sourceTree = "<group>"; };
+		B002 /* LocalStorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalStorageManager.swift; sourceTree = "<group>"; };
+		B003 /* MailComposeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailComposeView.swift; sourceTree = "<group>"; };
+		B004 /* BillHive.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BillHive.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		A200 = {
+			isa = PBXGroup;
+			children = (
+				A210 /* BillHive */,
+				A220 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A210 /* BillHive */ = {
+			isa = PBXGroup;
+			children = (
+				A001 /* SelfHiveApp.swift */,
+				B001 /* BillHiveApp.swift */,
+				A015 /* Assets.xcassets */,
+				A211 /* Models */,
+				A212 /* Network */,
+				A213 /* ViewModels */,
+				A214 /* Views */,
+				B200 /* Storage */,
+			);
+			path = BillHive;
+			sourceTree = "<group>";
+		};
+		A211 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				A009 /* Person.swift */,
+				A010 /* Bill.swift */,
+				A011 /* MonthData.swift */,
+				A012 /* EmailConfig.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		A212 /* Network */ = {
+			isa = PBXGroup;
+			children = (
+				A013 /* APIClient.swift */,
+			);
+			path = Network;
+			sourceTree = "<group>";
+		};
+		A213 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				A014 /* AppViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		A214 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				A002 /* ContentView.swift */,
+				A003 /* BillsView.swift */,
+				A004 /* SummaryView.swift */,
+				A005 /* SendReceiveView.swift */,
+				A006 /* TrendsView.swift */,
+				A007 /* SettingsView.swift */,
+				A008 /* ServerSetupView.swift */,
+				B003 /* MailComposeView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		A220 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A016 /* SelfHive.app */,
+				B004 /* BillHive.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		B200 /* Storage */ = {
+			isa = PBXGroup;
+			children = (
+				B002 /* LocalStorageManager.swift */,
+			);
+			path = Storage;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A300 /* SelfHive */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A401 /* Build configuration list for PBXNativeTarget "SelfHive" */;
+			buildPhases = (
+				A310 /* Sources */,
+				A320 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SelfHive;
+			productName = SelfHive;
+			productReference = A016 /* SelfHive.app */;
+			productType = "com.apple.product-type.application";
+		};
+		B300 /* BillHive */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B401 /* Build configuration list for PBXNativeTarget "BillHive" */;
+			buildPhases = (
+				B310 /* Sources */,
+				B320 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = BillHive;
+			productName = BillHive;
+			productReference = B004 /* BillHive.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A400 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 2630;
+				TargetAttributes = {
+					A300 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+					B300 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = A402 /* Build configuration list for PBXProject "BillHive" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A200;
+			productRefGroup = A220 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A300 /* SelfHive */,
+				B300 /* BillHive */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A320 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A115 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B320 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C116 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A310 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A101 /* SelfHiveApp.swift in Sources */,
+				A102 /* ContentView.swift in Sources */,
+				A103 /* BillsView.swift in Sources */,
+				A104 /* SummaryView.swift in Sources */,
+				A105 /* SendReceiveView.swift in Sources */,
+				A106 /* TrendsView.swift in Sources */,
+				A107 /* SettingsView.swift in Sources */,
+				A108 /* ServerSetupView.swift in Sources */,
+				A109 /* Person.swift in Sources */,
+				A110 /* Bill.swift in Sources */,
+				A111 /* MonthData.swift in Sources */,
+				A112 /* EmailConfig.swift in Sources */,
+				A113 /* APIClient.swift in Sources */,
+				A114 /* AppViewModel.swift in Sources */,
+				A116 /* LocalStorageManager.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B310 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C101 /* BillHiveApp.swift in Sources */,
+				C102 /* ContentView.swift in Sources */,
+				C103 /* BillsView.swift in Sources */,
+				C104 /* SummaryView.swift in Sources */,
+				C105 /* SendReceiveView.swift in Sources */,
+				C106 /* TrendsView.swift in Sources */,
+				C107 /* SettingsView.swift in Sources */,
+				C108 /* Person.swift in Sources */,
+				C109 /* Bill.swift in Sources */,
+				C110 /* MonthData.swift in Sources */,
+				C111 /* EmailConfig.swift in Sources */,
+				C112 /* APIClient.swift in Sources */,
+				C113 /* AppViewModel.swift in Sources */,
+				C114 /* LocalStorageManager.swift in Sources */,
+				C115 /* MailComposeView.swift in Sources */,
+				C117 /* ServerSetupView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A500 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A501 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		A510 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSAppTransportSecurity = "<dict><key>NSAllowsArbitraryLoads</key><true/></dict>";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.billhive.selfhive;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A511 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSAppTransportSecurity = "<dict><key>NSAllowsArbitraryLoads</key><true/></dict>";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.billhive.selfhive;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		B510 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.billhive.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		B511 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.billhive.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A401 /* Build configuration list for PBXNativeTarget "SelfHive" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A510 /* Debug */,
+				A511 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A402 /* Build configuration list for PBXProject "BillHive" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A500 /* Debug */,
+				A501 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B401 /* Build configuration list for PBXNativeTarget "BillHive" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B510 /* Debug */,
+				B511 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A400 /* Project object */;
+}
