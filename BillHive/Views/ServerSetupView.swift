@@ -133,7 +133,7 @@ struct HexLogoMark: View {
         ZStack {
             HexShape()
                 .fill(Color.bhAmber)
-                .frame(width: size, height: size)
+                .frame(width: size, height: size * CGFloat(3).squareRoot() / 2)
             // Bill icon
             VStack(spacing: size * 0.06) {
                 RoundedRectangle(cornerRadius: size * 0.03)
