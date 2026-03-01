@@ -6,38 +6,49 @@ struct ContentView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            TabView(selection: $selectedTab) {
-                BillsView()
-                    .tabItem {
-                        Label("Bills", systemImage: "list.clipboard")
+            VStack(spacing: 0) {
+                // Error banner — shown when load() fails
+                if let err = vm.error {
+                    ErrorBannerView(message: err) {
+                        vm.error = nil
+                        Task { await vm.load() }
                     }
-                    .tag(0)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
 
-                SummaryView()
-                    .tabItem {
-                        Label("Summary", systemImage: "dollarsign.circle")
-                    }
-                    .tag(1)
+                TabView(selection: $selectedTab) {
+                    BillsView()
+                        .tabItem {
+                            Label("Bills", systemImage: "list.clipboard")
+                        }
+                        .tag(0)
 
-                SendReceiveView()
-                    .tabItem {
-                        Label("Send & Receive", systemImage: "arrow.up.arrow.down.circle")
-                    }
-                    .tag(2)
+                    SummaryView()
+                        .tabItem {
+                            Label("Summary", systemImage: "dollarsign.circle")
+                        }
+                        .tag(1)
 
-                TrendsView()
-                    .tabItem {
-                        Label("Trends", systemImage: "chart.line.uptrend.xyaxis")
-                    }
-                    .tag(3)
+                    SendReceiveView()
+                        .tabItem {
+                            Label("Send & Receive", systemImage: "arrow.up.arrow.down.circle")
+                        }
+                        .tag(2)
 
-                SettingsView()
-                    .tabItem {
-                        Label("Settings", systemImage: "gearshape")
-                    }
-                    .tag(4)
+                    TrendsView()
+                        .tabItem {
+                            Label("Trends", systemImage: "chart.line.uptrend.xyaxis")
+                        }
+                        .tag(3)
+
+                    SettingsView()
+                        .tabItem {
+                            Label("Settings", systemImage: "gearshape")
+                        }
+                        .tag(4)
+                }
+                .accentColor(Color(hex: "#F5A800"))
             }
-            .accentColor(Color(hex: "#F5A800"))
 
             // Toast overlay
             if let msg = vm.toastMessage {
@@ -48,7 +59,33 @@ struct ContentView: View {
             }
         }
         .animation(.easeInOut(duration: 0.25), value: vm.toastMessage)
+        .animation(.easeInOut(duration: 0.25), value: vm.error)
         .preferredColorScheme(.dark)
+    }
+}
+
+struct ErrorBannerView: View {
+    let message: String
+    let onRetry: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(.bhAmber)
+                .font(.system(size: 13))
+            Text(message)
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundColor(.bhText)
+                .lineLimit(2)
+            Spacer()
+            Button("Retry", action: onRetry)
+                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .foregroundColor(.bhAmber)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color.bhSurface)
+        .overlay(Rectangle().fill(Color.bhBorder).frame(height: 1), alignment: .bottom)
     }
 }
 

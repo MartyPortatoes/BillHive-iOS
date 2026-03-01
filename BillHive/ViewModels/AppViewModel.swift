@@ -91,7 +91,7 @@ class AppViewModel: ObservableObject {
             do {
                 try await api.saveState(state)
             } catch {
-                self.error = error.localizedDescription
+                self.toast("Save failed: \(error.localizedDescription)")
             }
         }
     }
@@ -107,7 +107,7 @@ class AppViewModel: ObservableObject {
             do {
                 try await api.saveMonth(key, data: data)
             } catch {
-                self.error = error.localizedDescription
+                self.toast("Save failed: \(error.localizedDescription)")
             }
         }
     }
@@ -276,8 +276,20 @@ class AppViewModel: ObservableObject {
     // MARK: - Month Navigation
 
     func onMonthChange() {
-        autoFillPreservedBills()
-        saveMonthSnapshot()
+        if isLocal {
+            autoFillPreservedBills()
+            saveMonthSnapshot()
+            return
+        }
+        // For remote: fetch the latest server data first so autoFill doesn't
+        // overwrite values entered in the web app for non-preserved bills.
+        Task {
+            if let fresh = try? await api.getMonth(monthKey) {
+                monthly[monthKey] = fresh
+            }
+            autoFillPreservedBills()
+            saveMonthSnapshot()
+        }
     }
 
     // MARK: - People

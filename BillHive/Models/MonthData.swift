@@ -23,6 +23,14 @@ struct MonthData: Codable {
         case _myTotal
         case _owes
     }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        totals = try c.decodeIfPresent([String: Double].self, forKey: .totals) ?? [:]
+        amounts = try c.decodeIfPresent([String: [String: Double]].self, forKey: .amounts) ?? [:]
+        _myTotal = try c.decodeIfPresent(Double.self, forKey: ._myTotal)
+        _owes = try c.decodeIfPresent([String: Double].self, forKey: ._owes)
+    }
 }
 
 struct AppSettings: Codable {

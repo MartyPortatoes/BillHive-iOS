@@ -35,6 +35,22 @@ struct Person: Identifiable, Codable, Equatable {
         Color(hex: color) ?? .orange
     }
 
+    enum CodingKeys: String, CodingKey {
+        case id, name, color, payMethod, payId, zelleUrl, email, greeting
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        color = try c.decode(String.self, forKey: .color)
+        payMethod = try c.decode(PayMethod.self, forKey: .payMethod)
+        payId = try c.decode(String.self, forKey: .payId)
+        zelleUrl = try c.decodeIfPresent(String.self, forKey: .zelleUrl)
+        email = try c.decodeIfPresent(String.self, forKey: .email) ?? ""
+        greeting = try c.decodeIfPresent(String.self, forKey: .greeting) ?? ""
+    }
+
     init(
         id: String = "p\(Int(Date().timeIntervalSince1970 * 1000))",
         name: String = "New Person",

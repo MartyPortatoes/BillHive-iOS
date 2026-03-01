@@ -45,6 +45,23 @@ struct Bill: Identifiable, Codable, Equatable {
     var preserve: Bool
     var lines: [BillLine]
 
+    enum CodingKeys: String, CodingKey {
+        case id, name, icon, color, splitType, remainderLineId, payUrl, preserve, lines
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        icon = try c.decode(String.self, forKey: .icon)
+        color = try c.decode(String.self, forKey: .color)
+        splitType = try c.decode(SplitType.self, forKey: .splitType)
+        remainderLineId = try c.decode(String.self, forKey: .remainderLineId)
+        payUrl = try c.decodeIfPresent(String.self, forKey: .payUrl) ?? ""
+        preserve = try c.decodeIfPresent(Bool.self, forKey: .preserve) ?? false
+        lines = try c.decode([BillLine].self, forKey: .lines)
+    }
+
     init(
         id: String = "b\(Int(Date().timeIntervalSince1970 * 1000))",
         name: String = "New Bill",
