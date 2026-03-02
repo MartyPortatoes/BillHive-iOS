@@ -301,40 +301,6 @@ struct BillBodyView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
 
-            // Pay URL
-            HStack(spacing: 8) {
-                Text("Pay URL")
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(.bhMuted)
-                    .frame(width: 60, alignment: .leading)
-                TextField("Payment portal URL (optional)", text: Binding(
-                    get: { bill.payUrl },
-                    set: { val in
-                        guard let idx = billIndex else { return }
-                        vm.state.bills[idx].payUrl = val
-                        vm.save()
-                    }
-                ))
-                .font(.system(size: 11, design: .monospaced))
-                .foregroundColor(.bhText)
-                .textFieldStyle(.plain)
-                .keyboardType(.URL)
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
-                .padding(8)
-                .background(Color.bhSurface2)
-                .cornerRadius(6)
-                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.bhBorder, lineWidth: 1))
-
-                if !bill.payUrl.isEmpty, let url = URL(string: bill.payUrl) {
-                    Link(destination: url) {
-                        Image(systemName: "arrow.up.right.square")
-                            .foregroundColor(.bhAmber)
-                    }
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 12)
         }
     }
 }

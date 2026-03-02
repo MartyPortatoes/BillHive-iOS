@@ -291,44 +291,87 @@ struct SendCard: View {
     @EnvironmentObject var vm: AppViewModel
     let bill: Bill
 
+    private var billIndex: Int? { vm.state.bills.firstIndex(where: { $0.id == bill.id }) }
+
     var body: some View {
-        HStack(spacing: 10) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 7)
-                    .fill(Color(hex: bill.color)?.opacity(0.2) ?? Color.bhSurface3)
-                    .frame(width: 34, height: 34)
-                Text(bill.icon).font(.system(size: 16))
-            }
+        VStack(spacing: 0) {
+            // Main row
+            HStack(spacing: 10) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 7)
+                        .fill(Color(hex: bill.color)?.opacity(0.2) ?? Color.bhSurface3)
+                        .frame(width: 34, height: 34)
+                    Text(bill.icon).font(.system(size: 16))
+                }
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(bill.name)
-                    .font(.system(size: 13, weight: .bold, design: .monospaced))
-                    .foregroundColor(.bhText)
-                Text(vm.getBillTotal(bill.id).asCurrency)
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(.bhMuted)
-            }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(bill.name)
+                        .font(.system(size: 13, weight: .bold, design: .monospaced))
+                        .foregroundColor(.bhText)
+                    Text(vm.getBillTotal(bill.id).asCurrency)
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundColor(.bhMuted)
+                }
 
-            Spacer()
+                Spacer()
 
-            if !bill.payUrl.isEmpty, let url = URL(string: bill.payUrl) {
-                Link(destination: url) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "arrow.up.right.square")
-                            .font(.system(size: 11))
-                        Text("Pay")
-                            .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                if !bill.payUrl.isEmpty, let url = URL(string: bill.payUrl) {
+                    Link(destination: url) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.up.right.square")
+                                .font(.system(size: 11))
+                            Text("Pay")
+                                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                        }
+                        .foregroundColor(Color(hex: "#0c0d0f"))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(Color.bhAmber)
+                        .cornerRadius(7)
                     }
-                    .foregroundColor(Color(hex: "#0c0d0f"))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 7)
-                    .background(Color.bhAmber)
-                    .cornerRadius(7)
                 }
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+
+            Divider().background(Color.bhBorder)
+
+            // Pay URL field
+            HStack(spacing: 8) {
+                Text("Pay URL")
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .textCase(.uppercase)
+                    .tracking(1.5)
+                    .foregroundColor(.bhMuted)
+                    .frame(width: 60, alignment: .leading)
+
+                TextField("https://your-bank.com/pay", text: Binding(
+                    get: { bill.payUrl },
+                    set: { val in
+                        guard let idx = billIndex else { return }
+                        vm.state.bills[idx].payUrl = val
+                        vm.save()
+                    }
+                ))
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundColor(.bhText)
+                .textFieldStyle(.plain)
+                .keyboardType(.URL)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+
+                if !bill.payUrl.isEmpty, let url = URL(string: bill.payUrl) {
+                    Link(destination: url) {
+                        Image(systemName: "arrow.up.right.square")
+                            .font(.system(size: 14))
+                            .foregroundColor(.bhAmber)
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(Color.bhSurface2)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
         .background(Color.bhSurface)
         .cornerRadius(10)
         .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.bhBorder, lineWidth: 1))
