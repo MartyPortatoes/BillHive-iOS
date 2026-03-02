@@ -313,6 +313,9 @@ struct BillLineRowView: View {
     private var billIndex: Int? { vm.state.bills.firstIndex { $0.id == bill.id } }
     private var lineIndex: Int? { bill.lines.firstIndex { $0.id == line.id } }
 
+    // The effective payer: coveredById if set, otherwise the line's own personId
+    private var effectivePayer: String { line.coveredById ?? line.personId }
+
     var computedAmount: Double {
         if bill.splitType == .pct {
             return vm.getBillTotal(bill.id) * line.value / 100.0
@@ -327,86 +330,122 @@ struct BillLineRowView: View {
     }
 
     var body: some View {
-        HStack(spacing: 8) {
-            // Person picker
-            Picker("", selection: Binding(
-                get: { line.personId },
-                set: { val in
-                    guard let bi = billIndex, let li = lineIndex else { return }
-                    vm.state.bills[bi].lines[li].personId = val
-                    vm.save()
-                }
-            )) {
-                ForEach(vm.state.people) { person in
-                    Text(person.name).tag(person.id)
-                }
-            }
-            .pickerStyle(.menu)
-            .tint(.bhText)
-            .font(.system(size: 11, design: .monospaced))
-            .frame(width: 100)
-
-            Spacer()
-
-            if bill.splitType == .pct {
-                // Pct input
-                TextField("0", value: Binding(
-                    get: { line.value },
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                // Person picker (who is responsible)
+                Picker("", selection: Binding(
+                    get: { line.personId },
                     set: { val in
                         guard let bi = billIndex, let li = lineIndex else { return }
-                        vm.state.bills[bi].lines[li].value = val
-                        vm.saveMonthSnapshot()
+                        vm.state.bills[bi].lines[li].personId = val
+                        // If the new responsible person is the same as coveredById, clear coverage
+                        if vm.state.bills[bi].lines[li].coveredById == val {
+                            vm.state.bills[bi].lines[li].coveredById = nil
+                        }
+                        vm.save()
                     }
-                ), format: .number.precision(.fractionLength(0...2)))
-                .font(.system(size: 12, design: .monospaced))
-                .foregroundColor(.bhText)
-                .multilineTextAlignment(.trailing)
-                .keyboardType(.decimalPad)
-                .textFieldStyle(.plain)
-                .padding(6)
-                .frame(width: 50)
-                .background(Color.bhSurface2)
-                .cornerRadius(6)
-                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.bhBorder, lineWidth: 1))
+                )) {
+                    ForEach(vm.state.people) { person in
+                        Text(person.name).tag(person.id)
+                    }
+                }
+                .pickerStyle(.menu)
+                .tint(.bhText)
+                .font(.system(size: 11, design: .monospaced))
+                .frame(width: 100)
 
-                Text(computedAmount.asCurrency)
-                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                    .foregroundColor(.bhAmber)
-                    .frame(width: 80, alignment: .trailing)
-            } else {
-                if line.id == bill.remainderLineId {
+                Spacer()
+
+                if bill.splitType == .pct {
+                    // Pct input
+                    TextField("0", value: Binding(
+                        get: { line.value },
+                        set: { val in
+                            guard let bi = billIndex, let li = lineIndex else { return }
+                            vm.state.bills[bi].lines[li].value = val
+                            vm.saveMonthSnapshot()
+                        }
+                    ), format: .number.precision(.fractionLength(0...2)))
+                    .font(.system(size: 12, design: .monospaced))
+                    .foregroundColor(.bhText)
+                    .multilineTextAlignment(.trailing)
+                    .keyboardType(.decimalPad)
+                    .textFieldStyle(.plain)
+                    .padding(6)
+                    .frame(width: 50)
+                    .background(Color.bhSurface2)
+                    .cornerRadius(6)
+                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.bhBorder, lineWidth: 1))
+
                     Text(computedAmount.asCurrency)
                         .font(.system(size: 12, weight: .semibold, design: .monospaced))
                         .foregroundColor(.bhAmber)
                         .frame(width: 80, alignment: .trailing)
                 } else {
-                    CurrencyInputField(
-                        value: Binding(
-                            get: { vm.getLineAmount(bill.id, lineId: line.id) },
-                            set: { vm.setLineAmount(bill.id, lineId: line.id, value: $0) }
+                    if line.id == bill.remainderLineId {
+                        Text(computedAmount.asCurrency)
+                            .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                            .foregroundColor(.bhAmber)
+                            .frame(width: 80, alignment: .trailing)
+                    } else {
+                        CurrencyInputField(
+                            value: Binding(
+                                get: { vm.getLineAmount(bill.id, lineId: line.id) },
+                                set: { vm.setLineAmount(bill.id, lineId: line.id, value: $0) }
+                            )
                         )
-                    )
-                    .frame(width: 80)
+                        .frame(width: 80)
+                    }
                 }
-            }
 
-            // Remove
-            Button {
-                vm.removeLine(billId: bill.id, lineId: line.id)
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 10))
-                    .foregroundColor(.bhMuted)
-                    .frame(width: 24, height: 24)
-                    .background(Color.bhSurface2)
-                    .cornerRadius(5)
-                    .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.bhBorder, lineWidth: 1))
+                // Remove
+                Button {
+                    vm.removeLine(billId: bill.id, lineId: line.id)
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10))
+                        .foregroundColor(.bhMuted)
+                        .frame(width: 24, height: 24)
+                        .background(Color.bhSurface2)
+                        .cornerRadius(5)
+                        .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.bhBorder, lineWidth: 1))
+                }
+                .disabled(bill.lines.count <= 1)
+                .opacity(bill.lines.count <= 1 ? 0.3 : 1)
             }
-            .disabled(bill.lines.count <= 1)
-            .opacity(bill.lines.count <= 1 ? 0.3 : 1)
+            .padding(.horizontal, 16)
+            .padding(.top, 9)
+            .padding(.bottom, 5)
+
+            // Covered-by sub-row
+            HStack(spacing: 6) {
+                Text("Covered by")
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundColor(.bhMuted)
+
+                Picker("", selection: Binding(
+                    get: { effectivePayer },
+                    set: { val in
+                        guard let bi = billIndex, let li = lineIndex else { return }
+                        let selfId = vm.state.bills[bi].lines[li].personId
+                        vm.state.bills[bi].lines[li].coveredById = (val == selfId) ? nil : val
+                        vm.save()
+                    }
+                )) {
+                    ForEach(vm.state.people) { person in
+                        Text(person.id == line.personId ? "\(person.name) (self)" : person.name)
+                            .tag(person.id)
+                    }
+                }
+                .pickerStyle(.menu)
+                .tint(line.coveredById != nil ? Color.bhAmber : .bhMuted)
+                .font(.system(size: 10, design: .monospaced))
+
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 9)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 9)
     }
 }
 
