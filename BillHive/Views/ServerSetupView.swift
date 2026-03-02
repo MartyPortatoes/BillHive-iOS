@@ -10,7 +10,7 @@ struct ServerSetupView: View {
 
     var body: some View {
         ZStack {
-            Color.bhBackground.ignoresSafeArea()
+            HexBGView().ignoresSafeArea()
 
             VStack(spacing: 32) {
                 Spacer()

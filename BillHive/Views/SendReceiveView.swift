@@ -11,7 +11,7 @@ struct SendReceiveView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.bhBackground.ignoresSafeArea()
+                HexBGView().ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
                         VStack(alignment: .leading, spacing: 4) {

@@ -12,7 +12,7 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.bhBackground.ignoresSafeArea()
+                HexBGView().ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
                         Text("Settings")
@@ -725,7 +725,7 @@ struct ServerEditSheet: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.bhBackground.ignoresSafeArea()
+                HexBGView().ignoresSafeArea()
                 VStack(spacing: 20) {
                     Text("Change Server URL")
                         .font(.system(size: 16, weight: .bold, design: .monospaced))

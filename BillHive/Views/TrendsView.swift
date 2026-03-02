@@ -24,7 +24,7 @@ struct TrendsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.bhBackground.ignoresSafeArea()
+                HexBGView().ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         HStack(alignment: .top) {

@@ -36,7 +36,7 @@ struct MailFallbackView: View {
 
     var body: some View {
         ZStack {
-            Color.bhBackground.ignoresSafeArea()
+            HexBGView().ignoresSafeArea()
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
                     Text("No Mail Account")

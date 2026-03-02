@@ -40,6 +40,8 @@
 		C115 /* MailComposeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B003 /* MailComposeView.swift */; };
 		C116 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A015 /* Assets.xcassets */; };
 		C117 /* ServerSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A008 /* ServerSetupView.swift */; };
+		A120 /* HexagonBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = A020 /* HexagonBackground.swift */; };
+		C120 /* HexagonBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = A020 /* HexagonBackground.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -63,6 +65,7 @@
 		B002 /* LocalStorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalStorageManager.swift; sourceTree = "<group>"; };
 		B003 /* MailComposeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailComposeView.swift; sourceTree = "<group>"; };
 		B004 /* BillHive.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BillHive.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A020 /* HexagonBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HexagonBackground.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -126,6 +129,7 @@
 				A006 /* TrendsView.swift */,
 				A007 /* SettingsView.swift */,
 				A008 /* ServerSetupView.swift */,
+				A020 /* HexagonBackground.swift */,
 				B003 /* MailComposeView.swift */,
 			);
 			path = Views;
@@ -252,6 +256,7 @@
 				A106 /* TrendsView.swift in Sources */,
 				A107 /* SettingsView.swift in Sources */,
 				A108 /* ServerSetupView.swift in Sources */,
+				A120 /* HexagonBackground.swift in Sources */,
 				A109 /* Person.swift in Sources */,
 				A110 /* Bill.swift in Sources */,
 				A111 /* MonthData.swift in Sources */,
@@ -282,6 +287,7 @@
 				C114 /* LocalStorageManager.swift in Sources */,
 				C115 /* MailComposeView.swift in Sources */,
 				C117 /* ServerSetupView.swift in Sources */,
+				C120 /* HexagonBackground.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

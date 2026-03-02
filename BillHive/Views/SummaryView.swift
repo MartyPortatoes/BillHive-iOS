@@ -9,7 +9,7 @@ struct SummaryView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.bhBackground.ignoresSafeArea()
+                HexBGView().ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         VStack(alignment: .leading, spacing: 4) {

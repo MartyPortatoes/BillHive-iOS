@@ -7,7 +7,7 @@ struct BillsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.bhBackground.ignoresSafeArea()
+                HexBGView().ignoresSafeArea()
                 ScrollView {
                     VStack(spacing: 0) {
                         MonthPickerBar()
