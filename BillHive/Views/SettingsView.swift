@@ -60,28 +60,36 @@ struct SettingsView: View {
                                 .foregroundColor(.bhMuted)
                                 .padding(.bottom, 8)
 
-                            ForEach(Array(vm.state.people.filter { $0.id != "me" }.enumerated()), id: \.element.id) { _, person in
-                                if let globalIdx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
-                                    HStack(spacing: 8) {
-                                        Circle().fill(Color(hex: person.color) ?? .bhAmber).frame(width: 8, height: 8)
-                                        Text(person.name)
-                                            .font(.system(size: 11, design: .monospaced))
-                                            .foregroundColor(.bhText)
-                                            .frame(width: 80, alignment: .leading)
-                                        TextField("Hey \(person.name),", text: Binding(
-                                            get: { vm.state.people[globalIdx].greeting },
-                                            set: { vm.state.people[globalIdx].greeting = $0; vm.save() }
-                                        ))
+                            ForEach(vm.state.people.filter { $0.id != "me" }) { person in
+                                HStack(spacing: 8) {
+                                    Circle().fill(Color(hex: person.color) ?? .bhAmber).frame(width: 8, height: 8)
+                                    Text(person.name)
                                         .font(.system(size: 11, design: .monospaced))
                                         .foregroundColor(.bhText)
-                                        .textFieldStyle(.plain)
-                                        .padding(7)
-                                        .background(Color.bhSurface2)
-                                        .cornerRadius(6)
-                                        .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.bhBorder, lineWidth: 1))
-                                    }
-                                    .padding(.vertical, 4)
+                                        .frame(width: 80, alignment: .leading)
+                                    TextField("Hey \(person.name),", text: Binding(
+                                        get: {
+                                            if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
+                                                return vm.state.people[idx].greeting
+                                            }
+                                            return ""
+                                        },
+                                        set: { newValue in
+                                            if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
+                                                vm.state.people[idx].greeting = newValue
+                                                vm.save()
+                                            }
+                                        }
+                                    ))
+                                    .font(.system(size: 11, design: .monospaced))
+                                    .foregroundColor(.bhText)
+                                    .textFieldStyle(.plain)
+                                    .padding(7)
+                                    .background(Color.bhSurface2)
+                                    .cornerRadius(6)
+                                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.bhBorder, lineWidth: 1))
                                 }
+                                .padding(.vertical, 4)
                             }
                         }
 
@@ -92,57 +100,86 @@ struct SettingsView: View {
 
                         // Bill Config
                         SettingsSection(title: "Bills") {
-                            ForEach(Array(vm.state.bills.enumerated()), id: \.element.id) { idx, bill in
-                                HStack(spacing: 8) {
-                                    TextField("", text: Binding(
-                                        get: { vm.state.bills[idx].icon },
-                                        set: { vm.state.bills[idx].icon = $0; vm.save() }
-                                    ))
-                                    .font(.system(size: 18))
-                                    .multilineTextAlignment(.center)
-                                    .frame(width: 36, height: 36)
-                                    .background(Color.bhSurface2)
-                                    .cornerRadius(6)
-
-                                    TextField("Bill name", text: Binding(
-                                        get: { vm.state.bills[idx].name },
-                                        set: { vm.state.bills[idx].name = $0; vm.save() }
-                                    ))
-                                    .font(.system(size: 12, design: .monospaced))
-                                    .foregroundColor(.bhText)
-                                    .textFieldStyle(.plain)
-                                    .padding(8)
-                                    .background(Color.bhSurface2)
-                                    .cornerRadius(6)
-                                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.bhBorder, lineWidth: 1))
-
-                                    ColorPicker("", selection: Binding(
-                                        get: { Color(hex: vm.state.bills[idx].color) ?? .bhAmber },
-                                        set: { newColor in
-                                            if let hex = newColor.toHex() {
-                                                vm.state.bills[idx].color = hex
-                                                vm.save()
+                            ForEach(vm.state.bills) { bill in
+                                VStack(spacing: 0) {
+                                    HStack(spacing: 8) {
+                                        TextField("", text: Binding(
+                                            get: {
+                                                if let idx = vm.state.bills.firstIndex(where: { $0.id == bill.id }) {
+                                                    return vm.state.bills[idx].icon
+                                                }
+                                                return ""
+                                            },
+                                            set: { newValue in
+                                                if let idx = vm.state.bills.firstIndex(where: { $0.id == bill.id }) {
+                                                    vm.state.bills[idx].icon = newValue
+                                                    vm.save()
+                                                }
                                             }
-                                        }
-                                    ))
-                                    .frame(width: 36, height: 36)
-                                    .labelsHidden()
+                                        ))
+                                        .font(.system(size: 18))
+                                        .multilineTextAlignment(.center)
+                                        .frame(width: 36, height: 36)
+                                        .background(Color.bhSurface2)
+                                        .cornerRadius(6)
 
-                                    Button {
-                                        vm.removeBill(bill)
-                                    } label: {
-                                        Image(systemName: "xmark")
-                                            .font(.system(size: 10))
-                                            .foregroundColor(.bhRed)
-                                            .frame(width: 28, height: 28)
-                                            .background(Color.bhSurface2)
-                                            .cornerRadius(5)
-                                            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.bhRed.opacity(0.5), lineWidth: 1))
+                                        TextField("Bill name", text: Binding(
+                                            get: {
+                                                if let idx = vm.state.bills.firstIndex(where: { $0.id == bill.id }) {
+                                                    return vm.state.bills[idx].name
+                                                }
+                                                return ""
+                                            },
+                                            set: { newValue in
+                                                if let idx = vm.state.bills.firstIndex(where: { $0.id == bill.id }) {
+                                                    vm.state.bills[idx].name = newValue
+                                                    vm.save()
+                                                }
+                                            }
+                                        ))
+                                        .font(.system(size: 12, design: .monospaced))
+                                        .foregroundColor(.bhText)
+                                        .textFieldStyle(.plain)
+                                        .padding(8)
+                                        .background(Color.bhSurface2)
+                                        .cornerRadius(6)
+                                        .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.bhBorder, lineWidth: 1))
+
+                                        ColorPicker("", selection: Binding(
+                                            get: {
+                                                if let idx = vm.state.bills.firstIndex(where: { $0.id == bill.id }) {
+                                                    return Color(hex: vm.state.bills[idx].color) ?? .bhAmber
+                                                }
+                                                return .bhAmber
+                                            },
+                                            set: { newColor in
+                                                if let idx = vm.state.bills.firstIndex(where: { $0.id == bill.id }),
+                                                   let hex = newColor.toHex() {
+                                                    vm.state.bills[idx].color = hex
+                                                    vm.save()
+                                                }
+                                            }
+                                        ))
+                                        .frame(width: 36, height: 36)
+                                        .labelsHidden()
+
+                                        Button {
+                                            vm.removeBill(bill)
+                                        } label: {
+                                            Image(systemName: "xmark")
+                                                .font(.system(size: 10))
+                                                .foregroundColor(.bhRed)
+                                                .frame(width: 28, height: 28)
+                                                .background(Color.bhSurface2)
+                                                .cornerRadius(5)
+                                                .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.bhRed.opacity(0.5), lineWidth: 1))
+                                        }
                                     }
-                                }
-                                .padding(.vertical, 4)
-                                if idx < vm.state.bills.count - 1 {
-                                    Divider().background(Color.bhBorder)
+                                    .padding(.vertical, 4)
+                                    
+                                    if bill.id != vm.state.bills.last?.id {
+                                        Divider().background(Color.bhBorder)
+                                    }
                                 }
                             }
                         }
@@ -310,25 +347,51 @@ struct PersonBodyView: View {
     let person: Person
 
     var body: some View {
-        let pm = vm.state.people[idx].payMethod
+        // Get current index safely
+        guard let currentIdx = vm.state.people.firstIndex(where: { $0.id == person.id }) else {
+            return AnyView(EmptyView())
+        }
+        
+        let pm = vm.state.people[currentIdx].payMethod
         let showPayId = pm == .zelle || pm == .venmo || pm == .cashapp
         let payIdLabel = pm == .venmo ? "Venmo Handle" : pm == .cashapp ? "Cash Tag" : "Phone / Email"
         let payIdPlaceholder = pm == .venmo ? "@handle" : pm == .cashapp ? "$cashtag" : "phone or email"
 
-        return VStack(alignment: .leading, spacing: 12) {
+        return AnyView(VStack(alignment: .leading, spacing: 12) {
             // Name + color picker
             PersonFieldRow("Name") {
                 HStack(spacing: 8) {
                     ColorPicker("", selection: Binding(
-                        get: { Color(hex: vm.state.people[idx].color) ?? .bhAmber },
-                        set: { if let hex = $0.toHex() { vm.state.people[idx].color = hex; vm.save() } }
+                        get: {
+                            if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
+                                return Color(hex: vm.state.people[idx].color) ?? .bhAmber
+                            }
+                            return .bhAmber
+                        },
+                        set: { newColor in
+                            if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }),
+                               let hex = newColor.toHex() {
+                                vm.state.people[idx].color = hex
+                                vm.save()
+                            }
+                        }
                     ))
                     .frame(width: 26, height: 26)
                     .labelsHidden()
 
                     TextField("Name", text: Binding(
-                        get: { vm.state.people[idx].name },
-                        set: { vm.state.people[idx].name = $0; vm.save() }
+                        get: {
+                            if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
+                                return vm.state.people[idx].name
+                            }
+                            return ""
+                        },
+                        set: { newValue in
+                            if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
+                                vm.state.people[idx].name = newValue
+                                vm.save()
+                            }
+                        }
                     ))
                     .font(.system(size: 12, design: .monospaced))
                     .foregroundColor(.bhText)
@@ -343,8 +406,18 @@ struct PersonBodyView: View {
             // Payment method — full width so labels never wrap
             PersonFieldRow("Payment") {
                 Picker("Pay method", selection: Binding(
-                    get: { vm.state.people[idx].payMethod },
-                    set: { vm.state.people[idx].payMethod = $0; vm.save() }
+                    get: {
+                        if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
+                            return vm.state.people[idx].payMethod
+                        }
+                        return .none
+                    },
+                    set: { newValue in
+                        if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
+                            vm.state.people[idx].payMethod = newValue
+                            vm.save()
+                        }
+                    }
                 )) {
                     ForEach(PayMethod.allCases, id: \.self) { m in
                         Text(m.displayName).tag(m)
@@ -364,8 +437,18 @@ struct PersonBodyView: View {
             if showPayId {
                 PersonFieldRow(payIdLabel) {
                     TextField(payIdPlaceholder, text: Binding(
-                        get: { vm.state.people[idx].payId },
-                        set: { vm.state.people[idx].payId = $0; vm.save() }
+                        get: {
+                            if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
+                                return vm.state.people[idx].payId
+                            }
+                            return ""
+                        },
+                        set: { newValue in
+                            if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
+                                vm.state.people[idx].payId = newValue
+                                vm.save()
+                            }
+                        }
                     ))
                     .font(.system(size: 12, design: .monospaced))
                     .foregroundColor(.bhText)
@@ -384,11 +467,18 @@ struct PersonBodyView: View {
             if pm == .zelle {
                 PersonFieldRow("Zelle URL") {
                     TextField("Custom URL (optional)", text: Binding(
-                        get: { vm.state.people[idx].zelleUrl ?? "" },
-                        set: {
-                            let v = $0.trimmingCharacters(in: .whitespaces)
-                            vm.state.people[idx].zelleUrl = v.isEmpty ? nil : v
-                            vm.save()
+                        get: {
+                            if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
+                                return vm.state.people[idx].zelleUrl ?? ""
+                            }
+                            return ""
+                        },
+                        set: { newValue in
+                            if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
+                                let v = newValue.trimmingCharacters(in: .whitespaces)
+                                vm.state.people[idx].zelleUrl = v.isEmpty ? nil : v
+                                vm.save()
+                            }
                         }
                     ))
                     .font(.system(size: 12, design: .monospaced))
@@ -407,8 +497,18 @@ struct PersonBodyView: View {
             // Email
             PersonFieldRow("Email") {
                 TextField("Notifications email", text: Binding(
-                    get: { vm.state.people[idx].email },
-                    set: { vm.state.people[idx].email = $0; vm.save() }
+                    get: {
+                        if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
+                            return vm.state.people[idx].email
+                        }
+                        return ""
+                    },
+                    set: { newValue in
+                        if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
+                            vm.state.people[idx].email = newValue
+                            vm.save()
+                        }
+                    }
                 ))
                 .font(.system(size: 12, design: .monospaced))
                 .foregroundColor(.bhText)
@@ -425,7 +525,9 @@ struct PersonBodyView: View {
             // Remove (non-me only)
             if !person.isMe {
                 Button {
-                    vm.removePerson(at: idx)
+                    if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
+                        vm.removePerson(at: idx)
+                    }
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "trash")
@@ -437,7 +539,7 @@ struct PersonBodyView: View {
                 .padding(.top, 4)
             }
         }
-        .padding(14)
+        .padding(14))
     }
 }
 
