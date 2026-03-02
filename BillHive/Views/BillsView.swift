@@ -178,6 +178,7 @@ struct BillCardView: View {
 struct BillBodyView: View {
     @EnvironmentObject var vm: AppViewModel
     @Binding var bill: Bill
+    @State private var showRemoveConfirm = false
 
     init(bill: Bill) {
         // We need a binding so we find the index at render time
@@ -305,6 +306,26 @@ struct BillBodyView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
 
+            Divider().background(Color.bhBorder).padding(.horizontal, 16)
+
+            Button(role: .destructive) {
+                showRemoveConfirm = true
+            } label: {
+                Label("Remove Bill", systemImage: "trash")
+                    .font(.system(size: 12, design: .monospaced))
+                    .frame(maxWidth: .infinity)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+
+        }
+        .confirmationDialog("Remove \"\(bill.name)\"?", isPresented: $showRemoveConfirm, titleVisibility: .visible) {
+            Button("Remove Bill", role: .destructive) {
+                vm.removeBill(bill)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will permanently remove the bill and all its settings.")
         }
     }
 }
