@@ -46,7 +46,7 @@ struct SendReceiveView: View {
                                 }
                             }
 
-                            ForEach(nonMePeople) { person in
+                            ForEach(nonMePeople.filter { (owes[$0.id]?.total ?? 0) > 0 }) { person in
                                 ReceiveCard(
                                     person: person,
                                     personOwes: owes[person.id],
