@@ -7,6 +7,7 @@ struct SettingsView: View {
     @State private var showClearConfirm = false
     @State private var showServerEdit = false
     @State private var draftServerURL = ""
+    @State private var expandedPersonId: String? = nil
 
     var body: some View {
         NavigationStack {
@@ -20,24 +21,36 @@ struct SettingsView: View {
                             .padding(.top, 16)
 
                         // People
-                        SettingsSection(title: "People") {
-                            VStack(spacing: 0) {
-                                ForEach(Array(vm.state.people.enumerated()), id: \.element.id) { idx, person in
-                                    PersonRowView(idx: idx, person: person)
-                                    if idx < vm.state.people.count - 1 {
-                                        Divider().background(Color.bhBorder).padding(.vertical, 2)
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("People")
+                                .bhSectionTitle()
+                                .padding(.bottom, 2)
+
+                            ForEach(Array(vm.state.people.enumerated()), id: \.element.id) { idx, person in
+                                PersonCardView(
+                                    idx: idx,
+                                    person: person,
+                                    isExpanded: expandedPersonId == person.id,
+                                    onToggle: {
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            expandedPersonId = expandedPersonId == person.id ? nil : person.id
+                                        }
                                     }
-                                }
+                                )
                             }
 
                             Button {
                                 vm.addPerson()
+                                if let last = vm.state.people.last {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        expandedPersonId = last.id
+                                    }
+                                }
                             } label: {
                                 Label("Add Person", systemImage: "plus")
                                     .font(.system(size: 11, design: .monospaced))
                             }
                             .buttonStyle(BHSecondaryButtonStyle())
-                            .padding(.top, 12)
                         }
 
                         // Email Greetings
@@ -228,61 +241,107 @@ struct SettingsSection<Content: View>: View {
     }
 }
 
-struct PersonRowView: View {
+// ── Person expandable card (mirrors BillCardView pattern) ────────────────────
+struct PersonCardView: View {
+    @EnvironmentObject var vm: AppViewModel
+    let idx: Int
+    let person: Person
+    let isExpanded: Bool
+    let onToggle: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header — tappable to expand/collapse
+            Button(action: onToggle) {
+                HStack(spacing: 10) {
+                    Circle()
+                        .fill(Color(hex: person.color) ?? .bhAmber)
+                        .frame(width: 12, height: 12)
+
+                    Text(person.name.isEmpty ? "New Person" : person.name)
+                        .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                        .foregroundColor(.bhText)
+                        .lineLimit(1)
+
+                    Spacer()
+
+                    if person.isMe {
+                        Text("you")
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundColor(.bhMuted2)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(Color.bhSurface3)
+                            .cornerRadius(4)
+                    } else {
+                        Text(person.payMethod.displayName)
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundColor(.bhMuted)
+                    }
+
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.bhMuted)
+                        .frame(width: 16)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if isExpanded {
+                Divider().background(Color.bhBorder)
+                PersonBodyView(idx: idx, person: person)
+            }
+        }
+        .background(Color.bhSurface)
+        .cornerRadius(10)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(isExpanded ? Color.bhBorder2 : Color.bhBorder, lineWidth: 1)
+        )
+    }
+}
+
+struct PersonBodyView: View {
     @EnvironmentObject var vm: AppViewModel
     let idx: Int
     let person: Person
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            // Name row
-            HStack(spacing: 8) {
-                ColorPicker("", selection: Binding(
-                    get: { Color(hex: vm.state.people[idx].color) ?? .bhAmber },
-                    set: { newColor in
-                        if let hex = newColor.toHex() {
-                            vm.state.people[idx].color = hex
-                            vm.save()
-                        }
-                    }
-                ))
-                .frame(width: 28, height: 28)
-                .labelsHidden()
+        let pm = vm.state.people[idx].payMethod
+        let showPayId = pm == .zelle || pm == .venmo || pm == .cashapp
+        let payIdLabel = pm == .venmo ? "Venmo Handle" : pm == .cashapp ? "Cash Tag" : "Phone / Email"
+        let payIdPlaceholder = pm == .venmo ? "@handle" : pm == .cashapp ? "$cashtag" : "phone or email"
 
-                TextField("Name", text: Binding(
-                    get: { vm.state.people[idx].name },
-                    set: { vm.state.people[idx].name = $0; vm.save() }
-                ))
-                .font(.system(size: 13, design: .monospaced))
-                .foregroundColor(.bhText)
-                .textFieldStyle(.plain)
+        return VStack(alignment: .leading, spacing: 12) {
+            // Name + color picker
+            PersonFieldRow("Name") {
+                HStack(spacing: 8) {
+                    ColorPicker("", selection: Binding(
+                        get: { Color(hex: vm.state.people[idx].color) ?? .bhAmber },
+                        set: { if let hex = $0.toHex() { vm.state.people[idx].color = hex; vm.save() } }
+                    ))
+                    .frame(width: 26, height: 26)
+                    .labelsHidden()
+
+                    TextField("Name", text: Binding(
+                        get: { vm.state.people[idx].name },
+                        set: { vm.state.people[idx].name = $0; vm.save() }
+                    ))
+                    .font(.system(size: 12, design: .monospaced))
+                    .foregroundColor(.bhText)
+                    .textFieldStyle(.plain)
+                }
                 .padding(8)
                 .background(Color.bhSurface2)
                 .cornerRadius(6)
                 .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.bhBorder, lineWidth: 1))
-
-                if !person.isMe {
-                    Button {
-                        vm.removePerson(at: idx)
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 10))
-                            .foregroundColor(.bhRed)
-                            .frame(width: 24, height: 24)
-                            .background(Color.bhSurface2)
-                            .cornerRadius(4)
-                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.bhRed.opacity(0.5), lineWidth: 1))
-                    }
-                } else {
-                    Text("you")
-                        .font(.system(size: 10, design: .monospaced))
-                        .foregroundColor(.bhMuted2)
-                        .frame(width: 24)
-                }
             }
 
-            // Payment method + ID row
-            HStack(spacing: 8) {
+            // Payment method — full width so labels never wrap
+            PersonFieldRow("Payment") {
                 Picker("Pay method", selection: Binding(
                     get: { vm.state.people[idx].payMethod },
                     set: { vm.state.people[idx].payMethod = $0; vm.save() }
@@ -293,43 +352,38 @@ struct PersonRowView: View {
                 }
                 .pickerStyle(.menu)
                 .tint(.bhText)
-                .font(.system(size: 11, design: .monospaced))
-                .frame(width: 130)
-                .padding(6)
+                .font(.system(size: 12, design: .monospaced))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(8)
                 .background(Color.bhSurface2)
                 .cornerRadius(6)
                 .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.bhBorder, lineWidth: 1))
+            }
 
-                let pm = vm.state.people[idx].payMethod
-                if pm != .none && pm != .manual {
-                    TextField(
-                        pm == .venmo ? "@handle" : pm == .cashapp ? "$cashtag" : "phone / email",
-                        text: Binding(
-                            get: { vm.state.people[idx].payId },
-                            set: { vm.state.people[idx].payId = $0; vm.save() }
-                        )
-                    )
-                    .font(.system(size: 11, design: .monospaced))
+            // Pay ID (Zelle / Venmo / Cash App)
+            if showPayId {
+                PersonFieldRow(payIdLabel) {
+                    TextField(payIdPlaceholder, text: Binding(
+                        get: { vm.state.people[idx].payId },
+                        set: { vm.state.people[idx].payId = $0; vm.save() }
+                    ))
+                    .font(.system(size: 12, design: .monospaced))
                     .foregroundColor(.bhText)
                     .textFieldStyle(.plain)
-                    .padding(7)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+                    .keyboardType(pm == .zelle ? .phonePad : .default)
+                    .padding(8)
                     .background(Color.bhSurface2)
                     .cornerRadius(6)
                     .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.bhBorder, lineWidth: 1))
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
                 }
             }
 
-            // Custom Zelle URL (only when Zelle is selected)
-            if vm.state.people[idx].payMethod == .zelle {
-                HStack(spacing: 8) {
-                    Image(systemName: "link")
-                        .font(.system(size: 11))
-                        .foregroundColor(.bhMuted)
-                        .frame(width: 16)
-
-                    TextField("Custom Zelle URL (optional)", text: Binding(
+            // Custom Zelle URL
+            if pm == .zelle {
+                PersonFieldRow("Zelle URL") {
+                    TextField("Custom URL (optional)", text: Binding(
                         get: { vm.state.people[idx].zelleUrl ?? "" },
                         set: {
                             let v = $0.trimmingCharacters(in: .whitespaces)
@@ -337,43 +391,73 @@ struct PersonRowView: View {
                             vm.save()
                         }
                     ))
-                    .font(.system(size: 11, design: .monospaced))
+                    .font(.system(size: 12, design: .monospaced))
                     .foregroundColor(.bhText)
                     .textFieldStyle(.plain)
                     .keyboardType(.URL)
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
-                    .padding(7)
+                    .padding(8)
                     .background(Color.bhSurface2)
                     .cornerRadius(6)
                     .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.bhBorder, lineWidth: 1))
                 }
             }
 
-            // Email row
-            HStack(spacing: 8) {
-                Image(systemName: "envelope")
-                    .font(.system(size: 11))
-                    .foregroundColor(.bhMuted)
-                    .frame(width: 16)
-
-                TextField("Email for notifications", text: Binding(
+            // Email
+            PersonFieldRow("Email") {
+                TextField("Notifications email", text: Binding(
                     get: { vm.state.people[idx].email },
                     set: { vm.state.people[idx].email = $0; vm.save() }
                 ))
-                .font(.system(size: 11, design: .monospaced))
+                .font(.system(size: 12, design: .monospaced))
                 .foregroundColor(.bhText)
                 .textFieldStyle(.plain)
                 .keyboardType(.emailAddress)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
-                .padding(7)
+                .padding(8)
                 .background(Color.bhSurface2)
                 .cornerRadius(6)
                 .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.bhBorder, lineWidth: 1))
             }
+
+            // Remove (non-me only)
+            if !person.isMe {
+                Button {
+                    vm.removePerson(at: idx)
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "trash")
+                        Text("Remove \(person.name.isEmpty ? "Person" : person.name)")
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(BHDangerButtonStyle())
+                .padding(.top, 4)
+            }
         }
-        .padding(.vertical, 8)
+        .padding(14)
+    }
+}
+
+struct PersonFieldRow<Content: View>: View {
+    let label: String
+    let content: Content
+
+    init(_ label: String, @ViewBuilder content: () -> Content) {
+        self.label = label
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label.uppercased())
+                .font(.system(size: 9, weight: .medium, design: .monospaced))
+                .tracking(1.2)
+                .foregroundColor(.bhMuted)
+            content
+        }
     }
 }
 
