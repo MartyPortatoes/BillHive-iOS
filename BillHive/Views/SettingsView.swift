@@ -294,7 +294,7 @@ struct PersonRowView: View {
                 .pickerStyle(.menu)
                 .tint(.bhText)
                 .font(.system(size: 11, design: .monospaced))
-                .frame(width: 115)
+                .frame(width: 130)
                 .padding(6)
                 .background(Color.bhSurface2)
                 .cornerRadius(6)
