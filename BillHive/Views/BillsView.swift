@@ -219,28 +219,32 @@ struct BillBodyView: View {
             .padding(.top, 14)
             .padding(.bottom, 10)
 
-            // PCT bill: total input
-            if bill.splitType == .pct {
-                HStack {
-                    Text("Total")
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(.bhMuted)
-                    Spacer()
-                    CurrencyInputField(
-                        value: Binding(
-                            get: { vm.getBillTotal(bill.id) },
-                            set: { vm.setBillTotal(bill.id, value: $0) }
-                        )
-                    )
-                    .frame(width: 120)
+            // Total bill input — used by pct bills (each line % × total) and
+            // fixed bills (remainder line = total − sum of other lines)
+            HStack {
+                Text("Total Bill")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundColor(.bhMuted)
+                if bill.splitType == .fixed {
+                    Text("Remainder → \(vm.state.people.first { $0.id == (bill.lines.first { $0.id == bill.remainderLineId }?.personId ?? "") }?.name ?? "—")")
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundColor(.bhMuted2)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(Color.bhSurface2)
-                .cornerRadius(8)
-                .padding(.horizontal, 16)
-                .padding(.bottom, 10)
+                Spacer()
+                CurrencyInputField(
+                    value: Binding(
+                        get: { vm.getBillTotal(bill.id) },
+                        set: { vm.setBillTotal(bill.id, value: $0) }
+                    )
+                )
+                .frame(width: 120)
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(Color.bhSurface2)
+            .cornerRadius(8)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 10)
 
             Divider().background(Color.bhBorder).padding(.horizontal, 16)
 
