@@ -386,8 +386,7 @@ struct BillLineRowView: View {
                     TextField("0", value: Binding(
                         get: { line.value },
                         set: { val in
-                            guard let bi = billIndex, let li = lineIndex else { return }
-                            vm.state.bills[bi].lines[li].value = val
+                            vm.setLinePct(billId: bill.id, lineId: line.id, value: val)
                             vm.saveMonthSnapshot()
                         }
                     ), format: .number.precision(.fractionLength(0...2)))

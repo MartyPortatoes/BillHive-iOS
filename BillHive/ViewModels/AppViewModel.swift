@@ -349,6 +349,26 @@ class AppViewModel: ObservableObject {
         save()
     }
 
+    /// Called when a user manually edits one line's percentage.
+    /// Locks that line at the new value and splits the remaining % equally among all other lines.
+    func setLinePct(billId: String, lineId: String, value: Double) {
+        guard let bi = state.bills.firstIndex(where: { $0.id == billId }) else { return }
+        guard let li = state.bills[bi].lines.firstIndex(where: { $0.id == lineId }) else { return }
+        let clamped = max(0, min(100, value))
+        state.bills[bi].lines[li].value = clamped
+        let otherIndices = state.bills[bi].lines.indices.filter { $0 != li }
+        let n = otherIndices.count
+        if n > 0 {
+            let remaining = 100.0 - clamped
+            let share = ((remaining / Double(n)) * 100).rounded() / 100
+            let last  = remaining - share * Double(n - 1)
+            for (offset, idx) in otherIndices.enumerated() {
+                state.bills[bi].lines[idx].value = (offset == n - 1) ? last : share
+            }
+        }
+        save()
+    }
+
     private func redistributePctLines(billIdx: Int) {
         let n = state.bills[billIdx].lines.count
         guard n > 0 else { return }
