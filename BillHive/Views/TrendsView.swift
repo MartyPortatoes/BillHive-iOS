@@ -9,9 +9,16 @@ enum TrendsViewMode: String, CaseIterable {
 struct TrendsView: View {
     @EnvironmentObject var vm: AppViewModel
     @State private var mode: TrendsViewMode = .perPerson
+    @State private var showAllMonths = false
 
     var sortedMonthKeys: [String] {
         vm.monthly.keys.sorted()
+    }
+
+    var displayedMonthKeys: [String] {
+        let all = sortedMonthKeys
+        guard !showAllMonths, all.count > 12 else { return all }
+        return Array(all.suffix(12))
     }
 
     var body: some View {
@@ -42,6 +49,20 @@ struct TrendsView: View {
                         }
                         .padding(.top, 16)
 
+                        if sortedMonthKeys.count > 12 {
+                            Button {
+                                showAllMonths.toggle()
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: showAllMonths ? "clock.arrow.trianglehead.counterclockwise.rotate.90" : "calendar")
+                                        .font(.system(size: 10))
+                                    Text(showAllMonths ? "Showing all \(sortedMonthKeys.count) months — show last 12" : "Showing last 12 months — show all \(sortedMonthKeys.count)")
+                                        .font(.system(size: 10, design: .monospaced))
+                                }
+                                .foregroundColor(.bhAmber)
+                            }
+                        }
+
                         if sortedMonthKeys.isEmpty {
                             VStack(spacing: 8) {
                                 Image(systemName: "chart.line.uptrend.xyaxis")
@@ -57,9 +78,9 @@ struct TrendsView: View {
                         } else {
                             switch mode {
                             case .perPerson:
-                                PersonTrendsView(monthKeys: sortedMonthKeys)
+                                PersonTrendsView(monthKeys: displayedMonthKeys)
                             case .byBill:
-                                BillTrendsView(monthKeys: sortedMonthKeys)
+                                BillTrendsView(monthKeys: displayedMonthKeys)
                             }
                         }
 
@@ -98,10 +119,8 @@ struct PersonTrendsView: View {
             guard let md = vm.monthly[key] else { continue }
             let label = String(key.prefix(7))
 
-            // My total
             var myTotal = md._myTotal ?? 0
             if myTotal == 0 {
-                // Recompute
                 for bill in vm.state.bills {
                     let billSplit = computeSplit(bill: bill, md: md)
                     myTotal += billSplit["me"] ?? 0
@@ -110,7 +129,6 @@ struct PersonTrendsView: View {
             points.append(DataPoint(month: key, label: label, personId: "me",
                                     personName: "Me", amount: myTotal, color: .bhAmber))
 
-            // Each person
             for person in nonMe {
                 let owes = md._owes?[person.id] ?? 0
                 points.append(DataPoint(month: key, label: label, personId: person.id,
@@ -147,7 +165,7 @@ struct PersonTrendsView: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            // Line chart
+            // Line chart — full width
             VStack(alignment: .leading, spacing: 8) {
                 Text("Total Bills Over Time")
                     .bhSectionTitle()
@@ -189,67 +207,63 @@ struct PersonTrendsView: View {
             .padding(16)
             .bhCard()
 
-            HStack(alignment: .top, spacing: 12) {
-                // Donut
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("This Month — By Bill")
-                        .bhSectionTitle()
+            // This Month — By Bill donut — full width
+            VStack(alignment: .leading, spacing: 8) {
+                Text("This Month — By Bill")
+                    .bhSectionTitle()
 
-                    if currentMonthBillData.isEmpty {
-                        Text("No data this month")
-                            .font(.system(size: 11, design: .monospaced))
-                            .foregroundColor(.bhMuted2)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 40)
-                    } else {
-                        DonutChartView(items: currentMonthBillData)
-                            .frame(height: 160)
+                if currentMonthBillData.isEmpty {
+                    Text("No data this month")
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundColor(.bhMuted2)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 40)
+                } else {
+                    DonutChartView(items: currentMonthBillData)
+                        .frame(height: 180)
 
-                        ForEach(currentMonthBillData, id: \.name) { item in
-                            HStack(spacing: 4) {
-                                Circle().fill(item.color).frame(width: 6, height: 6)
-                                Text(item.name).font(.system(size: 9, design: .monospaced)).foregroundColor(.bhMuted)
-                                Spacer()
-                                Text(item.amount.asCurrency).font(.system(size: 9, weight: .semibold, design: .monospaced)).foregroundColor(.bhText)
-                            }
+                    ForEach(currentMonthBillData, id: \.name) { item in
+                        HStack(spacing: 4) {
+                            Circle().fill(item.color).frame(width: 6, height: 6)
+                            Text(item.name).font(.system(size: 10, design: .monospaced)).foregroundColor(.bhMuted)
+                            Spacer()
+                            Text(item.amount.asCurrency).font(.system(size: 10, weight: .semibold, design: .monospaced)).foregroundColor(.bhText)
                         }
                     }
                 }
-                .padding(16)
-                .bhCard()
-                .frame(maxWidth: .infinity)
+            }
+            .padding(16)
+            .bhCard()
 
-                // History log
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Historical Log")
-                        .bhSectionTitle()
+            // Historical Log — full width
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Historical Log")
+                    .bhSectionTitle()
 
-                    ForEach(monthKeys.reversed(), id: \.self) { key in
-                        if let md = vm.monthly[key] {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(MonthKey.label(key))
-                                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                                    .foregroundColor(.bhText)
+                ForEach(monthKeys.reversed(), id: \.self) { key in
+                    if let md = vm.monthly[key] {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(MonthKey.label(key))
+                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                .foregroundColor(.bhText)
 
-                                let owesMap = md._owes ?? [:]
-                                ForEach(vm.state.people.filter { $0.id != "me" }) { person in
-                                    let amt = owesMap[person.id] ?? 0
-                                    HStack {
-                                        Text(person.name).font(.system(size: 9, design: .monospaced)).foregroundColor(.bhMuted)
-                                        Spacer()
-                                        Text(amt.asCurrency).font(.system(size: 9, design: .monospaced)).foregroundColor(.bhText)
-                                    }
+                            let owesMap = md._owes ?? [:]
+                            ForEach(vm.state.people.filter { $0.id != "me" }) { person in
+                                let amt = owesMap[person.id] ?? 0
+                                HStack {
+                                    Text(person.name).font(.system(size: 9, design: .monospaced)).foregroundColor(.bhMuted)
+                                    Spacer()
+                                    Text(amt.asCurrency).font(.system(size: 9, design: .monospaced)).foregroundColor(.bhText)
                                 }
                             }
-                            .padding(.bottom, 6)
-                            Divider().background(Color.bhBorder)
                         }
+                        .padding(.bottom, 6)
+                        Divider().background(Color.bhBorder)
                     }
                 }
-                .padding(16)
-                .bhCard()
-                .frame(maxWidth: .infinity)
             }
+            .padding(16)
+            .bhCard()
         }
     }
 }
@@ -263,7 +277,7 @@ struct DonutChartView: View {
 
     private var segments: [(start: Angle, end: Angle, color: Color)] {
         var result: [(start: Angle, end: Angle, color: Color)] = []
-        var current: Double = -90 // start from top
+        var current: Double = -90
         for item in items {
             let fraction = total > 0 ? item.amount / total : 0
             let sweep = fraction * 360
@@ -347,7 +361,7 @@ struct BillTrendsView: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            // Per-bill line chart
+            // Per-bill line chart — full width
             VStack(alignment: .leading, spacing: 8) {
                 Text("Per-Bill Totals Over Time")
                     .bhSectionTitle()
@@ -375,71 +389,67 @@ struct BillTrendsView: View {
             .padding(16)
             .bhCard()
 
-            HStack(alignment: .top, spacing: 12) {
-                // Stacked bar
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Household Total by Month")
-                        .bhSectionTitle()
+            // Stacked bar — full width
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Household Total by Month")
+                    .bhSectionTitle()
 
-                    Chart(chartData) { point in
-                        BarMark(
-                            x: .value("Month", point.month),
-                            y: .value("Amount", point.amount)
-                        )
-                        .foregroundStyle(by: .value("Bill", point.billName))
-                    }
-                    .frame(height: 180)
-                    .chartYAxis {
-                        AxisMarks { value in
-                            AxisGridLine().foregroundStyle(Color.bhBorder)
-                            AxisValueLabel {
-                                if let v = value.as(Double.self) {
-                                    Text(v.asCurrency).font(.system(size: 9, design: .monospaced)).foregroundStyle(Color.bhMuted)
-                                }
+                Chart(chartData) { point in
+                    BarMark(
+                        x: .value("Month", point.month),
+                        y: .value("Amount", point.amount)
+                    )
+                    .foregroundStyle(by: .value("Bill", point.billName))
+                }
+                .frame(height: 200)
+                .chartYAxis {
+                    AxisMarks { value in
+                        AxisGridLine().foregroundStyle(Color.bhBorder)
+                        AxisValueLabel {
+                            if let v = value.as(Double.self) {
+                                Text(v.asCurrency).font(.system(size: 9, design: .monospaced)).foregroundStyle(Color.bhMuted)
                             }
                         }
                     }
                 }
-                .padding(16)
-                .bhCard()
-                .frame(maxWidth: .infinity)
-
-                // Summary log
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Bill Totals — This Month")
-                        .bhSectionTitle()
-
-                    let md = vm.monthly[vm.monthKey]
-                    ForEach(vm.state.bills) { bill in
-                        HStack {
-                            Text("\(bill.icon) \(bill.name)")
-                                .font(.system(size: 10, design: .monospaced))
-                                .foregroundColor(.bhMuted)
-                            Spacer()
-                            Text((md?.totals[bill.id] ?? 0).asCurrency)
-                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                                .foregroundColor(.bhText)
-                        }
-                        .padding(.vertical, 2)
-                    }
-
-                    Divider().background(Color.bhBorder)
-
-                    let grandTotal = vm.state.bills.reduce(0.0) { $0 + (md?.totals[$1.id] ?? 0) }
-                    HStack {
-                        Text("Total")
-                            .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                            .foregroundColor(.bhText)
-                        Spacer()
-                        Text(grandTotal.asCurrency)
-                            .font(.system(size: 13, weight: .bold, design: .monospaced))
-                            .foregroundColor(.bhAmber)
-                    }
-                }
-                .padding(16)
-                .bhCard()
-                .frame(maxWidth: .infinity)
             }
+            .padding(16)
+            .bhCard()
+
+            // Bill Totals this month — full width
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Bill Totals — This Month")
+                    .bhSectionTitle()
+
+                let md = vm.monthly[vm.monthKey]
+                ForEach(vm.state.bills) { bill in
+                    HStack {
+                        Text("\(bill.icon) \(bill.name)")
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundColor(.bhMuted)
+                        Spacer()
+                        Text((md?.totals[bill.id] ?? 0).asCurrency)
+                            .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                            .foregroundColor(.bhText)
+                    }
+                    .padding(.vertical, 2)
+                }
+
+                Divider().background(Color.bhBorder)
+
+                let grandTotal = vm.state.bills.reduce(0.0) { $0 + (md?.totals[$1.id] ?? 0) }
+                HStack {
+                    Text("Total")
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .foregroundColor(.bhText)
+                    Spacer()
+                    Text(grandTotal.asCurrency)
+                        .font(.system(size: 13, weight: .bold, design: .monospaced))
+                        .foregroundColor(.bhAmber)
+                }
+            }
+            .padding(16)
+            .bhCard()
         }
     }
 }
