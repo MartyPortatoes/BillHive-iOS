@@ -25,7 +25,7 @@ struct SettingsView: View {
                                 ForEach(Array(vm.state.people.enumerated()), id: \.element.id) { idx, person in
                                     PersonRowView(idx: idx, person: person)
                                     if idx < vm.state.people.count - 1 {
-                                        Divider().background(Color.bhBorder)
+                                        Divider().background(Color.bhBorder).padding(.vertical, 2)
                                     }
                                 }
                             }
@@ -234,7 +234,8 @@ struct PersonRowView: View {
     let person: Person
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
+            // Name row
             HStack(spacing: 8) {
                 ColorPicker("", selection: Binding(
                     get: { Color(hex: vm.state.people[idx].color) ?? .bhAmber },
@@ -280,6 +281,7 @@ struct PersonRowView: View {
                 }
             }
 
+            // Payment method + ID row
             HStack(spacing: 8) {
                 Picker("Pay method", selection: Binding(
                     get: { vm.state.people[idx].payMethod },
@@ -292,7 +294,7 @@ struct PersonRowView: View {
                 .pickerStyle(.menu)
                 .tint(.bhText)
                 .font(.system(size: 11, design: .monospaced))
-                .frame(width: 130)
+                .frame(width: 115)
                 .padding(6)
                 .background(Color.bhSurface2)
                 .cornerRadius(6)
@@ -319,6 +321,36 @@ struct PersonRowView: View {
                 }
             }
 
+            // Custom Zelle URL (only when Zelle is selected)
+            if vm.state.people[idx].payMethod == .zelle {
+                HStack(spacing: 8) {
+                    Image(systemName: "link")
+                        .font(.system(size: 11))
+                        .foregroundColor(.bhMuted)
+                        .frame(width: 16)
+
+                    TextField("Custom Zelle URL (optional)", text: Binding(
+                        get: { vm.state.people[idx].zelleUrl ?? "" },
+                        set: {
+                            let v = $0.trimmingCharacters(in: .whitespaces)
+                            vm.state.people[idx].zelleUrl = v.isEmpty ? nil : v
+                            vm.save()
+                        }
+                    ))
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundColor(.bhText)
+                    .textFieldStyle(.plain)
+                    .keyboardType(.URL)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+                    .padding(7)
+                    .background(Color.bhSurface2)
+                    .cornerRadius(6)
+                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.bhBorder, lineWidth: 1))
+                }
+            }
+
+            // Email row
             HStack(spacing: 8) {
                 Image(systemName: "envelope")
                     .font(.system(size: 11))
@@ -341,7 +373,7 @@ struct PersonRowView: View {
                 .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.bhBorder, lineWidth: 1))
             }
         }
-        .padding(.vertical, 10)
+        .padding(.vertical, 8)
     }
 }
 

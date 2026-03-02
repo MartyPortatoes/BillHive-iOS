@@ -10,7 +10,7 @@ enum PayMethod: String, Codable, CaseIterable {
 
     var displayName: String {
         switch self {
-        case .none: return "No Payment"
+        case .none: return "None"
         case .zelle: return "Zelle"
         case .venmo: return "Venmo"
         case .cashapp: return "Cash App"
