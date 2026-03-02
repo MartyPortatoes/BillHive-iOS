@@ -275,7 +275,7 @@ struct BillBodyView: View {
             Button {
                 vm.addLine(to: bill.id)
             } label: {
-                Label("Add Line", systemImage: "plus")
+                Label("Add Person", systemImage: "plus")
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundColor(.bhMuted)
             }
