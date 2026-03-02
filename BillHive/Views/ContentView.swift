@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject var vm: AppViewModel
     @State private var selectedTab = 0
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -61,6 +62,11 @@ struct ContentView: View {
         .animation(.easeInOut(duration: 0.25), value: vm.toastMessage)
         .animation(.easeInOut(duration: 0.25), value: vm.error)
         .preferredColorScheme(.dark)
+        .onChange(of: scenePhase) { phase in
+            if phase == .active && !vm.isLocal {
+                Task { await vm.refresh() }
+            }
+        }
     }
 }
 
