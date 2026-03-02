@@ -334,13 +334,30 @@ class AppViewModel: ObservableObject {
             personId: defaultPersonId,
             value: 0
         ))
+        if state.bills[idx].splitType == .pct {
+            redistributePctLines(billIdx: idx)
+        }
         save()
     }
 
     func removeLine(billId: String, lineId: String) {
         guard let idx = state.bills.firstIndex(where: { $0.id == billId }) else { return }
         state.bills[idx].lines.removeAll { $0.id == lineId }
+        if state.bills[idx].splitType == .pct {
+            redistributePctLines(billIdx: idx)
+        }
         save()
+    }
+
+    private func redistributePctLines(billIdx: Int) {
+        let n = state.bills[billIdx].lines.count
+        guard n > 0 else { return }
+        // Round each share to 2dp; give the last line the true remainder so totals stay at 100.
+        let share = ((100.0 / Double(n)) * 100).rounded() / 100
+        let last  = 100.0 - share * Double(n - 1)
+        for i in 0 ..< n {
+            state.bills[billIdx].lines[i].value = (i == n - 1) ? last : share
+        }
     }
 
     // MARK: - Checklist
