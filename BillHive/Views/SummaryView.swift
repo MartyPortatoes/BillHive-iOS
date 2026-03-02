@@ -38,7 +38,7 @@ struct SummaryView: View {
                             .padding(.vertical, 40)
                         } else {
                             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                                ForEach(nonMePeople) { person in
+                                ForEach(nonMePeople.filter { (owes[$0.id]?.total ?? 0) > 0 }) { person in
                                     PersonSummaryCard(
                                         person: person,
                                         personOwes: owes[person.id]
@@ -178,32 +178,24 @@ struct FullBreakdownRow: View {
             }
             .padding(.vertical, 10)
 
-            ForEach(bill.lines) { line in
-                let payer = line.coveredById ?? line.personId
-                if let person = vm.getPerson(payer) {
-                    let amount = split[payer] ?? 0
-                    HStack {
-                        HStack(spacing: 4) {
-                            Circle()
-                                .fill(Color(hex: person.color) ?? .gray)
-                                .frame(width: 6, height: 6)
-                            Text(person.name)
-                                .font(.system(size: 11, design: .monospaced))
-                                .foregroundColor(.bhMuted)
-                            if line.coveredById != nil {
-                                Text("covers \(line.personId)")
-                                    .font(.system(size: 9, design: .monospaced))
-                                    .foregroundColor(.bhMuted2)
-                            }
-                        }
-                        Spacer()
-                        Text(amount.asCurrency)
-                            .font(.system(size: 11, weight: .medium, design: .monospaced))
-                            .foregroundColor(.bhText)
+            ForEach(vm.state.people.filter { (split[$0.id] ?? 0) > 0 }) { person in
+                let amount = split[person.id] ?? 0
+                HStack {
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(Color(hex: person.color) ?? .gray)
+                            .frame(width: 6, height: 6)
+                        Text(person.name)
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundColor(.bhMuted)
                     }
-                    .padding(.vertical, 4)
-                    .padding(.leading, 12)
+                    Spacer()
+                    Text(amount.asCurrency)
+                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .foregroundColor(.bhText)
                 }
+                .padding(.vertical, 4)
+                .padding(.leading, 12)
             }
 
             Divider().background(Color.bhBorder)
