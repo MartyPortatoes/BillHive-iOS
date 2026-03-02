@@ -391,7 +391,7 @@ struct BillLineRowView: View {
                         vm.state.bills[bi].lines[li].value = val
                         vm.saveMonthSnapshot()
                     }
-                ), format: .number)
+                ), format: .number.precision(.fractionLength(0...2)))
                 .font(.system(size: 12, design: .monospaced))
                 .foregroundColor(.bhText)
                 .multilineTextAlignment(.trailing)
