@@ -191,6 +191,59 @@ struct BillBodyView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            // ── Bill identity ──
+            HStack(spacing: 8) {
+                // Emoji / icon
+                TextField("", text: Binding(
+                    get: { bill.icon },
+                    set: { val in
+                        guard let idx = billIndex else { return }
+                        vm.state.bills[idx].icon = val
+                        vm.save()
+                    }
+                ))
+                .font(.system(size: 20))
+                .multilineTextAlignment(.center)
+                .frame(width: 44, height: 44)
+                .background(Color(hex: bill.color)?.opacity(0.2) ?? Color.bhSurface2)
+                .cornerRadius(8)
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.bhBorder, lineWidth: 1))
+
+                // Name
+                TextField("Bill name", text: Binding(
+                    get: { bill.name },
+                    set: { val in
+                        guard let idx = billIndex else { return }
+                        vm.state.bills[idx].name = val
+                        vm.save()
+                    }
+                ))
+                .font(.system(size: 13, design: .monospaced))
+                .foregroundColor(.bhText)
+                .textFieldStyle(.plain)
+                .padding(8)
+                .background(Color.bhSurface2)
+                .cornerRadius(6)
+                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.bhBorder, lineWidth: 1))
+
+                // Accent color
+                ColorPicker("", selection: Binding(
+                    get: { Color(hex: bill.color) ?? .bhAmber },
+                    set: { newColor in
+                        guard let idx = billIndex, let hex = newColor.toHex() else { return }
+                        vm.state.bills[idx].color = hex
+                        vm.save()
+                    }
+                ))
+                .labelsHidden()
+                .frame(width: 44, height: 44)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 14)
+            .padding(.bottom, 10)
+
+            Divider().background(Color.bhBorder).padding(.horizontal, 16)
+
             // Split type toggle
             HStack(spacing: 8) {
                 Text("Split Type")
@@ -217,7 +270,7 @@ struct BillBodyView: View {
                 .overlay(RoundedRectangle(cornerRadius: 7).stroke(Color.bhBorder, lineWidth: 1))
             }
             .padding(.horizontal, 16)
-            .padding(.top, 14)
+            .padding(.top, 8)
             .padding(.bottom, 10)
 
             // Total bill input — used by pct bills (each line % × total) and
