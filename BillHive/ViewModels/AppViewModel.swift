@@ -56,6 +56,7 @@ class AppViewModel: ObservableObject {
         if isLocal {
             state = LocalStorageManager.shared.loadState()
             monthly = LocalStorageManager.shared.loadMonths()
+            normalizePctLines()
             autoFillPreservedBills()
         } else {
             do {
@@ -65,12 +66,30 @@ class AppViewModel: ObservableObject {
                 state = try await stateTask
                 monthly = try await monthsTask
                 emailConfig = try? await emailTask
+                normalizePctLines()
                 autoFillPreservedBills()
             } catch {
                 self.error = error.localizedDescription
             }
         }
         isLoading = false
+    }
+
+    /// Ensures every pct-split bill has line values that sum to 100.
+    /// Bills loaded from JSON (server or local file) may have all-zero values
+    /// if they were saved before percentages were configured, which causes
+    /// computeBillSplit to return $0 for every person despite a non-zero total.
+    private func normalizePctLines() {
+        var changed = false
+        for i in state.bills.indices {
+            guard state.bills[i].splitType == .pct else { continue }
+            let sum = state.bills[i].lines.reduce(0.0) { $0 + $1.value }
+            if sum == 0 {
+                redistributePctLines(billIdx: i)
+                changed = true
+            }
+        }
+        if changed { save() }
     }
 
     func refresh() async {
