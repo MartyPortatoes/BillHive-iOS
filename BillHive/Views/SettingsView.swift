@@ -26,6 +26,15 @@ struct SettingsView: View {
                                 .bhSectionTitle()
                                 .padding(.bottom, 2)
 
+                            // Explanatory note about the primary person
+                            (Text("The ").font(.system(size: 11, design: .monospaced)).foregroundColor(.bhMuted)
+                            + Text("★ Primary").font(.system(size: 11, weight: .semibold, design: .monospaced)).foregroundColor(.bhAmber)
+                            + Text(" person is ").font(.system(size: 11, design: .monospaced)).foregroundColor(.bhMuted)
+                            + Text("you").font(.system(size: 11, weight: .bold, design: .monospaced)).foregroundColor(.bhText)
+                            + Text(" — the one who fronts all bills and collects from everyone else. This person cannot be removed.").font(.system(size: 11, design: .monospaced)).foregroundColor(.bhMuted))
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.bottom, 4)
+
                             ForEach(Array(vm.state.people.enumerated()), id: \.element.id) { idx, person in
                                 PersonCardView(
                                     idx: idx,
@@ -217,12 +226,12 @@ struct PersonCardView: View {
                     Spacer()
 
                     if person.isMe {
-                        Text("you")
-                            .font(.system(size: 9, design: .monospaced))
-                            .foregroundColor(.bhMuted2)
-                            .padding(.horizontal, 6)
+                        Text("★ YOU")
+                            .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                            .foregroundColor(.bhAmber)
+                            .padding(.horizontal, 7)
                             .padding(.vertical, 3)
-                            .background(Color.bhSurface3)
+                            .background(Color.bhAmber.opacity(0.12))
                             .cornerRadius(4)
                     } else {
                         Text(person.payMethod.displayName)

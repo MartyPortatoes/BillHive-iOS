@@ -77,16 +77,22 @@ class AppViewModel: ObservableObject {
         isLoading = false
     }
 
-    /// One-time migration: ensures the primary person always has the literal ID "me".
-    /// addBill() creates lines with personId:"me", but addPerson() assigns timestamp IDs.
-    /// If a user selected their own person entry from the line picker, that line now carries
-    /// a timestamp personId and all split["me"] lookups return nil → $0. This remaps the
-    /// first person's ID to "me" and updates every bill line reference, then saves.
+    /// Ensures the primary "me" person always exists with the literal ID "me".
+    /// Three cases handled:
+    ///   1. No people at all → insert a default "Me" entry at index 0 and save.
+    ///   2. A person with id "me" already exists → nothing to do.
+    ///   3. People exist but none has id "me" (legacy timestamp IDs) → promote
+    ///      the first person to "me" and remap all bill line references, then save.
     private func normalizeStatePeople() {
-        guard !state.people.isEmpty else { return }
-        let oldId = state.people[0].id
-        guard oldId != "me" else { return }
+        if state.people.isEmpty {
+            state.people = [Person(id: "me", name: "Me", color: "#F5A800")]
+            save()
+            return
+        }
+        guard !state.people.contains(where: { $0.id == "me" }) else { return }
 
+        // Legacy migration: first person was created with a timestamp ID
+        let oldId = state.people[0].id
         state.people[0].id = "me"
         for bi in state.bills.indices {
             for li in state.bills[bi].lines.indices {
