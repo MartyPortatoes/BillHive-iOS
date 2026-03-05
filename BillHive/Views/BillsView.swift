@@ -117,13 +117,7 @@ struct BillCardView: View {
 
     var total: Double { vm.getBillTotal(bill.id) }
     var myShare: Double {
-        let split = vm.computeBillSplit(bill)
-        let explicit = split["me"] ?? 0
-        if explicit > 0 { return explicit }
-        // No explicit "me" line (or it's zero): my share is whatever
-        // remains after summing every other person's allocated amount.
-        let othersTotal = split.filter { $0.key != "me" }.values.reduce(0, +)
-        return max(0, total - othersTotal)
+        vm.computeBillSplit(bill)["me"] ?? 0
     }
 
     var body: some View {

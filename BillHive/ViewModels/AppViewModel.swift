@@ -56,6 +56,7 @@ class AppViewModel: ObservableObject {
         if isLocal {
             state = LocalStorageManager.shared.loadState()
             monthly = LocalStorageManager.shared.loadMonths()
+            normalizeStatePeople()
             normalizePctLines()
             autoFillPreservedBills()
         } else {
@@ -66,6 +67,7 @@ class AppViewModel: ObservableObject {
                 state = try await stateTask
                 monthly = try await monthsTask
                 emailConfig = try? await emailTask
+                normalizeStatePeople()
                 normalizePctLines()
                 autoFillPreservedBills()
             } catch {
@@ -73,6 +75,30 @@ class AppViewModel: ObservableObject {
             }
         }
         isLoading = false
+    }
+
+    /// One-time migration: ensures the primary person always has the literal ID "me".
+    /// addBill() creates lines with personId:"me", but addPerson() assigns timestamp IDs.
+    /// If a user selected their own person entry from the line picker, that line now carries
+    /// a timestamp personId and all split["me"] lookups return nil → $0. This remaps the
+    /// first person's ID to "me" and updates every bill line reference, then saves.
+    private func normalizeStatePeople() {
+        guard !state.people.isEmpty else { return }
+        let oldId = state.people[0].id
+        guard oldId != "me" else { return }
+
+        state.people[0].id = "me"
+        for bi in state.bills.indices {
+            for li in state.bills[bi].lines.indices {
+                if state.bills[bi].lines[li].personId == oldId {
+                    state.bills[bi].lines[li].personId = "me"
+                }
+                if state.bills[bi].lines[li].coveredById == oldId {
+                    state.bills[bi].lines[li].coveredById = "me"
+                }
+            }
+        }
+        save()
     }
 
     /// Ensures every pct-split bill has line values that sum to 100.
