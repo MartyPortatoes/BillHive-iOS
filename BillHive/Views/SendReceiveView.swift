@@ -168,6 +168,22 @@ struct ReceiveCard: View {
         return URL(string: "venmo://paycharge?txn=charge&recipients=\(handle)&amount=\(String(format: "%.2f", amount))&note=\(encoded)")
     }
 
+    var cashAppURL: URL? {
+        guard person.payMethod == .cashapp, !person.payId.isEmpty else { return nil }
+        let tag = person.payId.hasPrefix("$") ? person.payId : "$\(person.payId)"
+        return URL(string: "https://cash.app/\(tag)")
+    }
+
+    var payURL: URL? { zelleURL ?? venmoURL ?? cashAppURL }
+
+    var payLabel: String {
+        switch person.payMethod {
+        case .venmo: return "Venmo"
+        case .cashapp: return "Cash App"
+        default: return "Zelle"
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Head
@@ -194,9 +210,9 @@ struct ReceiveCard: View {
 
                     HStack(spacing: 6) {
                         // Payment button
-                        if let url = zelleURL ?? venmoURL {
+                        if let url = payURL {
                             Link(destination: url) {
-                                Text(person.payMethod == .venmo ? "Venmo" : "Zelle")
+                                Text(payLabel)
                                     .font(.system(size: 11, weight: .semibold, design: .monospaced))
                                     .foregroundColor(Color(hex: "#0c0d0f"))
                                     .padding(.horizontal, 10)
@@ -259,12 +275,12 @@ struct ReceiveCard: View {
                         .buttonStyle(BHSecondaryButtonStyle())
                         .disabled(person.email.isEmpty || isSendingEmail)
 
-                        if let url = zelleURL ?? venmoURL {
+                        if let url = payURL {
                             Link(destination: url) {
                                 HStack(spacing: 5) {
                                     Image(systemName: "arrow.up.right.square")
                                         .font(.system(size: 11))
-                                    Text(person.payMethod == .venmo ? "Request via Venmo" : "Request via Zelle")
+                                    Text("Request via \(payLabel)")
                                 }
                                 .font(.system(size: 11, weight: .medium, design: .monospaced))
                                 .foregroundColor(.bhText)
