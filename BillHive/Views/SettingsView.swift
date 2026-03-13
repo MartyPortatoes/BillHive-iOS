@@ -16,7 +16,7 @@ struct SettingsView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
                         Text("Settings")
-                            .font(.system(size: 18, weight: .bold, design: .monospaced))
+                            .font(.system(size: 18, weight: .bold, design: .default))
                             .foregroundColor(.bhText)
                             .padding(.top, 16)
 
@@ -178,6 +178,9 @@ struct SettingsView: View {
                     serverURL = newURL
                     APIClient.shared.serverURL = newURL
                     Task { await vm.load() }
+                }, onLogout: {
+                    serverURL = ""
+                    APIClient.shared.serverURL = ""
                 })
             }
         }
@@ -643,6 +646,7 @@ struct EMField: View {
 struct ServerEditSheet: View {
     @Binding var url: String
     let onSave: (String) -> Void
+    let onLogout: () -> Void
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -673,6 +677,19 @@ struct ServerEditSheet: View {
                             dismiss()
                         }.buttonStyle(BHPrimaryButtonStyle())
                     }
+
+                    Button {
+                        onLogout()
+                        dismiss()
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "rectangle.portrait.and.arrow.right")
+                            Text("Logout")
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(BHDangerButtonStyle())
+
                     Spacer()
                 }
                 .padding(24)

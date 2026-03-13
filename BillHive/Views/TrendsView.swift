@@ -30,10 +30,10 @@ struct TrendsView: View {
                         HStack(alignment: .top) {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Trends")
-                                    .font(.system(size: 18, weight: .bold, design: .monospaced))
+                                    .font(.system(size: 18, weight: .bold, design: .default))
                                     .foregroundColor(.bhText)
                                 Text("Month-over-month spend tracking.")
-                                    .font(.system(size: 11, design: .monospaced))
+                                    .font(.system(size: 11, design: .default))
                                     .foregroundColor(.bhMuted)
                             }
 

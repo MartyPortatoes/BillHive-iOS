@@ -16,10 +16,10 @@ struct SendReceiveView: View {
                     VStack(alignment: .leading, spacing: 24) {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Send & Receive")
-                                .font(.system(size: 18, weight: .bold, design: .monospaced))
+                                .font(.system(size: 18, weight: .bold, design: .default))
                                 .foregroundColor(.bhText)
                             Text("Collect from others and pay your bills.")
-                                .font(.system(size: 11, design: .monospaced))
+                                .font(.system(size: 11, design: .default))
                                 .foregroundColor(.bhMuted)
                         }
                         .padding(.top, 16)

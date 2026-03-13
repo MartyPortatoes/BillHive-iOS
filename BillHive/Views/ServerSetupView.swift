@@ -106,16 +106,28 @@ struct ServerSetupView: View {
     private func testConnection() async {
         isTesting = true
         testResult = nil
-        let original = APIClient.shared.serverURL
-        APIClient.shared.serverURL = inputURL
         do {
-            let ok = try await APIClient.shared.health()
-            testSuccess = ok
-            testResult = ok ? "Connected successfully!" : "Server responded but health check failed"
+            var s = inputURL.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !s.hasPrefix("http") { s = "http://" + s }
+            s = s.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            guard let url = URL(string: s + "/api/health") else {
+                throw URLError(.badURL)
+            }
+            var req = URLRequest(url: url)
+            req.timeoutInterval = 10
+            let (data, response) = try await URLSession.shared.data(for: req)
+            if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+                testSuccess = false
+                testResult = "Server error \(http.statusCode)"
+            } else {
+                let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+                let ok = obj?["ok"] as? Bool == true
+                testSuccess = ok
+                testResult = ok ? "Connection successful!" : "Server responded but health check failed"
+            }
         } catch {
             testSuccess = false
             testResult = error.localizedDescription
-            APIClient.shared.serverURL = original
         }
         isTesting = false
     }

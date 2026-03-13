@@ -14,10 +14,10 @@ struct SummaryView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Summary")
-                                .font(.system(size: 18, weight: .bold, design: .monospaced))
+                                .font(.system(size: 18, weight: .bold, design: .default))
                                 .foregroundColor(.bhText)
                             Text("What everyone owes this month — \(vm.monthLabel)")
-                                .font(.system(size: 11, design: .monospaced))
+                                .font(.system(size: 11, design: .default))
                                 .foregroundColor(.bhMuted)
                         }
                         .padding(.top, 16)

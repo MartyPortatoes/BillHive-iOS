@@ -40,7 +40,7 @@ struct MailFallbackView: View {
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
                     Text("No Mail Account")
-                        .font(.system(size: 18, weight: .bold, design: .monospaced))
+                        .font(.system(size: 18, weight: .bold, design: .default))
                         .foregroundColor(.bhText)
                     Spacer()
                     Button("Done") { dismiss() }
@@ -49,7 +49,7 @@ struct MailFallbackView: View {
                 }
 
                 Text("Mail app is not configured. Copy the email body below and paste it manually.")
-                    .font(.system(size: 12, design: .monospaced))
+                    .font(.system(size: 12, design: .default))
                     .foregroundColor(.bhMuted)
 
                 ScrollView {

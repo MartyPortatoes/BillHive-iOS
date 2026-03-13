@@ -16,7 +16,7 @@ struct BillsView: View {
 
                         VStack(spacing: 1) {
                             Text("Bills")
-                                .font(.system(size: 18, weight: .bold, design: .monospaced))
+                                .font(.system(size: 18, weight: .bold, design: .default))
                                 .foregroundColor(.bhText)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.horizontal, 16)
@@ -24,7 +24,7 @@ struct BillsView: View {
                                 .padding(.bottom, 4)
 
                             Text("Add your bills and configure who owes what.")
-                                .font(.system(size: 11, design: .monospaced))
+                                .font(.system(size: 11, design: .default))
                                 .foregroundColor(.bhMuted)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.horizontal, 16)
