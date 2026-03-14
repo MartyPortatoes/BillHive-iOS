@@ -17,11 +17,11 @@ struct ServerSetupView: View {
 
                 // Logo
                 VStack(spacing: 12) {
-                    HexLogoMark(size: 64)
-                    Text("BillHive")
+                    TriHexLogoMark(size: 72)
+                    Text("SelfHive")
                         .font(.system(size: 28, weight: .black, design: .default))
                         .foregroundColor(.bhText)
-                    Text("household manager")
+                    Text("self-hosted bill manager")
                         .font(.system(size: 11, design: .monospaced))
                         .tracking(2)
                         .textCase(.uppercase)
@@ -30,11 +30,11 @@ struct ServerSetupView: View {
 
                 // Setup card
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("Connect to your BillHive server")
+                    Text("Connect to your SelfHive server")
                         .font(.system(size: 14, weight: .semibold, design: .monospaced))
                         .foregroundColor(.bhText)
 
-                    Text("Enter the URL of your self-hosted BillHive instance.")
+                    Text("Enter the URL of your self-hosted SelfHive instance.")
                         .font(.system(size: 12, design: .monospaced))
                         .foregroundColor(.bhMuted)
 
@@ -135,6 +135,36 @@ struct ServerSetupView: View {
     private func saveAndConnect() {
         serverURL = inputURL
         APIClient.shared.serverURL = inputURL
+    }
+}
+
+// Three-hexagon logo mark — matches the website SVG (viewBox 100×100)
+struct TriHexLogoMark: View {
+    let size: CGFloat
+
+    // SVG points scaled from 100×100 viewBox to `size`
+    private func hex(_ pts: [(CGFloat, CGFloat)]) -> Path {
+        var path = Path()
+        let scaled = pts.map { CGPoint(x: $0.0 / 100 * size, y: $0.1 / 100 * size) }
+        path.move(to: scaled[0])
+        scaled.dropFirst().forEach { path.addLine(to: $0) }
+        path.closeSubpath()
+        return path
+    }
+
+    var body: some View {
+        ZStack {
+            // Left hex
+            hex([(48.6,50),(41.2,62.8),(26.4,62.8),(19,50),(26.4,37.2),(41.2,37.2)])
+                .fill(Color.bhAmber)
+            // Top-right hex
+            hex([(72.9,36),(65.5,48.8),(50.7,48.8),(43.3,36),(50.7,23.2),(65.5,23.2)])
+                .fill(Color.bhAmber)
+            // Bottom-right hex
+            hex([(72.9,64),(65.5,76.8),(50.7,76.8),(43.3,64),(50.7,51.2),(65.5,51.2)])
+                .fill(Color.bhAmber)
+        }
+        .frame(width: size, height: size)
     }
 }
 
