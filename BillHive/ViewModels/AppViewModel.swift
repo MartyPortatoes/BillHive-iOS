@@ -27,6 +27,7 @@ class AppViewModel: ObservableObject {
 
     private var saveDebounceTask: Task<Void, Never>? = nil
     private let api = APIClient.shared
+    private var cloudChangeObserver: Any?
 
     init(isLocal: Bool = false) {
         self.isLocal = isLocal
@@ -34,6 +35,26 @@ class AppViewModel: ObservableObject {
         let cal = Calendar.current
         selectedYear = cal.component(.year, from: now)
         selectedMonth = cal.component(.month, from: now)
+
+        #if BILLHIVE_LOCAL
+        if isLocal {
+            cloudChangeObserver = NotificationCenter.default.addObserver(
+                forName: CloudStorageManager.filesDidChangeExternally,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    await self?.reloadFromCloud()
+                }
+            }
+        }
+        #endif
+    }
+
+    deinit {
+        if let observer = cloudChangeObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
     }
 
     var monthKey: String {
@@ -54,8 +75,13 @@ class AppViewModel: ObservableObject {
         isLoading = true
         error = nil
         if isLocal {
+            #if BILLHIVE_LOCAL
+            state = CloudStorageManager.shared.loadState()
+            monthly = CloudStorageManager.shared.loadMonths()
+            #else
             state = LocalStorageManager.shared.loadState()
             monthly = LocalStorageManager.shared.loadMonths()
+            #endif
             normalizeStatePeople()
             normalizePctLines()
             autoFillPreservedBills()
@@ -128,11 +154,35 @@ class AppViewModel: ObservableObject {
         await load()
     }
 
+    #if BILLHIVE_LOCAL
+    /// Reloads data from iCloud if it changed on another device.
+    /// Compares with current in-memory state to avoid unnecessary re-renders.
+    func reloadFromCloud() async {
+        guard isLocal else { return }
+        let newState = CloudStorageManager.shared.loadState()
+        let newMonthly = CloudStorageManager.shared.loadMonths()
+
+        if newState != state {
+            state = newState
+            normalizeStatePeople()
+            normalizePctLines()
+        }
+        if newMonthly != monthly {
+            monthly = newMonthly
+            autoFillPreservedBills()
+        }
+    }
+    #endif
+
     // MARK: - Save (debounced for config, immediate for monthly)
 
     func save() {
         if isLocal {
+            #if BILLHIVE_LOCAL
+            CloudStorageManager.shared.saveState(state)
+            #else
             LocalStorageManager.shared.saveState(state)
+            #endif
             return
         }
         saveDebounceTask?.cancel()
@@ -151,7 +201,11 @@ class AppViewModel: ObservableObject {
         let key = key ?? monthKey
         guard let data = monthly[key] else { return }
         if isLocal {
+            #if BILLHIVE_LOCAL
+            CloudStorageManager.shared.saveMonth(key, data: data)
+            #else
             LocalStorageManager.shared.saveMonth(key, data: data)
+            #endif
             return
         }
         Task {

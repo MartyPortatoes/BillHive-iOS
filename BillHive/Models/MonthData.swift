@@ -1,6 +1,6 @@
 import Foundation
 
-struct MonthData: Codable {
+struct MonthData: Codable, Equatable {
     var totals: [String: Double]         // billId -> total
     var amounts: [String: [String: Double]] // billId -> lineId -> amount
     var _myTotal: Double?
@@ -33,7 +33,7 @@ struct MonthData: Codable {
     }
 }
 
-struct AppSettings: Codable {
+struct AppSettings: Codable, Equatable {
     var myEmail: String
     var mortgageUrl: String
     var mortgageProvider: String
@@ -45,7 +45,7 @@ struct AppSettings: Codable {
     }
 }
 
-struct AppState: Codable {
+struct AppState: Codable, Equatable {
     var settings: AppSettings
     var people: [Person]
     var bills: [Bill]
