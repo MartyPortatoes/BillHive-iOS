@@ -1,9 +1,15 @@
 import SwiftUI
 
+// MARK: - Summary View
+
+/// Monthly summary screen showing what each household member owes and
+/// a full per-bill breakdown with the primary user's total outlay.
 struct SummaryView: View {
     @EnvironmentObject var vm: AppViewModel
 
+    /// Per-person owed amounts for the current month, keyed by person ID.
     var owes: [String: PersonOwes] { vm.computePersonOwes() }
+    /// Total amount the primary user ("me") is paying this month.
     var myTotal: Double { vm.computeMyTotal() }
 
     var body: some View {
@@ -112,6 +118,10 @@ struct SummaryView: View {
     }
 }
 
+// MARK: - Person Summary Card
+
+/// A compact card displaying a single person's total owed amount and
+/// the bill names contributing to that total, styled with the person's color.
 struct PersonSummaryCard: View {
     let person: Person
     let personOwes: PersonOwes?
@@ -159,6 +169,10 @@ struct PersonSummaryCard: View {
     }
 }
 
+// MARK: - Full Breakdown Row
+
+/// Displays a single bill's total and per-person split in the
+/// "Full Bill Breakdown" section.
 struct FullBreakdownRow: View {
     @EnvironmentObject var vm: AppViewModel
     let bill: Bill

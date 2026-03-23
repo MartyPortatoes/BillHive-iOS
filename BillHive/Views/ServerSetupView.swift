@@ -1,5 +1,13 @@
 import SwiftUI
 
+// MARK: - Server Setup View
+
+/// Initial onboarding screen for the SelfHive (remote server) target.
+///
+/// Presents a connection form where the user enters their self-hosted
+/// server URL, tests the connection via `/api/health`, and connects.
+/// Once connected, the URL is persisted in `@AppStorage` and the app
+/// transitions to `ContentView`.
 struct ServerSetupView: View {
     @EnvironmentObject var vm: AppViewModel
     @AppStorage("serverURL") private var serverURL: String = ""
@@ -138,7 +146,12 @@ struct ServerSetupView: View {
     }
 }
 
-// Three-hexagon logo mark — matches the website SVG (viewBox 100×100)
+// MARK: - Tri-Hex Logo Mark
+
+/// Three-hexagon logo matching the BillHive website SVG (viewBox 100×100).
+///
+/// Draws three filled hexagons in an asymmetric cluster: one on the left,
+/// one top-right, and one bottom-right, all in the brand amber color.
 struct TriHexLogoMark: View {
     let size: CGFloat
 
@@ -168,6 +181,10 @@ struct TriHexLogoMark: View {
     }
 }
 
+// MARK: - Hex Logo Mark
+
+/// A single hexagon with a stylized "bill" icon inside — three horizontal
+/// bars of decreasing width, resembling a receipt or invoice.
 struct HexLogoMark: View {
     let size: CGFloat
 
@@ -192,6 +209,9 @@ struct HexLogoMark: View {
     }
 }
 
+// MARK: - Hex Shape
+
+/// A flat-top regular hexagon shape that fills the given rect.
 struct HexShape: Shape {
     func path(in rect: CGRect) -> Path {
         let w = rect.width, h = rect.height
@@ -213,6 +233,7 @@ struct HexShape: Shape {
 
 // MARK: - Button Styles
 
+/// Solid amber background with dark text. Used for primary call-to-action buttons.
 struct BHPrimaryButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) var isEnabled
     func makeBody(configuration: Configuration) -> some View {
@@ -228,6 +249,7 @@ struct BHPrimaryButtonStyle: ButtonStyle {
     }
 }
 
+/// Surface-colored background with a border outline. Used for secondary actions.
 struct BHSecondaryButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) var isEnabled
     func makeBody(configuration: Configuration) -> some View {
@@ -245,6 +267,7 @@ struct BHSecondaryButtonStyle: ButtonStyle {
     }
 }
 
+/// Surface background with a red border and red text. Used for destructive actions.
 struct BHDangerButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label

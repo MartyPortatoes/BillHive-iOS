@@ -1,13 +1,21 @@
 import Foundation
 import SwiftUI
 
-enum PayMethod: String, Codable, CaseIterable {
+// MARK: - Payment Method
+
+/// Supported payment methods for collecting money from household members.
+///
+/// Each method determines what fields are relevant in the person's settings
+/// (e.g. Venmo needs a handle, Zelle needs a phone/email) and what deep-link
+/// URL is generated on the Send & Receive screen.
+enum PayMethod: String, Codable, CaseIterable, Sendable {
     case none = "none"
     case zelle = "zelle"
     case venmo = "venmo"
     case cashapp = "cashapp"
     case manual = "manual"
 
+    /// Human-readable label for display in pickers.
     var displayName: String {
         switch self {
         case .none: return "None"
@@ -19,21 +27,39 @@ enum PayMethod: String, Codable, CaseIterable {
     }
 }
 
-struct Person: Identifiable, Codable, Equatable {
+// MARK: - Person
+
+/// A household member who participates in bill splitting.
+///
+/// The first person (id == "me") represents the primary user — the one who
+/// fronts all bills and collects from everyone else. This person cannot be
+/// removed and is always present in the people array.
+struct Person: Identifiable, Codable, Equatable, Sendable {
     var id: String
+    /// Display name shown throughout the app.
     var name: String
+    /// Hex color string (e.g. "#F5A800") used as the person's accent color.
     var color: String
+    /// How this person prefers to pay or be paid.
     var payMethod: PayMethod
+    /// Payment identifier — Venmo handle, Cash App tag, or Zelle phone/email.
     var payId: String
+    /// Optional custom Zelle payment URL (overrides the auto-generated one).
     var zelleUrl: String?
+    /// Email address for sending bill notifications.
     var email: String
+    /// Custom opening line for bill emails (e.g. "Hey roomie,").
     var greeting: String
 
+    /// Whether this person is the primary "me" user.
     var isMe: Bool { id == "me" }
 
+    /// SwiftUI `Color` derived from the hex string.
     var swiftUIColor: Color {
         Color(hex: color) ?? .orange
     }
+
+    // MARK: - Codable
 
     enum CodingKeys: String, CodingKey {
         case id, name, color, payMethod, payId, zelleUrl, email, greeting
@@ -50,6 +76,8 @@ struct Person: Identifiable, Codable, Equatable {
         email = try c.decodeIfPresent(String.self, forKey: .email) ?? ""
         greeting = try c.decodeIfPresent(String.self, forKey: .greeting) ?? ""
     }
+
+    // MARK: - Init
 
     init(
         id: String = "p\(Int(Date().timeIntervalSince1970 * 1000))",
@@ -71,13 +99,22 @@ struct Person: Identifiable, Codable, Equatable {
         self.greeting = greeting
     }
 
+    // MARK: - Color Palette
+
+    /// Rotating color palette assigned to new people in order.
     static let personColors = [
         "#F5A800", "#5bc4f5", "#f5a623", "#f06292",
         "#b39ddb", "#ef5350", "#ffd54f", "#a5d6a7"
     ]
 }
 
+// MARK: - Color Hex Extension
+
 extension Color {
+    /// Creates a `Color` from a hex string (e.g. "#FF8800" or "FF880080").
+    ///
+    /// Supports 6-digit (RGB) and 8-digit (ARGB) hex strings.
+    /// Returns `nil` if the string is not a valid hex color.
     init?(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
         var int: UInt64 = 0

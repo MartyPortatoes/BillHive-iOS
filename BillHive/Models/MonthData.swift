@@ -1,10 +1,25 @@
 import Foundation
 
-struct MonthData: Codable, Equatable {
-    var totals: [String: Double]         // billId -> total
-    var amounts: [String: [String: Double]] // billId -> lineId -> amount
+// MARK: - Month Data
+
+/// Per-month financial data — bill totals and individual line amounts.
+///
+/// Each month key (e.g. "2026-03") maps to one `MonthData` instance.
+/// This separation from `AppState` allows the bill *configuration* (names,
+/// split types, people) to persist independently from the *dollar amounts*
+/// that change each month.
+struct MonthData: Codable, Equatable, Sendable {
+    /// Bill totals keyed by bill ID. Example: `["b123": 1500.00]`.
+    var totals: [String: Double]
+    /// Per-line amounts keyed by bill ID then line ID.
+    /// Example: `["b123": ["l1": 750.00, "l2": 750.00]]`.
+    var amounts: [String: [String: Double]]
+    /// Cached "my total" for the historical trends view.
+    /// Computed at save time via `computeMyTotal()`.
     var _myTotal: Double?
-    var _owes: [String: Double]?         // personId -> amount
+    /// Cached per-person owes for the historical trends view.
+    /// Keyed by person ID. Computed at save time via `computePersonOwes()`.
+    var _owes: [String: Double]?
 
     init(
         totals: [String: Double] = [:],
@@ -17,6 +32,8 @@ struct MonthData: Codable, Equatable {
         self._myTotal = myTotal
         self._owes = owes
     }
+
+    // MARK: - Codable
 
     enum CodingKeys: String, CodingKey {
         case totals, amounts
@@ -33,9 +50,15 @@ struct MonthData: Codable, Equatable {
     }
 }
 
-struct AppSettings: Codable, Equatable {
+// MARK: - App Settings
+
+/// User-level settings that persist across months.
+struct AppSettings: Codable, Equatable, Sendable {
+    /// The primary user's email address.
     var myEmail: String
+    /// URL to the mortgage payment portal (shown as a quick-pay link).
     var mortgageUrl: String
+    /// Display name for the mortgage provider.
     var mortgageProvider: String
 
     init(myEmail: String = "", mortgageUrl: String = "", mortgageProvider: String = "") {
@@ -45,10 +68,19 @@ struct AppSettings: Codable, Equatable {
     }
 }
 
-struct AppState: Codable, Equatable {
+// MARK: - App State
+
+/// The complete application configuration — people, bills, settings, and checklists.
+///
+/// This is the "shape" of the data, independent of any particular month's dollar
+/// amounts. Persisted as `state.json` locally or via the server's `/api/state` endpoint.
+struct AppState: Codable, Equatable, Sendable {
     var settings: AppSettings
+    /// All household members. The first entry (id == "me") is always the primary user.
     var people: [Person]
+    /// All configured bills.
     var bills: [Bill]
+    /// Monthly checklists keyed by month key (e.g. "2026-03"), then item ID → done state.
     var checklist: [String: [String: Bool]]
 
     init(
@@ -64,22 +96,32 @@ struct AppState: Codable, Equatable {
     }
 }
 
-// Represents what one person owes for a given month
+// MARK: - Person Owes (Computed)
+
+/// What a single person owes for the current month, with a per-bill breakdown.
+///
+/// This is a computed view-model type — not persisted. Built by
+/// `AppViewModel.computePersonOwes()` each time the summary is displayed.
 struct PersonOwes {
     var personId: String
     var total: Double
     var bills: [BillOwed]
 }
 
+/// A single bill's contribution to what a person owes.
 struct BillOwed {
     var billId: String
     var billName: String
     var amount: Double
-    var coveredNote: String? // e.g. "covers Mom"
+    /// Explanatory note when someone covers another person's share (e.g. "covers Mom").
+    var coveredNote: String?
 }
 
-// Month key helpers
+// MARK: - Month Key Helpers
+
+/// Utility for creating and manipulating month keys in "YYYY-MM" format.
 struct MonthKey {
+    /// Returns the current month key (e.g. "2026-03").
     static func current() -> String {
         let now = Date()
         let cal = Calendar.current
@@ -88,10 +130,12 @@ struct MonthKey {
         return String(format: "%04d-%02d", y, m)
     }
 
+    /// Creates a month key from year and month components.
     static func from(year: Int, month: Int) -> String {
         String(format: "%04d-%02d", year, month)
     }
 
+    /// Converts a month key into a human-readable label (e.g. "March 2026").
     static func label(_ key: String) -> String {
         let parts = key.split(separator: "-")
         guard parts.count == 2,
@@ -107,6 +151,9 @@ struct MonthKey {
         return key
     }
 
+    /// Returns the month key for the month before `key`.
+    ///
+    /// Handles year rollover (e.g. "2026-01" → "2025-12").
     static func previous(of key: String) -> String {
         let parts = key.split(separator: "-")
         guard parts.count == 2,

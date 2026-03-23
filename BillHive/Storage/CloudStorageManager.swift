@@ -1,20 +1,41 @@
 import Foundation
 
-/// Manages iCloud Document storage for BillHive (standalone).
-/// Syncs state.json and monthly.json across devices via iCloud Drive.
-/// Falls back to LocalStorageManager when iCloud is unavailable.
+// MARK: - Cloud Storage Manager
+
+/// Manages iCloud Document storage for the BillHive standalone target.
+///
+/// Syncs `state.json` and `monthly.json` across devices via iCloud Drive using
+/// `NSFileCoordinator` for safe concurrent access. Falls back to
+/// `LocalStorageManager` when iCloud is unavailable (e.g. user not signed in,
+/// or running in the simulator without iCloud entitlement).
+///
+/// ## File Layout (inside iCloud container)
+/// ```
+/// iCloud.com.billhive.app/
+///   Documents/
+///     state.json     — AppState (people, bills, settings, checklists)
+///     monthly.json   — All MonthData keyed by month string
+/// ```
+///
+/// ## Change Monitoring
+/// An `NSMetadataQuery` watches for `.json` file updates in the ubiquitous
+/// documents scope. When another device pushes changes, the query fires a
+/// notification (`filesDidChangeExternally`) that `AppViewModel` observes
+/// to reload data.
 class CloudStorageManager: NSObject {
     static let shared = CloudStorageManager()
 
     /// Posted when iCloud delivers updated files from another device.
+    /// Observers should reload state and monthly data when this fires.
     static let filesDidChangeExternally = Notification.Name("CloudStorageFilesDidChange")
 
     private let containerID = "iCloud.com.billhive.app"
     private let stateFilename = "state.json"
     private let monthlyFilename = "monthly.json"
 
-    /// Cached ubiquity container URL. nil = iCloud unavailable → local fallback.
+    /// Cached ubiquity container URL. `nil` means iCloud is unavailable.
     private var iCloudURL: URL?
+    /// Metadata query that monitors iCloud for file changes from other devices.
     private var metadataQuery: NSMetadataQuery?
 
     private override init() {
@@ -27,10 +48,10 @@ class CloudStorageManager: NSObject {
         }
     }
 
-    /// Whether iCloud storage is active (vs local fallback).
+    /// Whether iCloud storage is active (vs local-only fallback).
     var isCloudAvailable: Bool { iCloudURL != nil }
 
-    // MARK: - Documents directory inside iCloud container
+    // MARK: - Documents Directory
 
     private var cloudDocsURL: URL? {
         iCloudURL?.appendingPathComponent("Documents")
@@ -44,8 +65,9 @@ class CloudStorageManager: NSObject {
         cloudDocsURL?.appendingPathComponent(monthlyFilename)
     }
 
-    // MARK: - Public API (same signatures as LocalStorageManager)
+    // MARK: - Public API
 
+    /// Loads the app state from iCloud, falling back to local storage if unavailable.
     func loadState() -> AppState {
         guard let fileURL = cloudStateURL else {
             return LocalStorageManager.shared.loadState()
@@ -58,8 +80,9 @@ class CloudStorageManager: NSObject {
         return state
     }
 
+    /// Saves the app state to both iCloud and local storage (backup).
     func saveState(_ state: AppState) {
-        // Always keep local copy as backup
+        // Always keep a local copy as backup in case iCloud becomes unavailable
         LocalStorageManager.shared.saveState(state)
 
         guard let fileURL = cloudStateURL else { return }
@@ -68,6 +91,7 @@ class CloudStorageManager: NSObject {
         coordinatedWrite(data: encoded, to: fileURL)
     }
 
+    /// Loads all monthly data from iCloud, falling back to local storage if unavailable.
     func loadMonths() -> [String: MonthData] {
         guard let fileURL = cloudMonthlyURL else {
             return LocalStorageManager.shared.loadMonths()
@@ -80,12 +104,14 @@ class CloudStorageManager: NSObject {
         return months
     }
 
+    /// Saves a single month's data, merging it into the existing monthly file.
+    ///
+    /// Reads the current months from iCloud, updates the entry for `key`,
+    /// and rewrites the file. Also saves to local storage as backup.
     func saveMonth(_ key: String, data: MonthData) {
-        // Always keep local copy as backup
         LocalStorageManager.shared.saveMonth(key, data: data)
 
         guard let fileURL = cloudMonthlyURL else { return }
-        // Load current months from cloud, merge, rewrite
         var months = loadMonths()
         months[key] = data
         guard let encoded = try? JSONEncoder().encode(months) else { return }
@@ -93,10 +119,13 @@ class CloudStorageManager: NSObject {
         coordinatedWrite(data: encoded, to: fileURL)
     }
 
-    // MARK: - Migration (local → iCloud, one-time)
+    // MARK: - Migration (Local → iCloud)
 
     /// Copies existing local data into iCloud if the cloud container is empty.
-    /// Call once at app launch before loading data.
+    ///
+    /// Should be called once at app launch, before loading data. Only migrates
+    /// if there's meaningful local data (non-empty people array) and iCloud
+    /// doesn't already have a state file.
     func migrateLocalToCloudIfNeeded() {
         guard let stateURL = cloudStateURL else { return }
 
@@ -104,17 +133,14 @@ class CloudStorageManager: NSObject {
         if FileManager.default.fileExists(atPath: stateURL.path) { return }
 
         let localState = LocalStorageManager.shared.loadState()
-        // Only migrate if there's meaningful local data
         guard !localState.people.isEmpty else { return }
 
         ensureCloudDocsDir()
 
-        // Copy state
         if let data = try? JSONEncoder().encode(localState) {
             coordinatedWrite(data: data, to: stateURL)
         }
 
-        // Copy monthly
         let months = LocalStorageManager.shared.loadMonths()
         if !months.isEmpty, let monthlyURL = cloudMonthlyURL,
            let data = try? JSONEncoder().encode(months) {
@@ -122,8 +148,9 @@ class CloudStorageManager: NSObject {
         }
     }
 
-    // MARK: - NSFileCoordinator helpers
+    // MARK: - NSFileCoordinator Helpers
 
+    /// Reads file data using `NSFileCoordinator` for safe iCloud access.
     private func coordinatedRead(at url: URL) -> Data? {
         var data: Data?
         var error: NSError?
@@ -134,6 +161,7 @@ class CloudStorageManager: NSObject {
         return data
     }
 
+    /// Writes data to a file using `NSFileCoordinator` for safe iCloud access.
     private func coordinatedWrite(data: Data, to url: URL) {
         var error: NSError?
         let coordinator = NSFileCoordinator()
@@ -142,18 +170,22 @@ class CloudStorageManager: NSObject {
         }
     }
 
+    /// Creates the Documents directory inside the iCloud container if needed.
     private func ensureCloudDocsDir() {
         guard let docsURL = cloudDocsURL else { return }
         try? FileManager.default.createDirectory(at: docsURL, withIntermediateDirectories: true)
     }
 
+    /// Asks iCloud to download a file if it's not yet available locally.
     private func triggerDownloadIfNeeded(_ url: URL) {
         guard FileManager.default.isUbiquitousItem(at: url) else { return }
         try? FileManager.default.startDownloadingUbiquitousItem(at: url)
     }
 
-    // MARK: - NSMetadataQuery (iCloud file change monitoring)
+    // MARK: - NSMetadataQuery (iCloud Change Monitoring)
 
+    /// Starts an `NSMetadataQuery` that watches for `.json` file updates
+    /// in the iCloud ubiquitous documents scope.
     private func startMonitoring() {
         let query = NSMetadataQuery()
         query.searchScopes = [NSMetadataQueryUbiquitousDocumentsScope]
@@ -173,6 +205,7 @@ class CloudStorageManager: NSObject {
         self.metadataQuery = query
     }
 
+    /// Handles metadata query updates by checking if our files changed.
     @objc private func queryDidUpdate(_ notification: Notification) {
         guard let query = metadataQuery else { return }
         query.disableUpdates()

@@ -1,5 +1,9 @@
 import SwiftUI
 
+// MARK: - Bills View
+
+/// The main bills management screen — lists all bills as expandable cards
+/// with a month picker bar and an "Add Bill" button.
 struct BillsView: View {
     @EnvironmentObject var vm: AppViewModel
     @State private var expandedBillId: String? = nil
@@ -71,6 +75,9 @@ struct BillsView: View {
     }
 }
 
+// MARK: - Month Picker Bar
+
+/// Compact month/year picker aligned to the trailing edge.
 struct MonthPickerBar: View {
     @EnvironmentObject var vm: AppViewModel
     private let months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
@@ -109,6 +116,10 @@ struct MonthPickerBar: View {
     }
 }
 
+// MARK: - Bill Card (Collapsed Header + Expandable Body)
+
+/// An expandable card showing a bill's header (name, icon, total, my share)
+/// and, when expanded, the full configuration body.
 struct BillCardView: View {
     @EnvironmentObject var vm: AppViewModel
     let bill: Bill
@@ -122,10 +133,9 @@ struct BillCardView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header row
+            // Header row — always visible
             Button(action: onToggle) {
                 HStack(spacing: 10) {
-                    // Icon
                     ZStack {
                         RoundedRectangle(cornerRadius: 7)
                             .fill(Color(hex: bill.color)?.opacity(0.2) ?? Color.bhSurface3)
@@ -177,25 +187,29 @@ struct BillCardView: View {
     }
 }
 
+// MARK: - Bill Body (Expanded Configuration)
+
+/// The expanded body of a bill card — icon/name editing, split type toggle,
+/// total input, line items, preserve toggle, and remove button.
+///
+/// Uses the bill's `id` to look up its live index in the view model rather
+/// than holding a stale `@Binding`, preventing index-out-of-bounds crashes
+/// after array mutations.
 struct BillBodyView: View {
     @EnvironmentObject var vm: AppViewModel
-    @Binding var bill: Bill
+    let bill: Bill
     @State private var showRemoveConfirm = false
 
-    init(bill: Bill) {
-        // We need a binding so we find the index at render time
-        self._bill = .constant(bill)
-    }
-
+    /// Safely resolves the bill's current index on each render.
     private var billIndex: Int? {
         vm.state.bills.firstIndex(where: { $0.id == bill.id })
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // ── Bill identity ──
+            // MARK: Bill Identity (Icon, Name, Color)
+
             HStack(spacing: 8) {
-                // Emoji / icon
                 TextField("", text: Binding(
                     get: { bill.icon },
                     set: { val in
@@ -211,7 +225,6 @@ struct BillBodyView: View {
                 .cornerRadius(8)
                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.bhBorder, lineWidth: 1))
 
-                // Name
                 TextField("Bill name", text: Binding(
                     get: { bill.name },
                     set: { val in
@@ -228,7 +241,6 @@ struct BillBodyView: View {
                 .cornerRadius(6)
                 .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.bhBorder, lineWidth: 1))
 
-                // Accent color
                 ColorPicker("", selection: Binding(
                     get: { Color(hex: bill.color) ?? .bhAmber },
                     set: { newColor in
@@ -246,7 +258,8 @@ struct BillBodyView: View {
 
             Divider().background(Color.bhBorder).padding(.horizontal, 16)
 
-            // Split type toggle
+            // MARK: Split Type Toggle
+
             HStack(spacing: 8) {
                 Text("Split Type")
                     .font(.system(size: 11, design: .monospaced))
@@ -275,13 +288,14 @@ struct BillBodyView: View {
             .padding(.top, 8)
             .padding(.bottom, 10)
 
-            // Total bill input — used by pct bills (each line % × total) and
-            // fixed bills (remainder line = total − sum of other lines)
+            // MARK: Total Bill Input
+
             HStack {
                 Text("Total Bill")
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundColor(.bhMuted)
                 if bill.splitType == .fixed {
+                    // Show which person receives the remainder
                     Text("Remainder → \(vm.state.people.first { $0.id == (bill.lines.first { $0.id == bill.remainderLineId }?.personId ?? "") }?.name ?? "—")")
                         .font(.system(size: 10, design: .monospaced))
                         .foregroundColor(.bhMuted2)
@@ -304,7 +318,8 @@ struct BillBodyView: View {
 
             Divider().background(Color.bhBorder).padding(.horizontal, 16)
 
-            // Lines header
+            // MARK: Line Items Header
+
             HStack {
                 Text("Person").bhSectionTitle().frame(width: 100, alignment: .leading)
                 Spacer()
@@ -320,13 +335,14 @@ struct BillBodyView: View {
             .padding(.top, 10)
             .padding(.bottom, 4)
 
-            // Lines
+            // MARK: Line Items
+
             ForEach(bill.lines) { line in
                 BillLineRowView(bill: bill, line: line)
                 Divider().background(Color.bhBorder).padding(.horizontal, 16)
             }
 
-            // Add line
+            // Add line button
             Button {
                 vm.addLine(to: bill.id)
             } label: {
@@ -339,7 +355,8 @@ struct BillBodyView: View {
 
             Divider().background(Color.bhBorder).padding(.horizontal, 16)
 
-            // Preserve toggle
+            // MARK: Preserve Toggle
+
             Toggle(isOn: Binding(
                 get: { bill.preserve },
                 set: { val in
@@ -363,6 +380,8 @@ struct BillBodyView: View {
 
             Divider().background(Color.bhBorder).padding(.horizontal, 16)
 
+            // MARK: Remove Bill
+
             Button(role: .destructive) {
                 showRemoveConfirm = true
             } label: {
@@ -385,6 +404,10 @@ struct BillBodyView: View {
     }
 }
 
+// MARK: - Bill Line Row
+
+/// A single line item within a bill's expanded body — shows the person picker,
+/// percentage/amount input, "covered by" selector, and a remove button.
 struct BillLineRowView: View {
     @EnvironmentObject var vm: AppViewModel
     let bill: Bill
@@ -393,9 +416,10 @@ struct BillLineRowView: View {
     private var billIndex: Int? { vm.state.bills.firstIndex { $0.id == bill.id } }
     private var lineIndex: Int? { bill.lines.firstIndex { $0.id == line.id } }
 
-    // The effective payer: coveredById if set, otherwise the line's own personId
+    /// The effective payer: coveredById if set, otherwise the line's own personId.
     private var effectivePayer: String { line.coveredById ?? line.personId }
 
+    /// The computed dollar amount for this line in the current month.
     var computedAmount: Double {
         if bill.splitType == .pct {
             return vm.getBillTotal(bill.id) * line.value / 100.0
@@ -411,14 +435,14 @@ struct BillLineRowView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // Main row: person picker + amount
             HStack(spacing: 8) {
-                // Person picker (who is responsible)
                 Picker("", selection: Binding(
                     get: { line.personId },
                     set: { val in
                         guard let bi = billIndex, let li = lineIndex else { return }
                         vm.state.bills[bi].lines[li].personId = val
-                        // If the new responsible person is the same as coveredById, clear coverage
+                        // Clear coverage if the new person matches coveredById
                         if vm.state.bills[bi].lines[li].coveredById == val {
                             vm.state.bills[bi].lines[li].coveredById = nil
                         }
@@ -437,7 +461,7 @@ struct BillLineRowView: View {
                 Spacer()
 
                 if bill.splitType == .pct {
-                    // Pct input
+                    // Percentage input
                     TextField("0", value: Binding(
                         get: { line.value },
                         set: { val in
@@ -456,17 +480,20 @@ struct BillLineRowView: View {
                     .cornerRadius(6)
                     .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.bhBorder, lineWidth: 1))
 
+                    // Computed dollar amount (read-only)
                     Text(computedAmount.asCurrency)
                         .font(.system(size: 12, weight: .semibold, design: .monospaced))
                         .foregroundColor(.bhAmber)
                         .frame(width: 80, alignment: .trailing)
                 } else {
                     if line.id == bill.remainderLineId {
+                        // Remainder line — computed, read-only
                         Text(computedAmount.asCurrency)
                             .font(.system(size: 12, weight: .semibold, design: .monospaced))
                             .foregroundColor(.bhAmber)
                             .frame(width: 80, alignment: .trailing)
                     } else {
+                        // Fixed amount input
                         CurrencyInputField(
                             value: Binding(
                                 get: { vm.getLineAmount(bill.id, lineId: line.id) },
@@ -477,7 +504,7 @@ struct BillLineRowView: View {
                     }
                 }
 
-                // Remove
+                // Remove line button
                 Button {
                     vm.removeLine(billId: bill.id, lineId: line.id)
                 } label: {
@@ -496,7 +523,7 @@ struct BillLineRowView: View {
             .padding(.top, 9)
             .padding(.bottom, 5)
 
-            // Covered-by sub-row
+            // "Covered by" sub-row
             HStack(spacing: 6) {
                 Text("Covered by")
                     .font(.system(size: 10, design: .monospaced))
@@ -528,6 +555,12 @@ struct BillLineRowView: View {
     }
 }
 
+// MARK: - Currency Input Field
+
+/// A text field that displays and edits a dollar amount.
+///
+/// Shows the formatted value when unfocused and switches to raw text editing
+/// when focused. Commits the parsed value on blur.
 struct CurrencyInputField: View {
     @Binding var value: Double
     @State private var text: String = ""

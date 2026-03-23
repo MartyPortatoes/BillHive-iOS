@@ -1,5 +1,11 @@
 import SwiftUI
 
+// MARK: - Content View
+
+/// Root tab bar view containing all five main sections of the app.
+///
+/// Handles global concerns: error banner display, toast overlay,
+/// dark color scheme enforcement, and scene-phase driven data refresh.
 struct ContentView: View {
     @EnvironmentObject var vm: AppViewModel
     @State private var selectedTab = 0
@@ -48,10 +54,10 @@ struct ContentView: View {
                         }
                         .tag(4)
                 }
-                .accentColor(Color(hex: "#F5A800"))
+                .tint(Color(hex: "#F5A800"))
             }
 
-            // Toast overlay
+            // Toast overlay — positioned above the tab bar
             if let msg = vm.toastMessage {
                 ToastView(message: msg)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -70,6 +76,9 @@ struct ContentView: View {
     }
 }
 
+// MARK: - Error Banner
+
+/// A top-aligned banner that displays an error message with a retry button.
 struct ErrorBannerView: View {
     let message: String
     let onRetry: () -> Void
@@ -95,6 +104,9 @@ struct ErrorBannerView: View {
     }
 }
 
+// MARK: - Toast
+
+/// A floating toast notification shown at the bottom of the screen.
 struct ToastView: View {
     let message: String
 
@@ -121,8 +133,11 @@ struct ToastView: View {
     }
 }
 
-// MARK: - Shared Design Tokens
+// MARK: - Design Tokens
 
+/// App-wide color palette — dark theme inspired by the BillHive web app.
+///
+/// Each color maps to the web app's CSS custom properties for visual consistency.
 extension Color {
     static let bhBackground = Color(hex: "#0c0d0f") ?? Color(.systemBackground)
     static let bhSurface = Color(hex: "#141518") ?? Color(.secondarySystemBackground)
@@ -138,7 +153,10 @@ extension Color {
     static let bhRed = Color(hex: "#ef5350") ?? .red
 }
 
+// MARK: - View Modifiers
+
 extension View {
+    /// Applies the standard BillHive card style — surface background with a border.
     func bhCard() -> some View {
         self
             .background(Color.bhSurface)
@@ -146,6 +164,7 @@ extension View {
             .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.bhBorder, lineWidth: 1))
     }
 
+    /// Applies the standard section title typography.
     func bhSectionTitle() -> some View {
         self
             .font(.system(size: 10, weight: .medium, design: .monospaced))
@@ -157,13 +176,22 @@ extension View {
 
 // MARK: - Money Formatting
 
+/// Shared `NumberFormatter` for currency display, avoiding repeated allocation.
+///
+/// Configured for USD with exactly 2 decimal places. Thread-safe because
+/// `NumberFormatter` is a class and this instance is only read after initial setup.
+private let currencyFormatter: NumberFormatter = {
+    let f = NumberFormatter()
+    f.numberStyle = .currency
+    f.currencySymbol = "$"
+    f.minimumFractionDigits = 2
+    f.maximumFractionDigits = 2
+    return f
+}()
+
 extension Double {
+    /// Formats the value as a US dollar amount (e.g. "$1,234.56").
     var asCurrency: String {
-        let f = NumberFormatter()
-        f.numberStyle = .currency
-        f.currencySymbol = "$"
-        f.minimumFractionDigits = 2
-        f.maximumFractionDigits = 2
-        return f.string(from: NSNumber(value: self)) ?? "$\(String(format: "%.2f", self))"
+        currencyFormatter.string(from: NSNumber(value: self)) ?? "$\(String(format: "%.2f", self))"
     }
 }

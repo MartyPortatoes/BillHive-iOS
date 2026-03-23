@@ -1,20 +1,34 @@
 import SwiftUI
 import Charts
 
+// MARK: - Trends View Mode
+
+/// Segmented control options for the Trends tab.
 enum TrendsViewMode: String, CaseIterable {
     case perPerson = "Per Person"
     case byBill = "By Bill"
 }
 
+// MARK: - Trends View
+
+/// Month-over-month spend tracking with line charts, donut charts,
+/// stacked bar charts, and a historical log.
+///
+/// Supports two modes via a segmented picker: "Per Person" (how much
+/// each household member owes over time) and "By Bill" (how each bill's
+/// total changes over time). Defaults to showing the last 12 months
+/// with an option to expand to all available data.
 struct TrendsView: View {
     @EnvironmentObject var vm: AppViewModel
     @State private var mode: TrendsViewMode = .perPerson
     @State private var showAllMonths = false
 
+    /// All month keys from the monthly data store, sorted chronologically.
     var sortedMonthKeys: [String] {
         vm.monthly.keys.sorted()
     }
 
+    /// The month keys to display — either all or the most recent 12.
     var displayedMonthKeys: [String] {
         let all = sortedMonthKeys
         guard !showAllMonths, all.count > 12 else { return all }
@@ -95,12 +109,15 @@ struct TrendsView: View {
     }
 }
 
-// MARK: - Per Person View
+// MARK: - Per Person Trends
 
+/// Displays person-centric trend charts: a line chart of spending over time,
+/// a donut chart of the current month's bill distribution, and a historical log.
 struct PersonTrendsView: View {
     @EnvironmentObject var vm: AppViewModel
     let monthKeys: [String]
 
+    /// A single data point for the per-person line chart.
     struct DataPoint: Identifiable {
         let id = UUID()
         let month: String
@@ -111,6 +128,8 @@ struct PersonTrendsView: View {
         let color: Color
     }
 
+    /// Builds chart data by iterating every displayed month and computing
+    /// per-person totals (the primary user's outlay + each other person's owed amount).
     var chartData: [DataPoint] {
         var points: [DataPoint] = []
         let nonMe = vm.state.people.filter { $0.id != "me" }
@@ -119,6 +138,7 @@ struct PersonTrendsView: View {
             guard let md = vm.monthly[key] else { continue }
             let label = String(key.prefix(7))
 
+            // Compute "me" total — use cached value or recompute from splits
             var myTotal = md._myTotal ?? 0
             if myTotal == 0 {
                 for bill in vm.state.bills {
@@ -139,6 +159,7 @@ struct PersonTrendsView: View {
         return points
     }
 
+    /// Current month's per-bill totals for the donut chart.
     var currentMonthBillData: [(name: String, amount: Double, color: Color)] {
         vm.state.bills.compactMap { bill in
             let total = vm.monthly[vm.monthKey]?.totals[bill.id] ?? 0
@@ -147,6 +168,10 @@ struct PersonTrendsView: View {
         }
     }
 
+    /// Computes the per-person split for a single bill using a specific month's data.
+    ///
+    /// Mirrors the logic in `AppViewModel.computeBillSplit`, but operates on
+    /// an arbitrary `MonthData` instead of the current month.
     func computeSplit(bill: Bill, md: MonthData) -> [String: Double] {
         var result: [String: Double] = [:]
         for line in bill.lines {
@@ -165,7 +190,8 @@ struct PersonTrendsView: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            // Line chart — full width
+            // MARK: Line Chart
+
             VStack(alignment: .leading, spacing: 8) {
                 Text("Total Bills Over Time")
                     .bhSectionTitle()
@@ -207,7 +233,8 @@ struct PersonTrendsView: View {
             .padding(16)
             .bhCard()
 
-            // This Month — By Bill donut — full width
+            // MARK: Donut Chart
+
             VStack(alignment: .leading, spacing: 8) {
                 Text("This Month — By Bill")
                     .bhSectionTitle()
@@ -235,7 +262,8 @@ struct PersonTrendsView: View {
             .padding(16)
             .bhCard()
 
-            // Historical Log — full width
+            // MARK: Historical Log
+
             VStack(alignment: .leading, spacing: 8) {
                 Text("Historical Log")
                     .bhSectionTitle()
@@ -268,13 +296,18 @@ struct PersonTrendsView: View {
     }
 }
 
-// MARK: - iOS 16-compatible Donut Chart
+// MARK: - Donut Chart
 
+/// An iOS 16-compatible donut (ring) chart built with Canvas-free `Shape` segments.
+///
+/// Each segment is a `DonutSegment` with a small gap between slices for visual clarity.
 struct DonutChartView: View {
     let items: [(name: String, amount: Double, color: Color)]
 
+    /// Sum of all item amounts.
     private var total: Double { items.reduce(0) { $0 + $1.amount } }
 
+    /// Pre-computed arc segments with start/end angles and fill color.
     private var segments: [(start: Angle, end: Angle, color: Color)] {
         var result: [(start: Angle, end: Angle, color: Color)] = []
         var current: Double = -90
@@ -313,6 +346,10 @@ struct DonutChartView: View {
     }
 }
 
+// MARK: - Donut Segment Shape
+
+/// A single arc segment of the donut chart, drawn as a closed path
+/// between two concentric arcs.
 struct DonutSegment: Shape {
     let startAngle: Angle
     let endAngle:   Angle
@@ -331,12 +368,15 @@ struct DonutSegment: Shape {
     }
 }
 
-// MARK: - By Bill View
+// MARK: - By Bill Trends
 
+/// Displays bill-centric trend charts: a per-bill line chart, a stacked bar
+/// chart of household totals, and a current-month summary table.
 struct BillTrendsView: View {
     @EnvironmentObject var vm: AppViewModel
     let monthKeys: [String]
 
+    /// A single data point for the per-bill line/bar charts.
     struct BillPoint: Identifiable {
         let id = UUID()
         let month: String
@@ -345,6 +385,8 @@ struct BillTrendsView: View {
         let color: Color
     }
 
+    /// Builds chart data by iterating every displayed month and pulling
+    /// each bill's total from the monthly data store.
     var chartData: [BillPoint] {
         var points: [BillPoint] = []
         for key in monthKeys {
@@ -361,7 +403,8 @@ struct BillTrendsView: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            // Per-bill line chart — full width
+            // MARK: Per-Bill Line Chart
+
             VStack(alignment: .leading, spacing: 8) {
                 Text("Per-Bill Totals Over Time")
                     .bhSectionTitle()
@@ -389,7 +432,8 @@ struct BillTrendsView: View {
             .padding(16)
             .bhCard()
 
-            // Stacked bar — full width
+            // MARK: Stacked Bar Chart
+
             VStack(alignment: .leading, spacing: 8) {
                 Text("Household Total by Month")
                     .bhSectionTitle()
@@ -416,7 +460,8 @@ struct BillTrendsView: View {
             .padding(16)
             .bhCard()
 
-            // Bill Totals this month — full width
+            // MARK: Current Month Summary
+
             VStack(alignment: .leading, spacing: 8) {
                 Text("Bill Totals — This Month")
                     .bhSectionTitle()

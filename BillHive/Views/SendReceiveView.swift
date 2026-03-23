@@ -1,11 +1,22 @@
 import SwiftUI
 
+// MARK: - Send & Receive View
+
+/// Central hub for collecting payments and paying bills.
+///
+/// Three sections:
+/// - **Receive** — shows each person who owes money with expandable details and
+///   email/payment-app actions.
+/// - **Send** — lists every bill with an optional payment URL and a "Pay" button.
+/// - **Checklist** — per-month task checklist for tracking what's been done.
 struct SendReceiveView: View {
     @EnvironmentObject var vm: AppViewModel
     @State private var expandedPersonId: String? = nil
     @State private var sendingEmailFor: String? = nil
 
+    /// All household members except the primary user.
     var nonMePeople: [Person] { vm.state.people.filter { $0.id != "me" } }
+    /// Per-person owed amounts for the current month, keyed by person ID.
     var owes: [String: PersonOwes] { vm.computePersonOwes() }
 
     var body: some View {
@@ -24,7 +35,8 @@ struct SendReceiveView: View {
                         }
                         .padding(.top, 16)
 
-                        // ── RECEIVE ──
+                        // MARK: Receive Section
+
                         VStack(alignment: .leading, spacing: 10) {
                             HStack(spacing: 10) {
                                 ZStack {
@@ -68,7 +80,8 @@ struct SendReceiveView: View {
                             }
                         }
 
-                        // ── SEND ──
+                        // MARK: Send Section
+
                         VStack(alignment: .leading, spacing: 10) {
                             HStack(spacing: 10) {
                                 ZStack {
@@ -95,7 +108,8 @@ struct SendReceiveView: View {
                             }
                         }
 
-                        // ── CHECKLIST ──
+                        // MARK: Checklist Section
+
                         VStack(alignment: .leading, spacing: 10) {
                             HStack(spacing: 10) {
                                 ZStack {
@@ -142,6 +156,12 @@ struct SendReceiveView: View {
     }
 }
 
+// MARK: - Receive Card
+
+/// An expandable card for a single person in the Receive section.
+///
+/// Collapsed: person name, color dot, total owed, and payment app link.
+/// Expanded: per-bill breakdown plus email and request-via-app action buttons.
 struct ReceiveCard: View {
     let person: Person
     let personOwes: PersonOwes?
@@ -150,6 +170,7 @@ struct ReceiveCard: View {
     let onToggle: () -> Void
     let onSendEmail: () -> Void
 
+    /// Constructs a Zelle payment URL from the person's pay ID or custom Zelle URL.
     var zelleURL: URL? {
         if let zu = person.zelleUrl, !zu.isEmpty { return URL(string: zu) }
         if person.payMethod == .zelle, !person.payId.isEmpty {
@@ -159,6 +180,7 @@ struct ReceiveCard: View {
         return nil
     }
 
+    /// Constructs a Venmo deep link with the charge amount pre-filled.
     var venmoURL: URL? {
         guard person.payMethod == .venmo, !person.payId.isEmpty else { return nil }
         let handle = person.payId.hasPrefix("@") ? String(person.payId.dropFirst()) : person.payId
@@ -168,14 +190,17 @@ struct ReceiveCard: View {
         return URL(string: "venmo://paycharge?txn=charge&recipients=\(handle)&amount=\(String(format: "%.2f", amount))&note=\(encoded)")
     }
 
+    /// Constructs a Cash App profile URL from the person's cashtag.
     var cashAppURL: URL? {
         guard person.payMethod == .cashapp, !person.payId.isEmpty else { return nil }
         let tag = person.payId.hasPrefix("$") ? person.payId : "$\(person.payId)"
         return URL(string: "https://cash.app/\(tag)")
     }
 
+    /// The resolved payment URL, trying Zelle → Venmo → Cash App.
     var payURL: URL? { zelleURL ?? venmoURL ?? cashAppURL }
 
+    /// Human-readable label for the payment method button.
     var payLabel: String {
         switch person.payMethod {
         case .venmo: return "Venmo"
@@ -186,7 +211,8 @@ struct ReceiveCard: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Head
+            // MARK: Header
+
             Button(action: onToggle) {
                 HStack(spacing: 10) {
                     Circle()
@@ -240,9 +266,11 @@ struct ReceiveCard: View {
             .buttonStyle(.plain)
 
             if isExpanded {
+                // MARK: Expanded Content
+
                 Divider().background(Color.bhBorder)
                 VStack(alignment: .leading, spacing: 10) {
-                    // Bill breakdown
+                    // Per-bill breakdown
                     ForEach(personOwes?.bills ?? [], id: \.billId) { bo in
                         HStack {
                             Text(bo.billName)
@@ -258,7 +286,7 @@ struct ReceiveCard: View {
 
                     Divider().background(Color.bhBorder)
 
-                    // Actions
+                    // Actions — email and payment request
                     HStack(spacing: 10) {
                         Button(action: onSendEmail) {
                             HStack(spacing: 5) {
@@ -303,15 +331,21 @@ struct ReceiveCard: View {
     }
 }
 
+// MARK: - Send Card
+
+/// A card for a single bill in the Send section, showing the bill total
+/// and an editable payment URL field with a "Pay" link button.
 struct SendCard: View {
     @EnvironmentObject var vm: AppViewModel
     let bill: Bill
 
+    /// Safely looks up the bill's current array index each time.
     private var billIndex: Int? { vm.state.bills.firstIndex(where: { $0.id == bill.id }) }
 
     var body: some View {
         VStack(spacing: 0) {
-            // Main row
+            // MARK: Main Row
+
             HStack(spacing: 10) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 7)
@@ -352,7 +386,8 @@ struct SendCard: View {
 
             Divider().background(Color.bhBorder)
 
-            // Pay URL field
+            // MARK: Pay URL Field
+
             HStack(spacing: 8) {
                 Text("Pay URL")
                     .font(.system(size: 10, weight: .medium, design: .monospaced))
@@ -394,6 +429,10 @@ struct SendCard: View {
     }
 }
 
+// MARK: - Checklist Item Row
+
+/// A single row in the monthly checklist with a custom checkbox and
+/// strikethrough styling when completed.
 struct ChecklistItemRow: View {
     let item: (id: String, label: String, done: Bool)
     let onToggle: () -> Void

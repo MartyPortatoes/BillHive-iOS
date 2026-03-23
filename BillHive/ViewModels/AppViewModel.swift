@@ -2,7 +2,9 @@ import Foundation
 import SwiftUI
 import Combine
 
-// Used by the BillHive (local) target to trigger iOS Mail compose
+// MARK: - Mail Compose Request
+
+/// Payload for triggering the iOS Mail compose sheet (BillHive standalone target only).
 struct MailComposeRequest: Identifiable {
     let id = UUID()
     let to: String
@@ -10,24 +12,57 @@ struct MailComposeRequest: Identifiable {
     let body: String
 }
 
+// MARK: - App View Model
+
+/// Central view model that owns all application state and business logic.
+///
+/// Operates in two modes depending on the `isLocal` flag:
+/// - **Local (BillHive)**: Reads/writes state via `CloudStorageManager` (iCloud)
+///   or `LocalStorageManager` (fallback). No server needed.
+/// - **Remote (SelfHive)**: Communicates with a self-hosted Node.js server
+///   via `APIClient` for all CRUD operations.
+///
+/// All published properties drive SwiftUI views. Mutations happen on `@MainActor`
+/// to guarantee thread-safe UI updates.
 @MainActor
 class AppViewModel: ObservableObject {
+
+    // MARK: - Configuration
+
+    /// Whether this instance uses local (iCloud/file) storage vs a remote server.
     let isLocal: Bool
 
-    @Published var state = AppState()
-    @Published var monthly: [String: MonthData] = [:]
-    @Published var emailConfig: EmailConfig? = nil
-    @Published var isLoading = false
-    @Published var error: String? = nil
-    @Published var toastMessage: String? = nil
-    @Published var pendingMailCompose: MailComposeRequest? = nil
+    // MARK: - Published State
 
+    /// The complete app configuration — people, bills, settings, checklists.
+    @Published var state = AppState()
+    /// Per-month financial data keyed by month key (e.g. "2026-03").
+    @Published var monthly: [String: MonthData] = [:]
+    /// Server-side email relay configuration (remote mode only).
+    @Published var emailConfig: EmailConfig? = nil
+    /// Whether a load/refresh operation is in progress.
+    @Published var isLoading = false
+    /// User-facing error message from the most recent failed operation.
+    @Published var error: String? = nil
+    /// Transient toast message displayed at the bottom of the screen.
+    @Published var toastMessage: String? = nil
+    /// Pending mail compose request (BillHive standalone target only).
+    @Published var pendingMailCompose: MailComposeRequest? = nil
+    /// Currently selected year in the month picker.
     @Published var selectedYear: Int
+    /// Currently selected month (1–12) in the month picker.
     @Published var selectedMonth: Int
 
+    // MARK: - Private
+
+    /// Debounce task for state saves to the remote server.
+    /// Prevents rapid-fire network requests while the user is editing.
     private var saveDebounceTask: Task<Void, Never>? = nil
     private let api = APIClient.shared
+    /// Observer token for iCloud file-change notifications (local mode only).
     private var cloudChangeObserver: Any?
+
+    // MARK: - Init / Deinit
 
     init(isLocal: Bool = false) {
         self.isLocal = isLocal
@@ -57,20 +92,30 @@ class AppViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Computed Properties
+
+    /// The month key for the currently selected year/month (e.g. "2026-03").
     var monthKey: String {
         MonthKey.from(year: selectedYear, month: selectedMonth)
     }
 
+    /// Human-readable label for the selected month (e.g. "March 2026").
     var monthLabel: String {
         MonthKey.label(monthKey)
     }
 
+    /// The `MonthData` for the currently selected month, or an empty default.
     var currentMonthData: MonthData {
         monthly[monthKey] ?? MonthData()
     }
 
     // MARK: - Load
 
+    /// Loads all data from the appropriate storage backend.
+    ///
+    /// In local mode, reads from iCloud/local files synchronously.
+    /// In remote mode, fetches state, months, and email config concurrently
+    /// from the server using `async let`.
     func load() async {
         isLoading = true
         error = nil
@@ -104,11 +149,12 @@ class AppViewModel: ObservableObject {
     }
 
     /// Ensures the primary "me" person always exists with the literal ID "me".
-    /// Three cases handled:
-    ///   1. No people at all → insert a default "Me" entry at index 0 and save.
-    ///   2. A person with id "me" already exists → nothing to do.
-    ///   3. People exist but none has id "me" (legacy timestamp IDs) → promote
-    ///      the first person to "me" and remap all bill line references, then save.
+    ///
+    /// Handles three cases:
+    /// 1. No people at all — inserts a default "Me" entry at index 0.
+    /// 2. A person with id "me" already exists — no-op.
+    /// 3. People exist but none has id "me" (legacy timestamp IDs) — promotes
+    ///    the first person to "me" and remaps all bill line references.
     private func normalizeStatePeople() {
         if state.people.isEmpty {
             state.people = [Person(id: "me", name: "Me", color: "#F5A800")]
@@ -134,9 +180,10 @@ class AppViewModel: ObservableObject {
     }
 
     /// Ensures every pct-split bill has line values that sum to 100.
-    /// Bills loaded from JSON (server or local file) may have all-zero values
-    /// if they were saved before percentages were configured, which causes
-    /// computeBillSplit to return $0 for every person despite a non-zero total.
+    ///
+    /// Bills loaded from JSON may have all-zero percentage values if they were
+    /// saved before percentages were configured, which causes `computeBillSplit`
+    /// to return $0.00 for every person despite a non-zero bill total.
     private func normalizePctLines() {
         var changed = false
         for i in state.bills.indices {
@@ -150,12 +197,14 @@ class AppViewModel: ObservableObject {
         if changed { save() }
     }
 
+    /// Convenience wrapper that reloads all data.
     func refresh() async {
         await load()
     }
 
     #if BILLHIVE_LOCAL
     /// Reloads data from iCloud if it changed on another device.
+    ///
     /// Compares with current in-memory state to avoid unnecessary re-renders.
     func reloadFromCloud() async {
         guard isLocal else { return }
@@ -174,8 +223,12 @@ class AppViewModel: ObservableObject {
     }
     #endif
 
-    // MARK: - Save (debounced for config, immediate for monthly)
+    // MARK: - Save
 
+    /// Persists the current `AppState` (debounced for remote, immediate for local).
+    ///
+    /// In remote mode, a 600ms debounce prevents rapid-fire API calls while
+    /// the user is actively editing fields.
     func save() {
         if isLocal {
             #if BILLHIVE_LOCAL
@@ -187,7 +240,7 @@ class AppViewModel: ObservableObject {
         }
         saveDebounceTask?.cancel()
         saveDebounceTask = Task {
-            try? await Task.sleep(nanoseconds: 600_000_000) // 600ms
+            try? await Task.sleep(for: .milliseconds(600))
             guard !Task.isCancelled else { return }
             do {
                 try await api.saveState(state)
@@ -197,6 +250,9 @@ class AppViewModel: ObservableObject {
         }
     }
 
+    /// Immediately persists the specified month's data.
+    ///
+    /// - Parameter key: The month key to save. Defaults to the currently selected month.
     func saveMonthNow(_ key: String? = nil) {
         let key = key ?? monthKey
         guard let data = monthly[key] else { return }
@@ -217,6 +273,10 @@ class AppViewModel: ObservableObject {
         }
     }
 
+    /// Recomputes cached summary fields (`_myTotal`, `_owes`) and saves the month.
+    ///
+    /// Called after any amount change so that the Trends view has accurate
+    /// historical snapshots without needing to recompute from raw line data.
     func saveMonthSnapshot() {
         let key = monthKey
         var data = monthly[key] ?? MonthData()
@@ -230,22 +290,26 @@ class AppViewModel: ObservableObject {
         saveMonthNow(key)
     }
 
-    // MARK: - Business Logic
+    // MARK: - Business Logic (Bill Totals & Amounts)
 
+    /// Returns the total for a bill in the current month.
     func getBillTotal(_ billId: String) -> Double {
         currentMonthData.totals[billId] ?? 0
     }
 
+    /// Sets the total for a bill in the current month and saves.
     func setBillTotal(_ billId: String, value: Double) {
         if monthly[monthKey] == nil { monthly[monthKey] = MonthData() }
         monthly[monthKey]!.totals[billId] = value
         saveMonthSnapshot()
     }
 
+    /// Returns the fixed amount for a specific line in the current month.
     func getLineAmount(_ billId: String, lineId: String) -> Double {
         currentMonthData.amounts[billId]?[lineId] ?? 0
     }
 
+    /// Sets the fixed amount for a specific line in the current month and saves.
     func setLineAmount(_ billId: String, lineId: String, value: Double) {
         if monthly[monthKey] == nil { monthly[monthKey] = MonthData() }
         if monthly[monthKey]!.amounts[billId] == nil {
@@ -255,6 +319,15 @@ class AppViewModel: ObservableObject {
         saveMonthSnapshot()
     }
 
+    // MARK: - Business Logic (Split Calculations)
+
+    /// Computes how the bill total is split among payers for the current month.
+    ///
+    /// Returns a dictionary of `[personId: dollarAmount]`. The "payer" is
+    /// `coveredById` if set, otherwise the line's own `personId`.
+    ///
+    /// - Parameter bill: The bill to compute the split for.
+    /// - Returns: A mapping of person IDs to their dollar share of this bill.
     func computeBillSplit(_ bill: Bill) -> [String: Double] {
         var result: [String: Double] = [:]
         let md = currentMonthData
@@ -266,10 +339,11 @@ class AppViewModel: ObservableObject {
                 amount = total * line.value / 100.0
             } else {
                 if line.id == bill.remainderLineId {
+                    // Remainder line gets total minus the sum of all other fixed lines
                     let allOthers = bill.lines
                         .filter { $0.id != bill.remainderLineId }
                         .reduce(0.0) { $0 + (md.amounts[bill.id]?[$1.id] ?? 0) }
-                    let billTotal = md.totals[bill.id] ?? allOthers  // fallback
+                    let billTotal = md.totals[bill.id] ?? allOthers
                     amount = max(0, billTotal - allOthers)
                 } else {
                     amount = md.amounts[bill.id]?[line.id] ?? 0
@@ -282,6 +356,11 @@ class AppViewModel: ObservableObject {
         return result
     }
 
+    /// Computes what each non-"me" person owes across all bills for the current month.
+    ///
+    /// Returns a dictionary of `[personId: PersonOwes]` with a per-bill breakdown.
+    /// Duplicate bill entries for the same person (e.g. when they cover someone else's
+    /// share on the same bill) are consolidated into a single entry.
     func computePersonOwes() -> [String: PersonOwes] {
         var result: [String: PersonOwes] = [:]
 
@@ -326,12 +405,14 @@ class AppViewModel: ObservableObject {
             }
         }
 
-        // Consolidate duplicate bill entries per person
+        // Consolidate duplicate bill entries per person (e.g. when one person
+        // covers multiple lines on the same bill, merge them into one entry).
         for (pid, _) in result {
             var consolidated: [String: BillOwed] = [:]
             for bo in result[pid]!.bills {
-                if consolidated[bo.billId] != nil {
-                    consolidated[bo.billId]!.amount += bo.amount  // This won't compile, BillOwed is struct
+                if var existing = consolidated[bo.billId] {
+                    existing.amount += bo.amount
+                    consolidated[bo.billId] = existing
                 } else {
                     consolidated[bo.billId] = bo
                 }
@@ -342,6 +423,7 @@ class AppViewModel: ObservableObject {
         return result
     }
 
+    /// Computes the primary user's ("me") total share across all bills.
     func computeMyTotal() -> Double {
         var total = 0.0
         for bill in state.bills {
@@ -351,6 +433,9 @@ class AppViewModel: ObservableObject {
         return total
     }
 
+    /// Copies the previous month's amounts into the current month for bills
+    /// that have `preserve` enabled, but only if the current month has no
+    /// data for that bill yet.
     func autoFillPreservedBills() {
         let key = monthKey
         let prevKey = MonthKey.previous(of: key)
@@ -380,14 +465,17 @@ class AppViewModel: ObservableObject {
 
     // MARK: - Month Navigation
 
+    /// Called when the user changes the selected month or year.
+    ///
+    /// In local mode, auto-fills preserved bills and saves a snapshot.
+    /// In remote mode, fetches the latest server data first so autoFill
+    /// doesn't overwrite values entered in the web app for non-preserved bills.
     func onMonthChange() {
         if isLocal {
             autoFillPreservedBills()
             saveMonthSnapshot()
             return
         }
-        // For remote: fetch the latest server data first so autoFill doesn't
-        // overwrite values entered in the web app for non-preserved bills.
         Task {
             if let fresh = try? await api.getMonth(monthKey) {
                 monthly[monthKey] = fresh
@@ -397,8 +485,9 @@ class AppViewModel: ObservableObject {
         }
     }
 
-    // MARK: - People
+    // MARK: - People Management
 
+    /// Adds a new person with the next color from the rotating palette.
     func addPerson() {
         let colors = Person.personColors
         let color = colors[state.people.count % colors.count]
@@ -406,17 +495,20 @@ class AppViewModel: ObservableObject {
         save()
     }
 
+    /// Removes the person at the given index.
     func removePerson(at index: Int) {
         state.people.remove(at: index)
         save()
     }
 
+    /// Looks up a person by their ID.
     func getPerson(_ id: String) -> Person? {
         state.people.first { $0.id == id }
     }
 
-    // MARK: - Bills
+    // MARK: - Bill Management
 
+    /// Adds a new bill with a single "My share" line at 100%.
     func addBill() {
         let lineId = "l\(Int(Date().timeIntervalSince1970 * 1000))"
         var bill = Bill()
@@ -426,11 +518,16 @@ class AppViewModel: ObservableObject {
         save()
     }
 
+    /// Removes a bill by ID.
     func removeBill(_ bill: Bill) {
         state.bills.removeAll { $0.id == bill.id }
         save()
     }
 
+    /// Adds a new line to the specified bill.
+    ///
+    /// Defaults to the first non-"me" person, or "me" if no others exist.
+    /// If the bill uses percentage splitting, redistributes all lines equally.
     func addLine(to billId: String) {
         guard let idx = state.bills.firstIndex(where: { $0.id == billId }) else { return }
         let defaultPersonId = state.people.first(where: { $0.id != "me" })?.id ?? "me"
@@ -445,6 +542,9 @@ class AppViewModel: ObservableObject {
         save()
     }
 
+    /// Removes a specific line from a bill.
+    ///
+    /// If the bill uses percentage splitting, redistributes remaining lines equally.
     func removeLine(billId: String, lineId: String) {
         guard let idx = state.bills.firstIndex(where: { $0.id == billId }) else { return }
         state.bills[idx].lines.removeAll { $0.id == lineId }
@@ -454,8 +554,16 @@ class AppViewModel: ObservableObject {
         save()
     }
 
-    /// Called when a user manually edits one line's percentage.
-    /// Locks that line at the new value and splits the remaining % equally among all other lines.
+    /// Sets one line's percentage and redistributes the remainder equally among other lines.
+    ///
+    /// The edited line is "locked" at the new value. All other lines share the
+    /// remaining percentage equally, with rounding correction on the last line
+    /// to ensure the total stays at exactly 100%.
+    ///
+    /// - Parameters:
+    ///   - billId: The bill containing the line.
+    ///   - lineId: The line being edited.
+    ///   - value: The new percentage (clamped to 0–100).
     func setLinePct(billId: String, lineId: String, value: Double) {
         guard let bi = state.bills.firstIndex(where: { $0.id == billId }) else { return }
         guard let li = state.bills[bi].lines.firstIndex(where: { $0.id == lineId }) else { return }
@@ -474,10 +582,13 @@ class AppViewModel: ObservableObject {
         save()
     }
 
+    /// Distributes percentages equally across all lines in a bill.
+    ///
+    /// Rounds each share to 2 decimal places and assigns the true remainder
+    /// to the last line so that all values sum to exactly 100.
     private func redistributePctLines(billIdx: Int) {
         let n = state.bills[billIdx].lines.count
         guard n > 0 else { return }
-        // Round each share to 2dp; give the last line the true remainder so totals stay at 100.
         let share = ((100.0 / Double(n)) * 100).rounded() / 100
         let last  = 100.0 - share * Double(n - 1)
         for i in 0 ..< n {
@@ -487,23 +598,24 @@ class AppViewModel: ObservableObject {
 
     // MARK: - Checklist
 
+    /// Builds the checklist items for a given month.
+    ///
+    /// Returns three groups of items in order:
+    /// 1. "Email sent to [person]" — one per non-me person
+    /// 2. "[Bill name] paid" — one per bill
+    /// 3. "Payment received from [person]" — one per non-me person
     func checklistItems(for key: String) -> [(id: String, label: String, done: Bool)] {
         var items: [(id: String, label: String, done: Bool)] = []
-        let checks = monthly[key] != nil
-        _ = checks
         let cl = state.checklist[key] ?? [:]
 
-        // Email sent items
         for person in state.people where person.id != "me" {
             let id = "email-\(person.id)"
             items.append((id: id, label: "Email sent to \(person.name)", done: cl[id] ?? false))
         }
-        // Bill paid items
         for bill in state.bills {
             let id = "paid-\(bill.id)"
             items.append((id: id, label: "\(bill.name) paid", done: cl[id] ?? false))
         }
-        // Payment received items
         for person in state.people where person.id != "me" {
             let id = "recv-\(person.id)"
             items.append((id: id, label: "Payment received from \(person.name)", done: cl[id] ?? false))
@@ -511,6 +623,7 @@ class AppViewModel: ObservableObject {
         return items
     }
 
+    /// Toggles a checklist item's done state for the given month.
     func toggleChecklistItem(_ itemId: String, for key: String) {
         if state.checklist[key] == nil { state.checklist[key] = [:] }
         let current = state.checklist[key]?[itemId] ?? false
@@ -520,16 +633,21 @@ class AppViewModel: ObservableObject {
 
     // MARK: - Toast
 
+    /// Shows a transient toast message that auto-dismisses after ~2.8 seconds.
     func toast(_ message: String) {
         toastMessage = message
         Task {
-            try? await Task.sleep(nanoseconds: 2_800_000_000)
+            try? await Task.sleep(for: .milliseconds(2800))
             if toastMessage == message { toastMessage = nil }
         }
     }
 
     // MARK: - Email Send
 
+    /// Sends a bill summary email to the specified person.
+    ///
+    /// In local mode, presents the iOS Mail compose sheet. In remote mode,
+    /// dispatches the email through the server's `/api/email/send` endpoint.
     func sendPersonEmail(personId: String) async {
         guard let person = getPerson(personId) else { return }
         guard !person.email.isEmpty else {
@@ -569,6 +687,7 @@ class AppViewModel: ObservableObject {
         }
     }
 
+    /// Builds a plain-text email body for the iOS Mail compose sheet.
     private func buildLocalEmailText(person: Person, personOwes: PersonOwes?) -> String {
         let greeting = person.greeting.isEmpty ? "Hi \(person.name)," : person.greeting
         var lines = [greeting, "", "Here's your bill summary for \(monthLabel):", ""]

@@ -1,9 +1,18 @@
 import Foundation
 
-enum SplitType: String, Codable, CaseIterable {
+// MARK: - Split Type
+
+/// Defines how a bill's total is divided among its line items.
+///
+/// - `pct`: Each line holds a percentage (0–100). The dollar amount for each
+///   line is computed as `total * line.value / 100`.
+/// - `fixed`: Each line holds a fixed dollar amount. One line may be designated
+///   as the "remainder" line, which automatically receives `total − sum(others)`.
+enum SplitType: String, Codable, CaseIterable, Sendable {
     case pct = "pct"
     case fixed = "fixed"
 
+    /// Human-readable label for display in pickers and UI badges.
     var displayName: String {
         switch self {
         case .pct: return "Percentage"
@@ -12,11 +21,24 @@ enum SplitType: String, Codable, CaseIterable {
     }
 }
 
-struct BillLine: Identifiable, Codable, Equatable {
+// MARK: - Bill Line
+
+/// A single person's share within a bill.
+///
+/// In percentage mode, `value` represents the percentage (0–100) of the bill
+/// total that this person owes. In fixed mode, the dollar amount for each line
+/// is stored separately in `MonthData.amounts` so it can vary month-to-month
+/// without changing the bill configuration.
+struct BillLine: Identifiable, Codable, Equatable, Sendable {
     var id: String
+    /// Short description of this line (e.g. "My share", "Internet portion").
     var desc: String
+    /// The person responsible for this line item.
     var personId: String
-    var value: Double      // pct mode: 0-100
+    /// In pct mode: the percentage (0–100). In fixed mode: unused (amounts live in MonthData).
+    var value: Double
+    /// When set, another person covers this line's cost on behalf of `personId`.
+    /// The amount is attributed to `coveredById` in all split calculations.
     var coveredById: String?
 
     init(
@@ -34,15 +56,31 @@ struct BillLine: Identifiable, Codable, Equatable {
     }
 }
 
-struct Bill: Identifiable, Codable, Equatable {
+// MARK: - Bill
+
+/// A recurring bill that is split among household members.
+///
+/// Bills are part of `AppState` and persist across months. The actual dollar
+/// amounts for each month are stored separately in `MonthData`, allowing the
+/// same bill configuration to carry different totals each month.
+struct Bill: Identifiable, Codable, Equatable, Sendable {
     var id: String
+    /// Display name (e.g. "Rent", "Electric").
     var name: String
+    /// Emoji icon shown in the bill card header.
     var icon: String
+    /// Hex color string (e.g. "#F5A800") for the bill's accent color.
     var color: String
+    /// How this bill is divided among its line items.
     var splitType: SplitType
+    /// In fixed-split mode, the line that receives the leftover amount
+    /// after all other fixed lines are subtracted from the total.
     var remainderLineId: String
+    /// Optional URL to the bill's payment portal (e.g. utility company website).
     var payUrl: String
+    /// When true, the previous month's amounts are auto-copied into a new month.
     var preserve: Bool
+    /// The individual share lines for this bill.
     var lines: [BillLine]
 
     enum CodingKeys: String, CodingKey {
@@ -62,6 +100,10 @@ struct Bill: Identifiable, Codable, Equatable {
         lines = try c.decode([BillLine].self, forKey: .lines)
     }
 
+    /// Creates a new bill with sensible defaults.
+    ///
+    /// If no lines are provided, a single "My share" line is created
+    /// automatically and designated as the remainder line.
     init(
         id: String = "b\(Int(Date().timeIntervalSince1970 * 1000))",
         name: String = "New Bill",

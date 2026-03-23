@@ -1,5 +1,9 @@
 import SwiftUI
 
+// MARK: - Settings View
+
+/// Top-level settings screen with people management, email greetings,
+/// email relay configuration (server-only), data export/import, and server URL.
 struct SettingsView: View {
     @EnvironmentObject var vm: AppViewModel
     @AppStorage("serverURL") private var serverURL: String = ""
@@ -20,7 +24,8 @@ struct SettingsView: View {
                             .foregroundColor(.bhText)
                             .padding(.top, 16)
 
-                        // People
+                        // MARK: People Section
+
                         VStack(alignment: .leading, spacing: 8) {
                             Text("People")
                                 .bhSectionTitle()
@@ -62,7 +67,8 @@ struct SettingsView: View {
                             .buttonStyle(BHSecondaryButtonStyle())
                         }
 
-                        // Email Greetings
+                        // MARK: Email Greetings Section
+
                         SettingsSection(title: "Email Greetings") {
                             Text("Custom opening line for each person's bill email")
                                 .font(.system(size: 10, design: .monospaced))
@@ -102,12 +108,14 @@ struct SettingsView: View {
                             }
                         }
 
-                        // Email Relay (server-only)
+                        // MARK: Email Relay Section (server-only)
+
                         if !vm.isLocal {
                             EmailConfigSection()
                         }
 
-                        // Data
+                        // MARK: Data Section
+
                         SettingsSection(title: "Data") {
                             VStack(spacing: 10) {
                                 if let exportURL = APIClient.shared.exportURL() {
@@ -134,7 +142,8 @@ struct SettingsView: View {
                             }
                         }
 
-                        // Server (server-only)
+                        // MARK: Server Section (server-only)
+
                         if !vm.isLocal {
                             SettingsSection(title: "Server") {
                                 HStack {
@@ -187,6 +196,9 @@ struct SettingsView: View {
     }
 }
 
+// MARK: - Settings Section
+
+/// Reusable card container for a titled settings group.
 struct SettingsSection<Content: View>: View {
     let title: String
     @ViewBuilder let content: Content
@@ -204,7 +216,13 @@ struct SettingsSection<Content: View>: View {
     }
 }
 
-// ── Person expandable card (mirrors BillCardView pattern) ────────────────────
+// MARK: - Person Card (Expandable)
+
+/// An expandable card for a household member in the Settings people list.
+///
+/// The collapsed state shows the person's name, color dot, and payment method.
+/// Expanding reveals editable fields for name, color, payment method, pay ID,
+/// email, and a remove button (non-"me" only).
 struct PersonCardView: View {
     @EnvironmentObject var vm: AppViewModel
     let idx: Int
@@ -255,7 +273,7 @@ struct PersonCardView: View {
 
             if isExpanded {
                 Divider().background(Color.bhBorder)
-                PersonBodyView(idx: idx, person: person)
+                PersonBodyView(person: person)
             }
         }
         .background(Color.bhSurface)
@@ -267,39 +285,54 @@ struct PersonCardView: View {
     }
 }
 
+// MARK: - Person Body (Expanded Fields)
+
+/// The expanded body of a person card, containing editable fields.
+///
+/// Refactored to use `@ViewBuilder` instead of `AnyView` to preserve
+/// SwiftUI's type-based diffing performance.
 struct PersonBodyView: View {
     @EnvironmentObject var vm: AppViewModel
-    let idx: Int
     let person: Person
 
-    var body: some View {
-        // Get current index safely
-        guard let currentIdx = vm.state.people.firstIndex(where: { $0.id == person.id }) else {
-            return AnyView(EmptyView())
-        }
-        
-        let pm = vm.state.people[currentIdx].payMethod
-        let showPayId = pm == .zelle || pm == .venmo || pm == .cashapp
-        let payIdLabel = pm == .venmo ? "Venmo Handle" : pm == .cashapp ? "Cash Tag" : "Phone / Email"
-        let payIdPlaceholder = pm == .venmo ? "@handle" : pm == .cashapp ? "$cashtag" : "phone or email"
+    /// Safely looks up the current index each time the body is evaluated,
+    /// guarding against stale indices after array mutations.
+    private var currentIdx: Int? {
+        vm.state.people.firstIndex(where: { $0.id == person.id })
+    }
 
-        return AnyView(VStack(alignment: .leading, spacing: 12) {
+    /// The person's current payment method, resolved via live index lookup.
+    private var payMethod: PayMethod {
+        guard let idx = currentIdx else { return .none }
+        return vm.state.people[idx].payMethod
+    }
+
+    var body: some View {
+        if currentIdx != nil {
+            personFields
+        }
+    }
+
+    /// All editable fields for this person, extracted to keep the body clean.
+    @ViewBuilder
+    private var personFields: some View {
+        let showPayId = payMethod == .zelle || payMethod == .venmo || payMethod == .cashapp
+        let payIdLabel = payMethod == .venmo ? "Venmo Handle" : payMethod == .cashapp ? "Cash Tag" : "Phone / Email"
+        let payIdPlaceholder = payMethod == .venmo ? "@handle" : payMethod == .cashapp ? "$cashtag" : "phone or email"
+
+        VStack(alignment: .leading, spacing: 12) {
             // Name + color picker
             PersonFieldRow("Name") {
                 HStack(spacing: 8) {
                     ColorPicker("", selection: Binding(
                         get: {
-                            if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
-                                return Color(hex: vm.state.people[idx].color) ?? .bhAmber
-                            }
-                            return .bhAmber
+                            guard let idx = currentIdx else { return .bhAmber }
+                            return Color(hex: vm.state.people[idx].color) ?? .bhAmber
                         },
                         set: { newColor in
-                            if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }),
-                               let hex = newColor.toHex() {
-                                vm.state.people[idx].color = hex
-                                vm.save()
-                            }
+                            guard let idx = currentIdx, let hex = newColor.toHex() else { return }
+                            vm.state.people[idx].color = hex
+                            vm.save()
                         }
                     ))
                     .frame(width: 26, height: 26)
@@ -307,16 +340,13 @@ struct PersonBodyView: View {
 
                     TextField("Name", text: Binding(
                         get: {
-                            if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
-                                return vm.state.people[idx].name
-                            }
-                            return ""
+                            guard let idx = currentIdx else { return "" }
+                            return vm.state.people[idx].name
                         },
                         set: { newValue in
-                            if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
-                                vm.state.people[idx].name = newValue
-                                vm.save()
-                            }
+                            guard let idx = currentIdx else { return }
+                            vm.state.people[idx].name = newValue
+                            vm.save()
                         }
                     ))
                     .font(.system(size: 12, design: .monospaced))
@@ -329,20 +359,14 @@ struct PersonBodyView: View {
                 .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.bhBorder, lineWidth: 1))
             }
 
-            // Payment method — full width so labels never wrap
+            // Payment method picker
             PersonFieldRow("Payment") {
                 Picker("Pay method", selection: Binding(
-                    get: {
-                        if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
-                            return vm.state.people[idx].payMethod
-                        }
-                        return .none
-                    },
+                    get: { payMethod },
                     set: { newValue in
-                        if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
-                            vm.state.people[idx].payMethod = newValue
-                            vm.save()
-                        }
+                        guard let idx = currentIdx else { return }
+                        vm.state.people[idx].payMethod = newValue
+                        vm.save()
                     }
                 )) {
                     ForEach(PayMethod.allCases, id: \.self) { m in
@@ -364,16 +388,13 @@ struct PersonBodyView: View {
                 PersonFieldRow(payIdLabel) {
                     TextField(payIdPlaceholder, text: Binding(
                         get: {
-                            if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
-                                return vm.state.people[idx].payId
-                            }
-                            return ""
+                            guard let idx = currentIdx else { return "" }
+                            return vm.state.people[idx].payId
                         },
                         set: { newValue in
-                            if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
-                                vm.state.people[idx].payId = newValue
-                                vm.save()
-                            }
+                            guard let idx = currentIdx else { return }
+                            vm.state.people[idx].payId = newValue
+                            vm.save()
                         }
                     ))
                     .font(.system(size: 12, design: .monospaced))
@@ -381,7 +402,7 @@ struct PersonBodyView: View {
                     .textFieldStyle(.plain)
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
-                    .keyboardType(pm == .zelle ? .phonePad : .default)
+                    .keyboardType(payMethod == .zelle ? .phonePad : .default)
                     .padding(8)
                     .background(Color.bhSurface2)
                     .cornerRadius(6)
@@ -390,21 +411,18 @@ struct PersonBodyView: View {
             }
 
             // Custom Zelle URL
-            if pm == .zelle {
+            if payMethod == .zelle {
                 PersonFieldRow("Zelle URL") {
                     TextField("Custom URL (optional)", text: Binding(
                         get: {
-                            if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
-                                return vm.state.people[idx].zelleUrl ?? ""
-                            }
-                            return ""
+                            guard let idx = currentIdx else { return "" }
+                            return vm.state.people[idx].zelleUrl ?? ""
                         },
                         set: { newValue in
-                            if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
-                                let v = newValue.trimmingCharacters(in: .whitespaces)
-                                vm.state.people[idx].zelleUrl = v.isEmpty ? nil : v
-                                vm.save()
-                            }
+                            guard let idx = currentIdx else { return }
+                            let v = newValue.trimmingCharacters(in: .whitespaces)
+                            vm.state.people[idx].zelleUrl = v.isEmpty ? nil : v
+                            vm.save()
                         }
                     ))
                     .font(.system(size: 12, design: .monospaced))
@@ -424,16 +442,13 @@ struct PersonBodyView: View {
             PersonFieldRow("Email") {
                 TextField("Notifications email", text: Binding(
                     get: {
-                        if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
-                            return vm.state.people[idx].email
-                        }
-                        return ""
+                        guard let idx = currentIdx else { return "" }
+                        return vm.state.people[idx].email
                     },
                     set: { newValue in
-                        if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
-                            vm.state.people[idx].email = newValue
-                            vm.save()
-                        }
+                        guard let idx = currentIdx else { return }
+                        vm.state.people[idx].email = newValue
+                        vm.save()
                     }
                 ))
                 .font(.system(size: 12, design: .monospaced))
@@ -448,10 +463,10 @@ struct PersonBodyView: View {
                 .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.bhBorder, lineWidth: 1))
             }
 
-            // Remove (non-me only)
+            // Remove button (non-"me" only)
             if !person.isMe {
                 Button {
-                    if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
+                    if let idx = currentIdx {
                         vm.removePerson(at: idx)
                     }
                 } label: {
@@ -465,10 +480,13 @@ struct PersonBodyView: View {
                 .padding(.top, 4)
             }
         }
-        .padding(14))
+        .padding(14)
     }
 }
 
+// MARK: - Person Field Row
+
+/// A labeled row used in the person body — title label above the content.
 struct PersonFieldRow<Content: View>: View {
     let label: String
     let content: Content
@@ -489,6 +507,12 @@ struct PersonFieldRow<Content: View>: View {
     }
 }
 
+// MARK: - Email Config Section
+
+/// Server-side email relay configuration panel.
+///
+/// Allows the user to select a provider (SMTP, Mailgun, SendGrid, Resend),
+/// enter credentials, save, and send a test email.
 struct EmailConfigSection: View {
     @EnvironmentObject var vm: AppViewModel
     @State private var config = EmailConfig()
@@ -504,7 +528,7 @@ struct EmailConfigSection: View {
                 .foregroundColor(.bhMuted)
                 .padding(.bottom, 8)
 
-            // Provider
+            // Provider picker
             HStack {
                 Text("Provider").font(.system(size: 11, design: .monospaced)).foregroundColor(.bhMuted).frame(width: 80, alignment: .leading)
                 Picker("", selection: $config.provider) {
@@ -519,6 +543,7 @@ struct EmailConfigSection: View {
             EMField("From Name", value: $config.fromName, placeholder: "e.g. Marty")
             EMField("From Email", value: $config.fromEmail, placeholder: "you@domain.com", keyboard: .emailAddress)
 
+            // Provider-specific fields
             let provider = EmailProvider(rawValue: config.provider) ?? .disabled
             switch provider {
             case .smtp:
@@ -537,6 +562,7 @@ struct EmailConfigSection: View {
                 EmptyView()
             }
 
+            // Status message
             if let msg = statusMsg {
                 HStack(spacing: 6) {
                     Image(systemName: statusOK ? "checkmark.circle.fill" : "xmark.circle.fill")
@@ -545,6 +571,7 @@ struct EmailConfigSection: View {
                 }
             }
 
+            // Action buttons
             HStack(spacing: 10) {
                 Button("Save") {
                     Task { await saveConfig() }
@@ -566,7 +593,9 @@ struct EmailConfigSection: View {
         .task { await loadConfig() }
     }
 
-    func loadConfig() async {
+    // MARK: - Email Config Actions
+
+    private func loadConfig() async {
         isLoading = true
         if let cfg = try? await APIClient.shared.getEmailConfig() {
             config = cfg
@@ -574,7 +603,7 @@ struct EmailConfigSection: View {
         isLoading = false
     }
 
-    func saveConfig() async {
+    private func saveConfig() async {
         do {
             try await APIClient.shared.saveEmailConfig(config)
             statusOK = true; statusMsg = "Saved!"
@@ -583,7 +612,7 @@ struct EmailConfigSection: View {
         }
     }
 
-    func testConfig() async {
+    private func testConfig() async {
         isTesting = true
         do {
             let msg = try await APIClient.shared.testEmail()
@@ -595,6 +624,9 @@ struct EmailConfigSection: View {
     }
 }
 
+// MARK: - Email Field Row
+
+/// A horizontal label + text field row used in the email config section.
 struct EMField: View {
     let label: String
     @Binding var value: String
@@ -643,6 +675,9 @@ struct EMField: View {
     }
 }
 
+// MARK: - Server Edit Sheet
+
+/// Modal sheet for changing the server URL or logging out.
 struct ServerEditSheet: View {
     @Binding var url: String
     let onSave: (String) -> Void
@@ -699,7 +734,13 @@ struct ServerEditSheet: View {
     }
 }
 
+// MARK: - Color → Hex Conversion
+
 extension Color {
+    /// Converts a SwiftUI Color to a hex string (e.g. "#FF8800").
+    ///
+    /// Uses UIColor for component extraction. Returns `nil` if the color
+    /// space conversion fails.
     func toHex() -> String? {
         let uic = UIColor(self)
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
