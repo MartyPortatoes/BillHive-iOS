@@ -80,11 +80,13 @@ struct Bill: Identifiable, Codable, Equatable, Sendable {
     var payUrl: String
     /// When true, the previous month's amounts are auto-copied into a new month.
     var preserve: Bool
+    /// When true, this bill is paid automatically — skips the "paid" checklist task.
+    var autoPay: Bool
     /// The individual share lines for this bill.
     var lines: [BillLine]
 
     enum CodingKeys: String, CodingKey {
-        case id, name, icon, color, splitType, remainderLineId, payUrl, preserve, lines
+        case id, name, icon, color, splitType, remainderLineId, payUrl, preserve, autoPay, lines
     }
 
     init(from decoder: Decoder) throws {
@@ -97,6 +99,7 @@ struct Bill: Identifiable, Codable, Equatable, Sendable {
         remainderLineId = try c.decode(String.self, forKey: .remainderLineId)
         payUrl = try c.decodeIfPresent(String.self, forKey: .payUrl) ?? ""
         preserve = try c.decodeIfPresent(Bool.self, forKey: .preserve) ?? false
+        autoPay = try c.decodeIfPresent(Bool.self, forKey: .autoPay) ?? false
         lines = try c.decode([BillLine].self, forKey: .lines)
     }
 
@@ -113,6 +116,7 @@ struct Bill: Identifiable, Codable, Equatable, Sendable {
         remainderLineId: String = "",
         payUrl: String = "",
         preserve: Bool = false,
+        autoPay: Bool = false,
         lines: [BillLine] = []
     ) {
         self.id = id
@@ -123,6 +127,7 @@ struct Bill: Identifiable, Codable, Equatable, Sendable {
         self.remainderLineId = remainderLineId
         self.payUrl = payUrl
         self.preserve = preserve
+        self.autoPay = autoPay
         if lines.isEmpty {
             let lineId = "l\(Int(Date().timeIntervalSince1970 * 1000))"
             self.lines = [BillLine(id: lineId, desc: "My share", personId: "me", value: 100)]

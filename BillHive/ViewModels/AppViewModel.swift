@@ -607,16 +607,20 @@ class AppViewModel: ObservableObject {
     func checklistItems(for key: String) -> [(id: String, label: String, done: Bool)] {
         var items: [(id: String, label: String, done: Bool)] = []
         let cl = state.checklist[key] ?? [:]
+        let owes = computePersonOwes()
 
-        for person in state.people where person.id != "me" {
+        // Only include people who actually owe money (skip covered people with $0 total)
+        let owingPeople = state.people.filter { $0.id != "me" && (owes[$0.id]?.total ?? 0) > 0 }
+
+        for person in owingPeople {
             let id = "email-\(person.id)"
             items.append((id: id, label: "Email sent to \(person.name)", done: cl[id] ?? false))
         }
-        for bill in state.bills {
+        for bill in state.bills where !bill.autoPay {
             let id = "paid-\(bill.id)"
             items.append((id: id, label: "\(bill.name) paid", done: cl[id] ?? false))
         }
-        for person in state.people where person.id != "me" {
+        for person in owingPeople {
             let id = "recv-\(person.id)"
             items.append((id: id, label: "Payment received from \(person.name)", done: cl[id] ?? false))
         }

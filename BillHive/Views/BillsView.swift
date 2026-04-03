@@ -378,6 +378,27 @@ struct BillBodyView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
 
+            Toggle(isOn: Binding(
+                get: { bill.autoPay },
+                set: { val in
+                    guard let idx = billIndex else { return }
+                    vm.state.bills[idx].autoPay = val
+                    vm.save()
+                }
+            )) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Auto-pay")
+                        .font(.system(size: 12, design: .monospaced))
+                        .foregroundColor(.bhText)
+                    Text("Skip \"paid\" task in monthly checklist")
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundColor(.bhMuted)
+                }
+            }
+            .tint(.bhAmber)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+
             Divider().background(Color.bhBorder).padding(.horizontal, 16)
 
             // MARK: Remove Bill
@@ -412,6 +433,7 @@ struct BillLineRowView: View {
     @EnvironmentObject var vm: AppViewModel
     let bill: Bill
     let line: BillLine
+    @FocusState private var pctFocused: Bool
 
     private var billIndex: Int? { vm.state.bills.firstIndex { $0.id == bill.id } }
     private var lineIndex: Int? { bill.lines.firstIndex { $0.id == line.id } }
@@ -479,6 +501,15 @@ struct BillLineRowView: View {
                     .background(Color.bhSurface2)
                     .cornerRadius(6)
                     .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.bhBorder, lineWidth: 1))
+                    .focused($pctFocused)
+                    .toolbar {
+                        ToolbarItemGroup(placement: .keyboard) {
+                            Spacer()
+                            Button("Done") { pctFocused = false }
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.bhAmber)
+                        }
+                    }
 
                     // Computed dollar amount (read-only)
                     Text(computedAmount.asCurrency)
@@ -578,6 +609,14 @@ struct CurrencyInputField: View {
             .cornerRadius(6)
             .overlay(RoundedRectangle(cornerRadius: 6).stroke(focused ? Color.bhAmber : Color.bhBorder, lineWidth: 1))
             .focused($focused)
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { focused = false }
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.bhAmber)
+                }
+            }
             .onAppear {
                 text = value > 0 ? String(format: "%.2f", value) : ""
             }
