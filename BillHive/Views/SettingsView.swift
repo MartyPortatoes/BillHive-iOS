@@ -24,6 +24,12 @@ struct SettingsView: View {
                             .foregroundColor(.bhText)
                             .padding(.top, 16)
 
+                        // MARK: Purchase Section
+
+                        if vm.isLocal {
+                            PurchaseSettingsSection()
+                        }
+
                         // MARK: People Section
 
                         VStack(alignment: .leading, spacing: 8) {
@@ -730,6 +736,100 @@ struct ServerEditSheet: View {
                 .padding(24)
             }
             .navigationBarHidden(true)
+        }
+    }
+}
+
+// MARK: - Purchase Settings Section
+
+/// Shows trial status, purchase button, and restore link in Settings.
+struct PurchaseSettingsSection: View {
+    @ObservedObject var pm = PurchaseManager.shared
+    @EnvironmentObject var vm: AppViewModel
+
+    var body: some View {
+        if pm.isPurchased {
+            // Thin full-width banner when purchased
+            HStack(spacing: 8) {
+                Image(systemName: "checkmark.seal.fill")
+                    .foregroundColor(.bhAmber)
+                    .font(.system(size: 13))
+                Text("BillHive Pro")
+                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                    .foregroundColor(.bhAmber)
+                Spacer()
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(Color.bhSurface)
+            .cornerRadius(10)
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.bhBorder, lineWidth: 1))
+        } else {
+            // Full card when not purchased
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Image(systemName: "clock")
+                        .foregroundColor(.bhMuted)
+                        .font(.system(size: 13))
+                    Text(pm.trialStatusText)
+                        .font(.system(size: 12, design: .monospaced))
+                        .foregroundColor(.bhText)
+                }
+
+                if pm.isTrialActive {
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(Color.bhSurface2)
+                                .frame(height: 6)
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(trialBarColor)
+                                .frame(width: geo.size.width * CGFloat(pm.trialDaysRemaining) / CGFloat(PurchaseManager.trialDays), height: 6)
+                        }
+                    }
+                    .frame(height: 6)
+                }
+
+                Button {
+                    vm.presentPaywall()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "lock.open.fill")
+                            .font(.system(size: 11))
+                        Text("Unlock BillHive — \(pm.priceText)")
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(BHPrimaryButtonStyle())
+
+                Button {
+                    Task { await pm.restore() }
+                } label: {
+                    Text("Restore Previous Purchase")
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundColor(.bhMuted)
+                }
+
+                if let error = pm.errorMessage {
+                    Text(error)
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundColor(.bhRed)
+                }
+            }
+            .padding(14)
+            .bhCard()
+        }
+    }
+
+    /// Trial bar color — green when full, amber midway, red when almost expired.
+    private var trialBarColor: Color {
+        let fraction = Double(pm.trialDaysRemaining) / Double(PurchaseManager.trialDays)
+        if fraction > 0.5 {
+            return Color(red: 0.2, green: 0.8, blue: 0.3)
+        } else if fraction > 0.25 {
+            return .bhAmber
+        } else {
+            return .bhRed
         }
     }
 }

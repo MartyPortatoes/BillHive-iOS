@@ -39,6 +39,11 @@ struct TrendsView: View {
         NavigationStack {
             ZStack {
                 HexBGView().ignoresSafeArea()
+                if !vm.isUnlocked {
+                    TrendsLockedView {
+                        vm.presentPaywall(context: "Unlock Trends to see analytics")
+                    }
+                } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         HStack(alignment: .top) {
@@ -103,9 +108,47 @@ struct TrendsView: View {
                     .padding(.horizontal, 16)
                 }
                 .refreshable { await vm.refresh() }
+                } // else (unlocked)
             }
             .navigationBarHidden(true)
         }
+    }
+}
+
+// MARK: - Trends Locked View
+
+/// Shown when Trends is gated behind the paywall.
+struct TrendsLockedView: View {
+    let onUnlock: () -> Void
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Spacer()
+            Image(systemName: "chart.line.uptrend.xyaxis")
+                .font(.system(size: 48))
+                .foregroundColor(.bhAmber.opacity(0.5))
+            Text("Trends")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(.bhText)
+            Text("Unlock BillHive to see month-over-month\nspending insights and analytics.")
+                .font(.system(size: 13, design: .monospaced))
+                .foregroundColor(.bhMuted)
+                .multilineTextAlignment(.center)
+            Button {
+                onUnlock()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 11))
+                    Text("Unlock")
+                        .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                }
+                .frame(width: 160)
+            }
+            .buttonStyle(BHPrimaryButtonStyle())
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 

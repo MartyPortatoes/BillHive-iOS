@@ -51,15 +51,26 @@ struct BillsView: View {
                         .padding(.horizontal, 16)
 
                         Button {
-                            vm.addBill()
-                            if let last = vm.state.bills.last {
-                                withAnimation {
-                                    expandedBillId = last.id
+                            if vm.isUnlocked || vm.state.bills.count < 2 {
+                                vm.addBill()
+                                if let last = vm.state.bills.last {
+                                    withAnimation {
+                                        expandedBillId = last.id
+                                    }
                                 }
+                            } else {
+                                vm.presentPaywall(context: "Unlock unlimited bills")
                             }
                         } label: {
-                            Label("Add Bill", systemImage: "plus")
-                                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                            HStack(spacing: 6) {
+                                Label("Add Bill", systemImage: "plus")
+                                if !vm.isUnlocked && vm.state.bills.count >= 2 {
+                                    Image(systemName: "lock.fill")
+                                        .font(.system(size: 9))
+                                        .foregroundColor(.bhAmber)
+                                }
+                            }
+                            .font(.system(size: 12, weight: .medium, design: .monospaced))
                         }
                         .buttonStyle(BHSecondaryButtonStyle())
                         .padding(.horizontal, 16)
@@ -71,6 +82,16 @@ struct BillsView: View {
                 .refreshable { await vm.refresh() }
             }
             .navigationBarHidden(true)
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    }
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.bhAmber)
+                }
+            }
         }
     }
 }
@@ -433,7 +454,6 @@ struct BillLineRowView: View {
     @EnvironmentObject var vm: AppViewModel
     let bill: Bill
     let line: BillLine
-    @FocusState private var pctFocused: Bool
 
     private var billIndex: Int? { vm.state.bills.firstIndex { $0.id == bill.id } }
     private var lineIndex: Int? { bill.lines.firstIndex { $0.id == line.id } }
@@ -501,15 +521,6 @@ struct BillLineRowView: View {
                     .background(Color.bhSurface2)
                     .cornerRadius(6)
                     .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.bhBorder, lineWidth: 1))
-                    .focused($pctFocused)
-                    .toolbar {
-                        ToolbarItemGroup(placement: .keyboard) {
-                            Spacer()
-                            Button("Done") { pctFocused = false }
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.bhAmber)
-                        }
-                    }
 
                     // Computed dollar amount (read-only)
                     Text(computedAmount.asCurrency)
@@ -609,14 +620,6 @@ struct CurrencyInputField: View {
             .cornerRadius(6)
             .overlay(RoundedRectangle(cornerRadius: 6).stroke(focused ? Color.bhAmber : Color.bhBorder, lineWidth: 1))
             .focused($focused)
-            .toolbar {
-                ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button("Done") { focused = false }
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.bhAmber)
-                }
-            }
             .onAppear {
                 text = value > 0 ? String(format: "%.2f", value) : ""
             }

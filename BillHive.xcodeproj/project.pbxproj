@@ -43,6 +43,8 @@
 		C117 /* ServerSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A008 /* ServerSetupView.swift */; };
 		C120 /* HexagonBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = A020 /* HexagonBackground.swift */; };
 		C121 /* CloudStorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B005 /* CloudStorageManager.swift */; };
+		D101 /* PurchaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D001 /* PurchaseManager.swift */; };
+		D102 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D002 /* PaywallView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -70,6 +72,9 @@
 		B005 /* CloudStorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudStorageManager.swift; sourceTree = "<group>"; };
 		B006 /* BillHive.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BillHive.entitlements; sourceTree = "<group>"; };
 		B007 /* SelfHive-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "SelfHive-Info.plist"; sourceTree = "<group>"; };
+		D001 /* PurchaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseManager.swift; sourceTree = "<group>"; };
+		D002 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
+		D003 /* Products.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Products.storekit; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -86,8 +91,10 @@
 			children = (
 				A001 /* SelfHiveApp.swift */,
 				B001 /* BillHiveApp.swift */,
+				D001 /* PurchaseManager.swift */,
 				B006 /* BillHive.entitlements */,
 				B007 /* SelfHive-Info.plist */,
+				D003 /* Products.storekit */,
 				A015 /* Assets.xcassets */,
 				A211 /* Models */,
 				A212 /* Network */,
@@ -137,6 +144,7 @@
 				A008 /* ServerSetupView.swift */,
 				A020 /* HexagonBackground.swift */,
 				B003 /* MailComposeView.swift */,
+				D002 /* PaywallView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -296,6 +304,8 @@
 				C117 /* ServerSetupView.swift in Sources */,
 				C120 /* HexagonBackground.swift in Sources */,
 				C121 /* CloudStorageManager.swift in Sources */,
+				D101 /* PurchaseManager.swift in Sources */,
+				D102 /* PaywallView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -433,7 +443,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.3.0;
+				MARKETING_VERSION = 1.4.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.billhive.selfhive;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -455,7 +465,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.3.0;
+				MARKETING_VERSION = 1.4.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.billhive.selfhive;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -484,7 +494,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.3.0;
+				MARKETING_VERSION = 1.4.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.billhive.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) BILLHIVE_LOCAL";
@@ -514,7 +524,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.3.0;
+				MARKETING_VERSION = 1.4.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.billhive.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) BILLHIVE_LOCAL";

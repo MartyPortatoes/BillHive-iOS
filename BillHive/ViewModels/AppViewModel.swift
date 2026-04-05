@@ -48,6 +48,10 @@ class AppViewModel: ObservableObject {
     @Published var toastMessage: String? = nil
     /// Pending mail compose request (BillHive standalone target only).
     @Published var pendingMailCompose: MailComposeRequest? = nil
+    /// Whether the paywall sheet is being presented.
+    @Published var showPaywall: Bool = false
+    /// Context string for the paywall (e.g. "Unlock Trends to see analytics").
+    @Published var paywallContext: String? = nil
     /// Currently selected year in the month picker.
     @Published var selectedYear: Int
     /// Currently selected month (1–12) in the month picker.
@@ -633,6 +637,24 @@ class AppViewModel: ObservableObject {
         let current = state.checklist[key]?[itemId] ?? false
         state.checklist[key]?[itemId] = !current
         save()
+    }
+
+    // MARK: - Purchase Gating
+
+    /// Whether the app is fully unlocked (purchased or within trial).
+    /// SelfHive (server target) is always unlocked — IAP only applies to the standalone BillHive target.
+    var isUnlocked: Bool {
+        #if BILLHIVE_LOCAL
+        return PurchaseManager.shared.isUnlocked
+        #else
+        return true
+        #endif
+    }
+
+    /// Presents the paywall sheet with an optional context message.
+    func presentPaywall(context: String? = nil) {
+        paywallContext = context
+        showPaywall = true
     }
 
     // MARK: - Toast
