@@ -26,9 +26,9 @@ struct SettingsView: View {
 
                         // MARK: Purchase Section
 
-                        if vm.isLocal {
-                            PurchaseSettingsSection()
-                        }
+                        #if BILLHIVE_LOCAL
+                        PurchaseSettingsSection()
+                        #endif
 
                         // MARK: People Section
 
@@ -740,6 +740,7 @@ struct ServerEditSheet: View {
     }
 }
 
+#if BILLHIVE_LOCAL
 // MARK: - Purchase Settings Section
 
 /// Shows trial status, purchase button, and restore link in Settings.
@@ -833,6 +834,7 @@ struct PurchaseSettingsSection: View {
         }
     }
 }
+#endif
 
 // MARK: - Color → Hex Conversion
 
