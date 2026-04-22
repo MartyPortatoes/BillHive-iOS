@@ -15,9 +15,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "B300"
-               BuildableName = "BillHive.app"
-               BlueprintName = "BillHive"
+               BlueprintIdentifier = "A300"
+               BuildableName = "SelfHive.app"
+               BlueprintName = "SelfHive"
                ReferencedContainer = "container:BillHive.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -39,20 +39,18 @@
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
-      allowLocationSimulation = "YES">
+      allowLocationSimulation = "YES"
+      queueDebuggingEnableBacktraceRecording = "Yes">
       <BuildableProductRunnable
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "B300"
-            BuildableName = "BillHive.app"
-            BlueprintName = "BillHive"
+            BlueprintIdentifier = "A300"
+            BuildableName = "SelfHive.app"
+            BlueprintName = "SelfHive"
             ReferencedContainer = "container:BillHive.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
-      <StoreKitConfigurationFileReference
-         identifier = "../../BillHive/Products.storekit">
-      </StoreKitConfigurationFileReference>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
@@ -64,9 +62,9 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "B300"
-            BuildableName = "BillHive.app"
-            BlueprintName = "BillHive"
+            BlueprintIdentifier = "A300"
+            BuildableName = "SelfHive.app"
+            BlueprintName = "SelfHive"
             ReferencedContainer = "container:BillHive.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
