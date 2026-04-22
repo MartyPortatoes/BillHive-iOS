@@ -27,10 +27,10 @@ struct ServerSetupView: View {
                 VStack(spacing: 12) {
                     TriHexLogoMark(size: 72)
                     Text("SelfHive")
-                        .font(.system(size: 28, weight: .black, design: .default))
+                        .font(.largeTitle.weight(.black))
                         .foregroundColor(.bhText)
                     Text("self-hosted bill manager")
-                        .font(.system(size: 11, design: .monospaced))
+                        .font(.bhCaption)
                         .tracking(2)
                         .textCase(.uppercase)
                         .foregroundColor(.bhMuted)
@@ -39,11 +39,11 @@ struct ServerSetupView: View {
                 // Setup card
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Connect to your SelfHive server")
-                        .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                        .font(.subheadline.weight(.semibold).monospaced())
                         .foregroundColor(.bhText)
 
                     Text("Enter the URL of your self-hosted SelfHive instance.")
-                        .font(.system(size: 12, design: .monospaced))
+                        .font(.bhBodySecondary)
                         .foregroundColor(.bhMuted)
 
                     VStack(alignment: .leading, spacing: 6) {
@@ -52,7 +52,7 @@ struct ServerSetupView: View {
 
                         TextField("http://192.168.1.100:8080", text: $inputURL)
                             .textFieldStyle(.plain)
-                            .font(.system(size: 13, design: .monospaced))
+                            .font(.bhBodySecondary)
                             .foregroundColor(.bhText)
                             .padding(10)
                             .background(Color.bhSurface2)
@@ -68,7 +68,7 @@ struct ServerSetupView: View {
                             Image(systemName: testSuccess ? "checkmark.circle.fill" : "xmark.circle.fill")
                                 .foregroundColor(testSuccess ? .bhAmber : .bhRed)
                             Text(result)
-                                .font(.system(size: 11, design: .monospaced))
+                                .font(.bhCaption)
                                 .foregroundColor(testSuccess ? .bhAmber : .bhRed)
                         }
                     }
@@ -105,7 +105,7 @@ struct ServerSetupView: View {
                 Spacer()
 
                 Text("Self-hosted · Your data stays on your server")
-                    .font(.system(size: 10, design: .monospaced))
+                    .font(.bhCaption)
                     .foregroundColor(.bhMuted2)
             }
         }
@@ -238,7 +238,7 @@ struct BHPrimaryButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) var isEnabled
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 12, weight: .semibold, design: .monospaced))
+            .font(.bhBodySecondary.weight(.semibold))
             .foregroundColor(Color(hex: "#0c0d0f"))
             .padding(.vertical, 10)
             .padding(.horizontal, 16)
@@ -254,7 +254,7 @@ struct BHSecondaryButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) var isEnabled
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 12, weight: .medium, design: .monospaced))
+            .font(.bhBodySecondary.weight(.medium))
             .foregroundColor(.bhText)
             .padding(.vertical, 10)
             .padding(.horizontal, 16)
@@ -271,7 +271,7 @@ struct BHSecondaryButtonStyle: ButtonStyle {
 struct BHDangerButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 12, weight: .medium, design: .monospaced))
+            .font(.bhBodySecondary.weight(.medium))
             .foregroundColor(.bhRed)
             .padding(.vertical, 10)
             .padding(.horizontal, 16)

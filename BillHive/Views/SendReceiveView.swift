@@ -1,13 +1,13 @@
 import SwiftUI
 
-// MARK: - Send & Receive View
+// MARK: - Pay & Collect View
 
-/// Central hub for collecting payments and paying bills.
+/// Central hub for paying bills and collecting from household members.
 ///
 /// Three sections:
-/// - **Receive** — shows each person who owes money with expandable details and
+/// - **Collect** — shows each person who owes money with expandable details and
 ///   email/payment-app actions.
-/// - **Send** — lists every bill with an optional payment URL and a "Pay" button.
+/// - **Pay** — lists every bill with an optional payment URL and a "Pay" button.
 /// - **Checklist** — per-month task checklist for tracking what's been done.
 struct SendReceiveView: View {
     @EnvironmentObject var vm: AppViewModel
@@ -26,16 +26,16 @@ struct SendReceiveView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Send & Receive")
-                                .font(.system(size: 18, weight: .bold, design: .default))
+                            Text("Pay & Collect")
+                                .font(.bhViewTitle)
                                 .foregroundColor(.bhText)
                             Text("Collect from others and pay your bills.")
-                                .font(.system(size: 11, design: .default))
+                                .font(.bhSubtitle)
                                 .foregroundColor(.bhMuted)
                         }
                         .padding(.top, 16)
 
-                        // MARK: Receive Section
+                        // MARK: Collect Section
 
                         VStack(alignment: .leading, spacing: 10) {
                             HStack(spacing: 10) {
@@ -45,15 +45,15 @@ struct SendReceiveView: View {
                                         .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.bhBlue.opacity(0.25), lineWidth: 1))
                                         .frame(width: 32, height: 32)
                                     Text("↓")
-                                        .font(.system(size: 16, weight: .bold))
+                                        .font(.headline.weight(.bold))
                                         .foregroundColor(.bhBlue)
                                 }
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text("Receive")
-                                        .font(.system(size: 16, weight: .bold, design: .monospaced))
+                                    Text("Collect")
+                                        .font(.headline.monospaced())
                                         .foregroundColor(.bhText)
                                     Text("Notify people what they owe and request payment")
-                                        .font(.system(size: 11, design: .monospaced))
+                                        .font(.bhCaption)
                                         .foregroundColor(.bhMuted)
                                 }
                             }
@@ -84,7 +84,7 @@ struct SendReceiveView: View {
                             }
                         }
 
-                        // MARK: Send Section
+                        // MARK: Pay Section
 
                         VStack(alignment: .leading, spacing: 10) {
                             HStack(spacing: 10) {
@@ -94,15 +94,15 @@ struct SendReceiveView: View {
                                         .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.bhAmber.opacity(0.25), lineWidth: 1))
                                         .frame(width: 32, height: 32)
                                     Text("↑")
-                                        .font(.system(size: 16, weight: .bold))
+                                        .font(.headline.weight(.bold))
                                         .foregroundColor(.bhAmber)
                                 }
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text("Send")
-                                        .font(.system(size: 16, weight: .bold, design: .monospaced))
+                                    Text("Pay")
+                                        .font(.headline.monospaced())
                                         .foregroundColor(.bhText)
                                     Text("Pay your bills — tap Pay on any bill with a URL")
-                                        .font(.system(size: 11, design: .monospaced))
+                                        .font(.bhCaption)
                                         .foregroundColor(.bhMuted)
                                 }
                             }
@@ -122,15 +122,15 @@ struct SendReceiveView: View {
                                         .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.bhBorder, lineWidth: 1))
                                         .frame(width: 32, height: 32)
                                     Image(systemName: "checkmark")
-                                        .font(.system(size: 14, weight: .bold))
+                                        .font(.subheadline.weight(.bold))
                                         .foregroundColor(.bhMuted)
                                 }
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("Monthly Checklist")
-                                        .font(.system(size: 16, weight: .bold, design: .monospaced))
+                                        .font(.headline.monospaced())
                                         .foregroundColor(.bhText)
                                     Text("Track what's been done this month")
-                                        .font(.system(size: 11, design: .monospaced))
+                                        .font(.bhCaption)
                                         .foregroundColor(.bhMuted)
                                 }
                             }
@@ -162,7 +162,7 @@ struct SendReceiveView: View {
 
 // MARK: - Receive Card
 
-/// An expandable card for a single person in the Receive section.
+/// An expandable card for a single person in the Collect section.
 ///
 /// Collapsed: person name, color dot, total owed, and payment app link.
 /// Expanded: per-bill breakdown plus email and request-via-app action buttons.
@@ -225,17 +225,17 @@ struct ReceiveCard: View {
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text(person.name)
-                            .font(.system(size: 15, weight: .bold, design: .monospaced))
+                            .font(.bhBody)
                             .foregroundColor(.bhText)
                         Text(person.payMethod.displayName)
-                            .font(.system(size: 10, design: .monospaced))
+                            .font(.bhCaption)
                             .foregroundColor(.bhMuted)
                     }
 
                     Spacer()
 
                     Text((personOwes?.total ?? 0).asCurrency)
-                        .font(.system(size: 22, weight: .bold, design: .monospaced))
+                        .font(.bhMoneyMedium)
                         .foregroundColor(Color(hex: person.color) ?? .bhAmber)
 
                     HStack(spacing: 6) {
@@ -243,7 +243,7 @@ struct ReceiveCard: View {
                         if let url = payURL {
                             Link(destination: url) {
                                 Text(payLabel)
-                                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                                    .font(.bhCaption.weight(.semibold))
                                     .foregroundColor(Color(hex: "#0c0d0f"))
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 5)
@@ -254,7 +254,7 @@ struct ReceiveCard: View {
 
                         Button(action: onToggle) {
                             Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                                .font(.system(size: 10, weight: .medium))
+                                .font(.caption2.weight(.medium))
                                 .foregroundColor(.bhMuted)
                                 .frame(width: 24, height: 24)
                                 .background(Color.bhSurface2)
@@ -278,11 +278,11 @@ struct ReceiveCard: View {
                     ForEach(personOwes?.bills ?? [], id: \.billId) { bo in
                         HStack {
                             Text(bo.billName)
-                                .font(.system(size: 12, design: .monospaced))
+                                .font(.bhBodySecondary)
                                 .foregroundColor(.bhMuted)
                             Spacer()
                             Text(bo.amount.asCurrency)
-                                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                                .font(.bhMoneySmall)
                                 .foregroundColor(.bhText)
                         }
                         .padding(.vertical, 2)
@@ -298,11 +298,11 @@ struct ReceiveCard: View {
                                     ProgressView().tint(.bhText).scaleEffect(0.7)
                                 } else {
                                     Image(systemName: "envelope")
-                                        .font(.system(size: 11))
+                                        .font(.caption)
                                 }
                                 Text(isSendingEmail ? "Sending..." : "Send Email")
                             }
-                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                            .font(.bhCaption.weight(.medium))
                         }
                         .buttonStyle(BHSecondaryButtonStyle())
                         .disabled(person.email.isEmpty || isSendingEmail)
@@ -311,10 +311,10 @@ struct ReceiveCard: View {
                             Link(destination: url) {
                                 HStack(spacing: 5) {
                                     Image(systemName: "arrow.up.right.square")
-                                        .font(.system(size: 11))
+                                        .font(.caption)
                                     Text("Request via \(payLabel)")
                                 }
-                                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                                .font(.bhCaption.weight(.medium))
                                 .foregroundColor(.bhText)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 9)
@@ -337,7 +337,7 @@ struct ReceiveCard: View {
 
 // MARK: - Send Card
 
-/// A card for a single bill in the Send section, showing the bill total
+/// A card for a single bill in the Pay section, showing the bill total
 /// and an editable payment URL field with a "Pay" link button.
 struct SendCard: View {
     @EnvironmentObject var vm: AppViewModel
@@ -355,15 +355,15 @@ struct SendCard: View {
                     RoundedRectangle(cornerRadius: 7)
                         .fill(Color(hex: bill.color)?.opacity(0.2) ?? Color.bhSurface3)
                         .frame(width: 34, height: 34)
-                    Text(bill.icon).font(.system(size: 16))
+                    Text(bill.icon).font(.body)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(bill.name)
-                        .font(.system(size: 13, weight: .bold, design: .monospaced))
+                        .font(.bhBody)
                         .foregroundColor(.bhText)
                     Text(vm.getBillTotal(bill.id).asCurrency)
-                        .font(.system(size: 11, design: .monospaced))
+                        .font(.bhCaption)
                         .foregroundColor(.bhMuted)
                 }
 
@@ -373,9 +373,9 @@ struct SendCard: View {
                     Link(destination: url) {
                         HStack(spacing: 4) {
                             Image(systemName: "arrow.up.right.square")
-                                .font(.system(size: 11))
+                                .font(.caption)
                             Text("Pay")
-                                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                                .font(.bhBodySecondary.weight(.semibold))
                         }
                         .foregroundColor(Color(hex: "#0c0d0f"))
                         .padding(.horizontal, 12)
@@ -394,10 +394,7 @@ struct SendCard: View {
 
             HStack(spacing: 8) {
                 Text("Pay URL")
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
-                    .textCase(.uppercase)
-                    .tracking(1.5)
-                    .foregroundColor(.bhMuted)
+                    .bhSectionTitle()
                     .frame(width: 60, alignment: .leading)
 
                 TextField("https://your-bank.com/pay", text: Binding(
@@ -408,7 +405,7 @@ struct SendCard: View {
                         vm.save()
                     }
                 ))
-                .font(.system(size: 11, design: .monospaced))
+                .font(.bhCaption)
                 .foregroundColor(.bhText)
                 .textFieldStyle(.plain)
                 .keyboardType(.URL)
@@ -418,7 +415,7 @@ struct SendCard: View {
                 if !bill.payUrl.isEmpty, let url = URL(string: bill.payUrl) {
                     Link(destination: url) {
                         Image(systemName: "arrow.up.right.square")
-                            .font(.system(size: 14))
+                            .font(.subheadline)
                             .foregroundColor(.bhAmber)
                     }
                 }
@@ -453,13 +450,13 @@ struct ChecklistItemRow: View {
                         .frame(width: 18, height: 18)
                     if item.done {
                         Image(systemName: "checkmark")
-                            .font(.system(size: 10, weight: .bold))
+                            .font(.caption2.weight(.bold))
                             .foregroundColor(Color(hex: "#0c0d0f"))
                     }
                 }
 
                 Text(item.label)
-                    .font(.system(size: 12, design: .monospaced))
+                    .font(.bhBodySecondary)
                     .foregroundColor(item.done ? .bhMuted : .bhText)
                     .strikethrough(item.done, color: .bhMuted)
 

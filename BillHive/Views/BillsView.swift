@@ -7,6 +7,7 @@ import SwiftUI
 struct BillsView: View {
     @EnvironmentObject var vm: AppViewModel
     @State private var expandedBillId: String? = nil
+    @State private var editingBillId: String? = nil
 
     var body: some View {
         NavigationStack {
@@ -20,7 +21,7 @@ struct BillsView: View {
 
                         VStack(spacing: 1) {
                             Text("Bills")
-                                .font(.system(size: 18, weight: .bold, design: .default))
+                                .font(.bhViewTitle)
                                 .foregroundColor(.bhText)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.horizontal, 16)
@@ -28,70 +29,96 @@ struct BillsView: View {
                                 .padding(.bottom, 4)
 
                             Text("Add your bills and configure who owes what.")
-                                .font(.system(size: 11, design: .default))
+                                .font(.bhSubtitle)
                                 .foregroundColor(.bhMuted)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.horizontal, 16)
                                 .padding(.bottom, 16)
                         }
 
-                        LazyVStack(spacing: 10) {
-                            ForEach(vm.state.bills) { bill in
-                                BillCardView(
-                                    bill: bill,
-                                    isExpanded: expandedBillId == bill.id,
-                                    onToggle: {
-                                        withAnimation(.easeInOut(duration: 0.2)) {
-                                            expandedBillId = expandedBillId == bill.id ? nil : bill.id
-                                        }
-                                    }
-                                )
+                        if vm.state.bills.isEmpty {
+                            EmptyStateView(
+                                systemImage: "list.clipboard",
+                                title: "No bills yet",
+                                subtitle: "Add your first recurring household bill to start tracking who owes what each month.",
+                                actionTitle: "Add Your First Bill",
+                                action: addBillAction
+                            )
+                            .padding(.top, 12)
+                        } else {
+                            LazyVStack(spacing: 10) {
+                                ForEach(vm.state.bills) { bill in
+                                    BillCardView(
+                                        bill: bill,
+                                        isExpanded: expandedBillId == bill.id,
+                                        onToggle: {
+                                            withAnimation(.easeInOut(duration: 0.2)) {
+                                                expandedBillId = expandedBillId == bill.id ? nil : bill.id
+                                            }
+                                        },
+                                        onEdit: { editingBillId = bill.id }
+                                    )
+                                }
                             }
-                        }
-                        .padding(.horizontal, 16)
+                            .padding(.horizontal, 16)
 
-                        Button {
-                            if vm.isUnlocked || vm.state.bills.count < 2 {
-                                vm.addBill()
-                                if let last = vm.state.bills.last {
-                                    withAnimation {
-                                        expandedBillId = last.id
+                            Button(action: addBillAction) {
+                                HStack(spacing: 6) {
+                                    Label("Add Bill", systemImage: "plus")
+                                    if !vm.isUnlocked && vm.state.bills.count >= 2 {
+                                        Image(systemName: "lock.fill")
+                                            .font(.caption2)
+                                            .foregroundColor(.bhAmber)
                                     }
                                 }
-                            } else {
-                                vm.presentPaywall(context: "Unlock unlimited bills")
+                                .font(.bhBodySecondary)
                             }
-                        } label: {
-                            HStack(spacing: 6) {
-                                Label("Add Bill", systemImage: "plus")
-                                if !vm.isUnlocked && vm.state.bills.count >= 2 {
-                                    Image(systemName: "lock.fill")
-                                        .font(.system(size: 9))
-                                        .foregroundColor(.bhAmber)
-                                }
-                            }
-                            .font(.system(size: 12, weight: .medium, design: .monospaced))
+                            .buttonStyle(BHSecondaryButtonStyle())
+                            .padding(.horizontal, 16)
+                            .padding(.top, 10)
+                            .padding(.bottom, 24)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
-                        .buttonStyle(BHSecondaryButtonStyle())
-                        .padding(.horizontal, 16)
-                        .padding(.top, 10)
-                        .padding(.bottom, 24)
-                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
                 .refreshable { await vm.refresh() }
             }
             .navigationBarHidden(true)
+            .sheet(isPresented: Binding(
+                get: { editingBillId != nil },
+                set: { if !$0 { editingBillId = nil } }
+            )) {
+                if let id = editingBillId,
+                   let bill = vm.state.bills.first(where: { $0.id == id }) {
+                    BillEditorSheet(bill: bill) { editingBillId = nil }
+                        .environmentObject(vm)
+                }
+            }
             .toolbar {
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
                     Button("Done") {
                         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                     }
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.subheadline.weight(.medium))
                         .foregroundColor(.bhAmber)
                 }
             }
+        }
+    }
+
+    private func addBillAction() {
+        if vm.isUnlocked || vm.state.bills.count < 2 {
+            vm.addBill()
+            if let last = vm.state.bills.last {
+                withAnimation {
+                    expandedBillId = last.id
+                }
+                // Immediately open the editor sheet for a new bill
+                editingBillId = last.id
+            }
+        } else {
+            vm.presentPaywall(context: "Unlock unlimited bills")
         }
     }
 }
@@ -115,7 +142,7 @@ struct MonthPickerBar: View {
                 }
                 .pickerStyle(.menu)
                 .tint(.bhText)
-                .font(.system(size: 12, design: .monospaced))
+                .font(.bhBodySecondary)
 
                 Picker("Year", selection: $vm.selectedYear) {
                     ForEach(years, id: \.self) { y in
@@ -124,7 +151,7 @@ struct MonthPickerBar: View {
                 }
                 .pickerStyle(.menu)
                 .tint(.bhText)
-                .font(.system(size: 12, design: .monospaced))
+                .font(.bhBodySecondary)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 4)
@@ -137,24 +164,25 @@ struct MonthPickerBar: View {
     }
 }
 
-// MARK: - Bill Card (Collapsed Header + Expandable Body)
+// MARK: - Bill Card (Collapsed Header + Read-only Preview)
 
 /// An expandable card showing a bill's header (name, icon, total, my share)
-/// and, when expanded, the full configuration body.
+/// and, when expanded, a read-only per-person split preview with an Edit button.
+///
+/// Full editing is delegated to `BillEditorSheet` via the `onEdit` callback.
 struct BillCardView: View {
     @EnvironmentObject var vm: AppViewModel
     let bill: Bill
     let isExpanded: Bool
     let onToggle: () -> Void
+    let onEdit: () -> Void
 
     var total: Double { vm.getBillTotal(bill.id) }
-    var myShare: Double {
-        vm.computeBillSplit(bill)["me"] ?? 0
-    }
+    var myShare: Double { vm.computeBillSplit(bill)["me"] ?? 0 }
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header row — always visible
+            // Header row — always visible, tapping expands the preview
             Button(action: onToggle) {
                 HStack(spacing: 10) {
                     ZStack {
@@ -162,16 +190,16 @@ struct BillCardView: View {
                             .fill(Color(hex: bill.color)?.opacity(0.2) ?? Color.bhSurface3)
                             .frame(width: 34, height: 34)
                         Text(bill.icon)
-                            .font(.system(size: 16))
+                            .font(.title3)
                     }
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text(bill.name.uppercased())
-                            .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                            .font(.bhBody)
                             .tracking(0.8)
                             .foregroundColor(.bhText)
                         Text(bill.splitType == .pct ? "% split" : "Fixed split")
-                            .font(.system(size: 10, design: .monospaced))
+                            .font(.bhCaption)
                             .foregroundColor(.bhMuted)
                     }
 
@@ -179,27 +207,30 @@ struct BillCardView: View {
 
                     VStack(alignment: .trailing, spacing: 2) {
                         Text(total > 0 ? total.asCurrency : "$—")
-                            .font(.system(size: 18, weight: .semibold, design: .monospaced))
+                            .font(.bhMoneyMedium)
                             .foregroundColor(total > 0 ? .bhAmber : .bhMuted)
                         Text("my share \(myShare.asCurrency)")
-                            .font(.system(size: 10, design: .monospaced))
+                            .font(.bhCaption)
                             .foregroundColor(.bhMuted)
                     }
 
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.caption.weight(.medium))
                         .foregroundColor(.bhMuted)
                         .frame(width: 24)
+                        .rotationEffect(.degrees(0))
+                        .animation(.easeInOut(duration: 0.2), value: isExpanded)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityHint(isExpanded ? "Collapse bill preview" : "Expand bill preview")
 
             if isExpanded {
                 Divider().background(Color.bhBorder)
-                BillBodyView(bill: bill)
+                BillPreviewView(bill: bill, onEdit: onEdit)
             }
         }
         .background(Color.bhSurface)
@@ -208,17 +239,87 @@ struct BillCardView: View {
     }
 }
 
-// MARK: - Bill Body (Expanded Configuration)
+// MARK: - Bill Preview (Read-only Split Summary)
 
-/// The expanded body of a bill card — icon/name editing, split type toggle,
-/// total input, line items, preserve toggle, and remove button.
+/// The expanded read-only preview of a bill card — shows the per-person split
+/// for the current month along with an "Edit Bill" button that opens the full
+/// editor sheet.
+struct BillPreviewView: View {
+    @EnvironmentObject var vm: AppViewModel
+    let bill: Bill
+    let onEdit: () -> Void
+
+    var body: some View {
+        let split = vm.computeBillSplit(bill)
+        let contributingPeople = vm.state.people.filter { (split[$0.id] ?? 0) > 0 }
+
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("Split this month")
+                    .bhSectionTitle()
+                Spacer()
+                Text(bill.preserve ? "Auto-carry forward" : "")
+                    .font(.bhCaption)
+                    .foregroundColor(.bhMuted2)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 8)
+
+            if contributingPeople.isEmpty {
+                Text("No amounts set for this month yet. Tap Edit to configure the split.")
+                    .font(.bhCaption)
+                    .foregroundColor(.bhMuted)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 12)
+            } else {
+                ForEach(contributingPeople) { person in
+                    let amount = split[person.id] ?? 0
+                    HStack(spacing: 8) {
+                        Circle()
+                            .fill(Color(hex: person.color) ?? .gray)
+                            .frame(width: 8, height: 8)
+                        Text(person.name)
+                            .font(.bhBodySecondary)
+                            .foregroundColor(.bhText)
+                        Spacer()
+                        Text(amount.asCurrency)
+                            .font(.bhMoneySmall)
+                            .foregroundColor(.bhText)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 6)
+                }
+                .padding(.bottom, 4)
+            }
+
+            Divider().background(Color.bhBorder).padding(.horizontal, 16)
+
+            Button(action: onEdit) {
+                Label("Edit Bill", systemImage: "slider.horizontal.3")
+                    .font(.bhBodySecondary)
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(BHSecondaryButtonStyle())
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+    }
+}
+
+// MARK: - Bill Editor Sheet
+
+/// Full-screen editor for a bill's settings, presented as a sheet with a
+/// navigation bar providing a clear "Done" affordance.
 ///
 /// Uses the bill's `id` to look up its live index in the view model rather
 /// than holding a stale `@Binding`, preventing index-out-of-bounds crashes
 /// after array mutations.
-struct BillBodyView: View {
+struct BillEditorSheet: View {
     @EnvironmentObject var vm: AppViewModel
     let bill: Bill
+    let onDone: () -> Void
+
     @State private var showRemoveConfirm = false
 
     /// Safely resolves the bill's current index on each render.
@@ -227,222 +328,237 @@ struct BillBodyView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // MARK: Bill Identity (Icon, Name, Color)
+        NavigationStack {
+            ZStack {
+                Color.bhBackground.ignoresSafeArea()
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        // MARK: Bill Identity (Icon, Name, Color)
+                        HStack(spacing: 8) {
+                            TextField("", text: Binding(
+                                get: { bill.icon },
+                                set: { val in
+                                    guard let idx = billIndex else { return }
+                                    vm.state.bills[idx].icon = val
+                                    vm.save()
+                                }
+                            ))
+                            .font(.title2)
+                            .multilineTextAlignment(.center)
+                            .frame(width: 44, height: 44)
+                            .background(Color(hex: bill.color)?.opacity(0.2) ?? Color.bhSurface2)
+                            .cornerRadius(8)
+                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.bhBorder, lineWidth: 1))
 
-            HStack(spacing: 8) {
-                TextField("", text: Binding(
-                    get: { bill.icon },
-                    set: { val in
-                        guard let idx = billIndex else { return }
-                        vm.state.bills[idx].icon = val
-                        vm.save()
-                    }
-                ))
-                .font(.system(size: 20))
-                .multilineTextAlignment(.center)
-                .frame(width: 44, height: 44)
-                .background(Color(hex: bill.color)?.opacity(0.2) ?? Color.bhSurface2)
-                .cornerRadius(8)
-                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.bhBorder, lineWidth: 1))
+                            TextField("Bill name", text: Binding(
+                                get: { bill.name },
+                                set: { val in
+                                    guard let idx = billIndex else { return }
+                                    vm.state.bills[idx].name = val
+                                    vm.save()
+                                }
+                            ))
+                            .font(.bhBodySecondary)
+                            .foregroundColor(.bhText)
+                            .textFieldStyle(.plain)
+                            .padding(8)
+                            .background(Color.bhSurface2)
+                            .cornerRadius(6)
+                            .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.bhBorder, lineWidth: 1))
 
-                TextField("Bill name", text: Binding(
-                    get: { bill.name },
-                    set: { val in
-                        guard let idx = billIndex else { return }
-                        vm.state.bills[idx].name = val
-                        vm.save()
-                    }
-                ))
-                .font(.system(size: 13, design: .monospaced))
-                .foregroundColor(.bhText)
-                .textFieldStyle(.plain)
-                .padding(8)
-                .background(Color.bhSurface2)
-                .cornerRadius(6)
-                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.bhBorder, lineWidth: 1))
-
-                ColorPicker("", selection: Binding(
-                    get: { Color(hex: bill.color) ?? .bhAmber },
-                    set: { newColor in
-                        guard let idx = billIndex, let hex = newColor.toHex() else { return }
-                        vm.state.bills[idx].color = hex
-                        vm.save()
-                    }
-                ))
-                .labelsHidden()
-                .frame(width: 44, height: 44)
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 14)
-            .padding(.bottom, 10)
-
-            Divider().background(Color.bhBorder).padding(.horizontal, 16)
-
-            // MARK: Split Type Toggle
-
-            HStack(spacing: 8) {
-                Text("Split Type")
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(.bhMuted)
-                Spacer()
-                HStack(spacing: 0) {
-                    ForEach(SplitType.allCases, id: \.self) { type in
-                        Button(type.displayName) {
-                            guard let idx = billIndex else { return }
-                            vm.state.bills[idx].splitType = type
-                            vm.save()
+                            ColorPicker("", selection: Binding(
+                                get: { Color(hex: bill.color) ?? .bhAmber },
+                                set: { newColor in
+                                    guard let idx = billIndex, let hex = newColor.toHex() else { return }
+                                    vm.state.bills[idx].color = hex
+                                    vm.save()
+                                }
+                            ))
+                            .labelsHidden()
+                            .frame(width: 44, height: 44)
                         }
-                        .font(.system(size: 11, design: .monospaced))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 5)
-                        .background(bill.splitType == type ? Color.bhSurface3 : Color.clear)
-                        .foregroundColor(bill.splitType == type ? .bhAmber : .bhMuted)
-                        .cornerRadius(5)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 16)
+                        .padding(.bottom, 12)
+
+                        Divider().background(Color.bhBorder).padding(.horizontal, 16)
+
+                        // MARK: Split Type Toggle
+                        HStack(spacing: 8) {
+                            Text("Split Type")
+                                .font(.bhBodySecondary)
+                                .foregroundColor(.bhMuted)
+                            Spacer()
+                            HStack(spacing: 0) {
+                                ForEach(SplitType.allCases, id: \.self) { type in
+                                    Button(type.displayName) {
+                                        guard let idx = billIndex else { return }
+                                        vm.state.bills[idx].splitType = type
+                                        vm.save()
+                                    }
+                                    .font(.bhBodySecondary)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 5)
+                                    .background(bill.splitType == type ? Color.bhSurface3 : Color.clear)
+                                    .foregroundColor(bill.splitType == type ? .bhAmber : .bhMuted)
+                                    .cornerRadius(5)
+                                }
+                            }
+                            .background(Color.bhSurface2)
+                            .cornerRadius(7)
+                            .overlay(RoundedRectangle(cornerRadius: 7).stroke(Color.bhBorder, lineWidth: 1))
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+
+                        // MARK: Total Bill Input
+                        HStack {
+                            Text("Total Bill")
+                                .font(.bhBodySecondary)
+                                .foregroundColor(.bhMuted)
+                            if bill.splitType == .fixed {
+                                Text("Remainder → \(vm.state.people.first { $0.id == (bill.lines.first { $0.id == bill.remainderLineId }?.personId ?? "") }?.name ?? "—")")
+                                    .font(.bhCaption)
+                                    .foregroundColor(.bhMuted2)
+                            }
+                            Spacer()
+                            CurrencyInputField(
+                                value: Binding(
+                                    get: { vm.getBillTotal(bill.id) },
+                                    set: { vm.setBillTotal(bill.id, value: $0) }
+                                )
+                            )
+                            .frame(width: 120)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(Color.bhSurface2)
+                        .cornerRadius(8)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 10)
+
+                        Divider().background(Color.bhBorder).padding(.horizontal, 16)
+
+                        // MARK: Line Items Header
+                        HStack {
+                            Text("Person").bhSectionTitle().frame(width: 100, alignment: .leading)
+                            Spacer()
+                            if bill.splitType == .pct {
+                                Text("%").bhSectionTitle().frame(width: 50, alignment: .trailing)
+                                Text("Amount").bhSectionTitle().frame(width: 80, alignment: .trailing)
+                            } else {
+                                Text("Amount").bhSectionTitle().frame(width: 80, alignment: .trailing)
+                            }
+                            Spacer().frame(width: 28)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 10)
+                        .padding(.bottom, 4)
+
+                        // MARK: Line Items
+                        ForEach(bill.lines) { line in
+                            BillLineRowView(bill: bill, line: line)
+                            Divider().background(Color.bhBorder).padding(.horizontal, 16)
+                        }
+
+                        Button {
+                            vm.addLine(to: bill.id)
+                        } label: {
+                            Label("Add Person", systemImage: "plus")
+                                .font(.bhBodySecondary)
+                                .foregroundColor(.bhMuted)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+
+                        Divider().background(Color.bhBorder).padding(.horizontal, 16)
+
+                        // MARK: Preserve Toggle
+                        Toggle(isOn: Binding(
+                            get: { bill.preserve },
+                            set: { val in
+                                guard let idx = billIndex else { return }
+                                vm.state.bills[idx].preserve = val
+                                vm.save()
+                            }
+                        )) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Auto-carry forward")
+                                    .font(.bhBodySecondary)
+                                    .foregroundColor(.bhText)
+                                Text("Copy last month's amounts when switching months")
+                                    .font(.bhCaption)
+                                    .foregroundColor(.bhMuted)
+                            }
+                        }
+                        .tint(.bhAmber)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+
+                        Toggle(isOn: Binding(
+                            get: { bill.autoPay },
+                            set: { val in
+                                guard let idx = billIndex else { return }
+                                vm.state.bills[idx].autoPay = val
+                                vm.save()
+                            }
+                        )) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Auto-pay")
+                                    .font(.bhBodySecondary)
+                                    .foregroundColor(.bhText)
+                                Text("Skip \"paid\" task in monthly checklist")
+                                    .font(.bhCaption)
+                                    .foregroundColor(.bhMuted)
+                            }
+                        }
+                        .tint(.bhAmber)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+
+                        Divider().background(Color.bhBorder).padding(.horizontal, 16)
+
+                        Button(role: .destructive) {
+                            showRemoveConfirm = true
+                        } label: {
+                            Label("Remove Bill", systemImage: "trash")
+                                .font(.bhBodySecondary)
+                                .frame(maxWidth: .infinity)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
                     }
-                }
-                .background(Color.bhSurface2)
-                .cornerRadius(7)
-                .overlay(RoundedRectangle(cornerRadius: 7).stroke(Color.bhBorder, lineWidth: 1))
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-            .padding(.bottom, 10)
-
-            // MARK: Total Bill Input
-
-            HStack {
-                Text("Total Bill")
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(.bhMuted)
-                if bill.splitType == .fixed {
-                    // Show which person receives the remainder
-                    Text("Remainder → \(vm.state.people.first { $0.id == (bill.lines.first { $0.id == bill.remainderLineId }?.personId ?? "") }?.name ?? "—")")
-                        .font(.system(size: 10, design: .monospaced))
-                        .foregroundColor(.bhMuted2)
-                }
-                Spacer()
-                CurrencyInputField(
-                    value: Binding(
-                        get: { vm.getBillTotal(bill.id) },
-                        set: { vm.setBillTotal(bill.id, value: $0) }
-                    )
-                )
-                .frame(width: 120)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(Color.bhSurface2)
-            .cornerRadius(8)
-            .padding(.horizontal, 16)
-            .padding(.bottom, 10)
-
-            Divider().background(Color.bhBorder).padding(.horizontal, 16)
-
-            // MARK: Line Items Header
-
-            HStack {
-                Text("Person").bhSectionTitle().frame(width: 100, alignment: .leading)
-                Spacer()
-                if bill.splitType == .pct {
-                    Text("%").bhSectionTitle().frame(width: 50, alignment: .trailing)
-                    Text("Amount").bhSectionTitle().frame(width: 80, alignment: .trailing)
-                } else {
-                    Text("Amount").bhSectionTitle().frame(width: 80, alignment: .trailing)
-                }
-                Spacer().frame(width: 28)
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 10)
-            .padding(.bottom, 4)
-
-            // MARK: Line Items
-
-            ForEach(bill.lines) { line in
-                BillLineRowView(bill: bill, line: line)
-                Divider().background(Color.bhBorder).padding(.horizontal, 16)
-            }
-
-            // Add line button
-            Button {
-                vm.addLine(to: bill.id)
-            } label: {
-                Label("Add Person", systemImage: "plus")
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(.bhMuted)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-
-            Divider().background(Color.bhBorder).padding(.horizontal, 16)
-
-            // MARK: Preserve Toggle
-
-            Toggle(isOn: Binding(
-                get: { bill.preserve },
-                set: { val in
-                    guard let idx = billIndex else { return }
-                    vm.state.bills[idx].preserve = val
-                    vm.save()
-                }
-            )) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Auto-carry forward")
-                        .font(.system(size: 12, design: .monospaced))
-                        .foregroundColor(.bhText)
-                    Text("Copy last month's amounts when switching months")
-                        .font(.system(size: 10, design: .monospaced))
-                        .foregroundColor(.bhMuted)
+                    .padding(.bottom, 24)
                 }
             }
-            .tint(.bhAmber)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-
-            Toggle(isOn: Binding(
-                get: { bill.autoPay },
-                set: { val in
-                    guard let idx = billIndex else { return }
-                    vm.state.bills[idx].autoPay = val
-                    vm.save()
+            .navigationTitle(bill.name.isEmpty ? "Edit Bill" : bill.name)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done", action: onDone)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.bhAmber)
                 }
-            )) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Auto-pay")
-                        .font(.system(size: 12, design: .monospaced))
-                        .foregroundColor(.bhText)
-                    Text("Skip \"paid\" task in monthly checklist")
-                        .font(.system(size: 10, design: .monospaced))
-                        .foregroundColor(.bhMuted)
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    }
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(.bhAmber)
                 }
             }
-            .tint(.bhAmber)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-
-            Divider().background(Color.bhBorder).padding(.horizontal, 16)
-
-            // MARK: Remove Bill
-
-            Button(role: .destructive) {
-                showRemoveConfirm = true
-            } label: {
-                Label("Remove Bill", systemImage: "trash")
-                    .font(.system(size: 12, design: .monospaced))
-                    .frame(maxWidth: .infinity)
+            .confirmationDialog("Remove \"\(bill.name)\"?", isPresented: $showRemoveConfirm, titleVisibility: .visible) {
+                Button("Remove Bill", role: .destructive) {
+                    vm.removeBill(bill)
+                    onDone()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will permanently remove the bill and all its settings.")
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-
         }
-        .confirmationDialog("Remove \"\(bill.name)\"?", isPresented: $showRemoveConfirm, titleVisibility: .visible) {
-            Button("Remove Bill", role: .destructive) {
-                vm.removeBill(bill)
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This will permanently remove the bill and all its settings.")
-        }
+        .preferredColorScheme(.dark)
     }
 }
 
@@ -484,7 +600,6 @@ struct BillLineRowView: View {
                     set: { val in
                         guard let bi = billIndex, let li = lineIndex else { return }
                         vm.state.bills[bi].lines[li].personId = val
-                        // Clear coverage if the new person matches coveredById
                         if vm.state.bills[bi].lines[li].coveredById == val {
                             vm.state.bills[bi].lines[li].coveredById = nil
                         }
@@ -497,13 +612,12 @@ struct BillLineRowView: View {
                 }
                 .pickerStyle(.menu)
                 .tint(.bhText)
-                .font(.system(size: 11, design: .monospaced))
+                .font(.bhBodySecondary)
                 .frame(width: 100)
 
                 Spacer()
 
                 if bill.splitType == .pct {
-                    // Percentage input
                     TextField("0", value: Binding(
                         get: { line.value },
                         set: { val in
@@ -511,7 +625,7 @@ struct BillLineRowView: View {
                             vm.saveMonthSnapshot()
                         }
                     ), format: .number.precision(.fractionLength(0...2)))
-                    .font(.system(size: 12, design: .monospaced))
+                    .font(.bhBodySecondary)
                     .foregroundColor(.bhText)
                     .multilineTextAlignment(.trailing)
                     .keyboardType(.decimalPad)
@@ -522,20 +636,17 @@ struct BillLineRowView: View {
                     .cornerRadius(6)
                     .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.bhBorder, lineWidth: 1))
 
-                    // Computed dollar amount (read-only)
                     Text(computedAmount.asCurrency)
-                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                        .font(.bhMoneySmall)
                         .foregroundColor(.bhAmber)
                         .frame(width: 80, alignment: .trailing)
                 } else {
                     if line.id == bill.remainderLineId {
-                        // Remainder line — computed, read-only
                         Text(computedAmount.asCurrency)
-                            .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                            .font(.bhMoneySmall)
                             .foregroundColor(.bhAmber)
                             .frame(width: 80, alignment: .trailing)
                     } else {
-                        // Fixed amount input
                         CurrencyInputField(
                             value: Binding(
                                 get: { vm.getLineAmount(bill.id, lineId: line.id) },
@@ -546,12 +657,11 @@ struct BillLineRowView: View {
                     }
                 }
 
-                // Remove line button
                 Button {
                     vm.removeLine(billId: bill.id, lineId: line.id)
                 } label: {
                     Image(systemName: "xmark")
-                        .font(.system(size: 10))
+                        .font(.caption2)
                         .foregroundColor(.bhMuted)
                         .frame(width: 24, height: 24)
                         .background(Color.bhSurface2)
@@ -568,7 +678,7 @@ struct BillLineRowView: View {
             // "Covered by" sub-row
             HStack(spacing: 6) {
                 Text("Covered by")
-                    .font(.system(size: 10, design: .monospaced))
+                    .font(.bhCaption)
                     .foregroundColor(.bhMuted)
 
                 Picker("", selection: Binding(
@@ -587,7 +697,7 @@ struct BillLineRowView: View {
                 }
                 .pickerStyle(.menu)
                 .tint(line.coveredById != nil ? Color.bhAmber : .bhMuted)
-                .font(.system(size: 10, design: .monospaced))
+                .font(.bhCaption)
 
                 Spacer()
             }
@@ -610,7 +720,7 @@ struct CurrencyInputField: View {
 
     var body: some View {
         TextField("0.00", text: $text)
-            .font(.system(size: 13, weight: .medium, design: .monospaced))
+            .font(.bhBodySecondary.weight(.medium))
             .foregroundColor(.bhText)
             .multilineTextAlignment(.trailing)
             .keyboardType(.decimalPad)

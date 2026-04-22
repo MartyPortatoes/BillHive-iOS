@@ -49,10 +49,10 @@ struct TrendsView: View {
                         HStack(alignment: .top) {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Trends")
-                                    .font(.system(size: 18, weight: .bold, design: .default))
+                                    .font(.bhViewTitle)
                                     .foregroundColor(.bhText)
                                 Text("Month-over-month spend tracking.")
-                                    .font(.system(size: 11, design: .default))
+                                    .font(.bhSubtitle)
                                     .foregroundColor(.bhMuted)
                             }
 
@@ -74,26 +74,20 @@ struct TrendsView: View {
                             } label: {
                                 HStack(spacing: 4) {
                                     Image(systemName: showAllMonths ? "clock.arrow.trianglehead.counterclockwise.rotate.90" : "calendar")
-                                        .font(.system(size: 10))
+                                        .font(.caption2)
                                     Text(showAllMonths ? "Showing all \(sortedMonthKeys.count) months — show last 12" : "Showing last 12 months — show all \(sortedMonthKeys.count)")
-                                        .font(.system(size: 10, design: .monospaced))
+                                        .font(.bhCaption)
                                 }
                                 .foregroundColor(.bhAmber)
                             }
                         }
 
                         if sortedMonthKeys.isEmpty {
-                            VStack(spacing: 8) {
-                                Image(systemName: "chart.line.uptrend.xyaxis")
-                                    .font(.system(size: 32))
-                                    .foregroundColor(.bhMuted)
-                                Text("No historical data yet.\nEnter amounts for multiple months to see trends.")
-                                    .font(.system(size: 12, design: .monospaced))
-                                    .foregroundColor(.bhMuted)
-                                    .multilineTextAlignment(.center)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 60)
+                            EmptyStateView(
+                                systemImage: "chart.line.uptrend.xyaxis",
+                                title: "No historical data yet",
+                                subtitle: "Enter amounts for multiple months to see spending trends over time."
+                            )
                         } else {
                             switch mode {
                             case .perPerson:
@@ -127,11 +121,12 @@ struct TrendsLockedView: View {
             Image(systemName: "chart.line.uptrend.xyaxis")
                 .font(.system(size: 48))
                 .foregroundColor(.bhAmber.opacity(0.5))
+                .accessibilityHidden(true)
             Text("Trends")
-                .font(.system(size: 18, weight: .bold))
+                .font(.bhViewTitle)
                 .foregroundColor(.bhText)
             Text("Unlock BillHive to see month-over-month\nspending insights and analytics.")
-                .font(.system(size: 13, design: .monospaced))
+                .font(.bhBodySecondary)
                 .foregroundColor(.bhMuted)
                 .multilineTextAlignment(.center)
             Button {
@@ -139,9 +134,9 @@ struct TrendsLockedView: View {
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "lock.fill")
-                        .font(.system(size: 11))
+                        .font(.caption)
                     Text("Unlock")
-                        .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                        .font(.bhBodySecondary.weight(.semibold))
                 }
                 .frame(width: 160)
             }
@@ -257,7 +252,7 @@ struct PersonTrendsView: View {
                         AxisGridLine().foregroundStyle(Color.bhBorder)
                         AxisValueLabel {
                             if let v = value.as(Double.self) {
-                                Text(v.asCurrency).font(.system(size: 9, design: .monospaced)).foregroundStyle(Color.bhMuted)
+                                Text(v.asCurrency).font(.bhCaption).foregroundStyle(Color.bhMuted)
                             }
                         }
                     }
@@ -266,7 +261,7 @@ struct PersonTrendsView: View {
                     AxisMarks { value in
                         AxisValueLabel {
                             if let v = value.as(String.self) {
-                                Text(v).font(.system(size: 9, design: .monospaced)).foregroundStyle(Color.bhMuted)
+                                Text(v).font(.bhCaption).foregroundStyle(Color.bhMuted)
                             }
                         }
                     }
@@ -284,20 +279,21 @@ struct PersonTrendsView: View {
 
                 if currentMonthBillData.isEmpty {
                     Text("No data this month")
-                        .font(.system(size: 11, design: .monospaced))
+                        .font(.bhCaption)
                         .foregroundColor(.bhMuted2)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 40)
                 } else {
                     DonutChartView(items: currentMonthBillData)
                         .frame(height: 180)
+                        .accessibilityHidden(true)
 
                     ForEach(currentMonthBillData, id: \.name) { item in
                         HStack(spacing: 4) {
                             Circle().fill(item.color).frame(width: 6, height: 6)
-                            Text(item.name).font(.system(size: 10, design: .monospaced)).foregroundColor(.bhMuted)
+                            Text(item.name).font(.bhCaption).foregroundColor(.bhMuted)
                             Spacer()
-                            Text(item.amount.asCurrency).font(.system(size: 10, weight: .semibold, design: .monospaced)).foregroundColor(.bhText)
+                            Text(item.amount.asCurrency).font(.bhCaption.weight(.semibold)).foregroundColor(.bhText)
                         }
                     }
                 }
@@ -315,16 +311,16 @@ struct PersonTrendsView: View {
                     if let md = vm.monthly[key] {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(MonthKey.label(key))
-                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                .font(.bhCaption.weight(.semibold))
                                 .foregroundColor(.bhText)
 
                             let owesMap = md._owes ?? [:]
                             ForEach(vm.state.people.filter { $0.id != "me" }) { person in
                                 let amt = owesMap[person.id] ?? 0
                                 HStack {
-                                    Text(person.name).font(.system(size: 9, design: .monospaced)).foregroundColor(.bhMuted)
+                                    Text(person.name).font(.bhCaption).foregroundColor(.bhMuted)
                                     Spacer()
-                                    Text(amt.asCurrency).font(.system(size: 9, design: .monospaced)).foregroundColor(.bhText)
+                                    Text(amt.asCurrency).font(.bhCaption).foregroundColor(.bhText)
                                 }
                             }
                         }
@@ -466,7 +462,7 @@ struct BillTrendsView: View {
                         AxisGridLine().foregroundStyle(Color.bhBorder)
                         AxisValueLabel {
                             if let v = value.as(Double.self) {
-                                Text(v.asCurrency).font(.system(size: 9, design: .monospaced)).foregroundStyle(Color.bhMuted)
+                                Text(v.asCurrency).font(.bhCaption).foregroundStyle(Color.bhMuted)
                             }
                         }
                     }
@@ -494,7 +490,7 @@ struct BillTrendsView: View {
                         AxisGridLine().foregroundStyle(Color.bhBorder)
                         AxisValueLabel {
                             if let v = value.as(Double.self) {
-                                Text(v.asCurrency).font(.system(size: 9, design: .monospaced)).foregroundStyle(Color.bhMuted)
+                                Text(v.asCurrency).font(.bhCaption).foregroundStyle(Color.bhMuted)
                             }
                         }
                     }
@@ -513,11 +509,11 @@ struct BillTrendsView: View {
                 ForEach(vm.state.bills) { bill in
                     HStack {
                         Text("\(bill.icon) \(bill.name)")
-                            .font(.system(size: 10, design: .monospaced))
+                            .font(.bhCaption)
                             .foregroundColor(.bhMuted)
                         Spacer()
                         Text((md?.totals[bill.id] ?? 0).asCurrency)
-                            .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                            .font(.bhCaption.weight(.semibold))
                             .foregroundColor(.bhText)
                     }
                     .padding(.vertical, 2)
@@ -528,11 +524,11 @@ struct BillTrendsView: View {
                 let grandTotal = vm.state.bills.reduce(0.0) { $0 + (md?.totals[$1.id] ?? 0) }
                 HStack {
                     Text("Total")
-                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .font(.bhBodySecondary.weight(.semibold))
                         .foregroundColor(.bhText)
                     Spacer()
                     Text(grandTotal.asCurrency)
-                        .font(.system(size: 13, weight: .bold, design: .monospaced))
+                        .font(.bhMoneySmall)
                         .foregroundColor(.bhAmber)
                 }
             }

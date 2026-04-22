@@ -20,7 +20,7 @@ struct SettingsView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
                         Text("Settings")
-                            .font(.system(size: 18, weight: .bold, design: .default))
+                            .font(.bhViewTitle)
                             .foregroundColor(.bhText)
                             .padding(.top, 16)
 
@@ -38,11 +38,11 @@ struct SettingsView: View {
                                 .padding(.bottom, 2)
 
                             // Explanatory note about the primary person
-                            (Text("The ").font(.system(size: 11, design: .monospaced)).foregroundColor(.bhMuted)
-                            + Text("★ Primary").font(.system(size: 11, weight: .semibold, design: .monospaced)).foregroundColor(.bhAmber)
-                            + Text(" person is ").font(.system(size: 11, design: .monospaced)).foregroundColor(.bhMuted)
-                            + Text("you").font(.system(size: 11, weight: .bold, design: .monospaced)).foregroundColor(.bhText)
-                            + Text(" — the one who fronts all bills and collects from everyone else. This person cannot be removed.").font(.system(size: 11, design: .monospaced)).foregroundColor(.bhMuted))
+                            (Text("The ").font(.bhCaption).foregroundColor(.bhMuted)
+                            + Text("★ Primary").font(.bhCaption.weight(.semibold)).foregroundColor(.bhAmber)
+                            + Text(" person is ").font(.bhCaption).foregroundColor(.bhMuted)
+                            + Text("you").font(.bhCaption.weight(.bold)).foregroundColor(.bhText)
+                            + Text(" — the one who fronts all bills and collects from everyone else. This person cannot be removed.").font(.bhCaption).foregroundColor(.bhMuted))
                             .fixedSize(horizontal: false, vertical: true)
                             .padding(.bottom, 4)
 
@@ -68,7 +68,7 @@ struct SettingsView: View {
                                 }
                             } label: {
                                 Label("Add Person", systemImage: "plus")
-                                    .font(.system(size: 11, design: .monospaced))
+                                    .font(.bhCaption)
                             }
                             .buttonStyle(BHSecondaryButtonStyle())
                         }
@@ -77,7 +77,7 @@ struct SettingsView: View {
 
                         SettingsSection(title: "Email Greetings") {
                             Text("Custom opening line for each person's bill email")
-                                .font(.system(size: 10, design: .monospaced))
+                                .font(.bhCaption)
                                 .foregroundColor(.bhMuted)
                                 .padding(.bottom, 8)
 
@@ -85,7 +85,7 @@ struct SettingsView: View {
                                 HStack(spacing: 8) {
                                     Circle().fill(Color(hex: person.color) ?? .bhAmber).frame(width: 8, height: 8)
                                     Text(person.name)
-                                        .font(.system(size: 11, design: .monospaced))
+                                        .font(.bhCaption)
                                         .foregroundColor(.bhText)
                                         .frame(width: 80, alignment: .leading)
                                     TextField("Hey \(person.name),", text: Binding(
@@ -102,7 +102,7 @@ struct SettingsView: View {
                                             }
                                         }
                                     ))
-                                    .font(.system(size: 11, design: .monospaced))
+                                    .font(.bhCaption)
                                     .foregroundColor(.bhText)
                                     .textFieldStyle(.plain)
                                     .padding(7)
@@ -154,7 +154,7 @@ struct SettingsView: View {
                             SettingsSection(title: "Server") {
                                 HStack {
                                     Text(serverURL)
-                                        .font(.system(size: 11, design: .monospaced))
+                                        .font(.bhCaption)
                                         .foregroundColor(.bhMuted)
                                         .lineLimit(1)
                                         .truncationMode(.middle)
@@ -163,7 +163,7 @@ struct SettingsView: View {
                                         draftServerURL = serverURL
                                         showServerEdit = true
                                     }
-                                    .font(.system(size: 11, design: .monospaced))
+                                    .font(.bhCaption)
                                     .foregroundColor(.bhAmber)
                                 }
                             }
@@ -246,7 +246,7 @@ struct PersonCardView: View {
                         .frame(width: 12, height: 12)
 
                     Text(person.name.isEmpty ? "New Person" : person.name)
-                        .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                        .font(.bhBodySecondary.weight(.semibold))
                         .foregroundColor(.bhText)
                         .lineLimit(1)
 
@@ -254,7 +254,7 @@ struct PersonCardView: View {
 
                     if person.isMe {
                         Text("★ YOU")
-                            .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                            .font(.caption2.weight(.semibold).monospaced())
                             .foregroundColor(.bhAmber)
                             .padding(.horizontal, 7)
                             .padding(.vertical, 3)
@@ -262,12 +262,12 @@ struct PersonCardView: View {
                             .cornerRadius(4)
                     } else {
                         Text(person.payMethod.displayName)
-                            .font(.system(size: 10, design: .monospaced))
+                            .font(.bhCaption)
                             .foregroundColor(.bhMuted)
                     }
 
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.bhCaption.weight(.medium))
                         .foregroundColor(.bhMuted)
                         .frame(width: 16)
                 }
@@ -355,7 +355,7 @@ struct PersonBodyView: View {
                             vm.save()
                         }
                     ))
-                    .font(.system(size: 12, design: .monospaced))
+                    .font(.bhBodySecondary)
                     .foregroundColor(.bhText)
                     .textFieldStyle(.plain)
                 }
@@ -381,7 +381,7 @@ struct PersonBodyView: View {
                 }
                 .pickerStyle(.menu)
                 .tint(.bhText)
-                .font(.system(size: 12, design: .monospaced))
+                .font(.bhBodySecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(8)
                 .background(Color.bhSurface2)
@@ -403,7 +403,7 @@ struct PersonBodyView: View {
                             vm.save()
                         }
                     ))
-                    .font(.system(size: 12, design: .monospaced))
+                    .font(.bhBodySecondary)
                     .foregroundColor(.bhText)
                     .textFieldStyle(.plain)
                     .autocorrectionDisabled()
@@ -431,7 +431,7 @@ struct PersonBodyView: View {
                             vm.save()
                         }
                     ))
-                    .font(.system(size: 12, design: .monospaced))
+                    .font(.bhBodySecondary)
                     .foregroundColor(.bhText)
                     .textFieldStyle(.plain)
                     .keyboardType(.URL)
@@ -457,7 +457,7 @@ struct PersonBodyView: View {
                         vm.save()
                     }
                 ))
-                .font(.system(size: 12, design: .monospaced))
+                .font(.bhBodySecondary)
                 .foregroundColor(.bhText)
                 .textFieldStyle(.plain)
                 .keyboardType(.emailAddress)
@@ -505,7 +505,7 @@ struct PersonFieldRow<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label.uppercased())
-                .font(.system(size: 9, weight: .medium, design: .monospaced))
+                .font(.caption2.weight(.medium).monospaced())
                 .tracking(1.2)
                 .foregroundColor(.bhMuted)
             content
@@ -530,13 +530,13 @@ struct EmailConfigSection: View {
     var body: some View {
         SettingsSection(title: "Email Relay") {
             Text("Configure a mail provider so BillHive can send HTML bill summaries. API keys are stored server-side.")
-                .font(.system(size: 10, design: .monospaced))
+                .font(.bhCaption)
                 .foregroundColor(.bhMuted)
                 .padding(.bottom, 8)
 
             // Provider picker
             HStack {
-                Text("Provider").font(.system(size: 11, design: .monospaced)).foregroundColor(.bhMuted).frame(width: 80, alignment: .leading)
+                Text("Provider").font(.bhCaption).foregroundColor(.bhMuted).frame(width: 80, alignment: .leading)
                 Picker("", selection: $config.provider) {
                     ForEach(EmailProvider.allCases, id: \.self) { p in
                         Text(p.displayName).tag(p.rawValue)
@@ -573,7 +573,7 @@ struct EmailConfigSection: View {
                 HStack(spacing: 6) {
                     Image(systemName: statusOK ? "checkmark.circle.fill" : "xmark.circle.fill")
                         .foregroundColor(statusOK ? .bhAmber : .bhRed)
-                    Text(msg).font(.system(size: 11, design: .monospaced)).foregroundColor(statusOK ? .bhAmber : .bhRed)
+                    Text(msg).font(.bhCaption).foregroundColor(statusOK ? .bhAmber : .bhRed)
                 }
             }
 
@@ -651,13 +651,13 @@ struct EMField: View {
     var body: some View {
         HStack(spacing: 8) {
             Text(label)
-                .font(.system(size: 11, design: .monospaced))
+                .font(.bhCaption)
                 .foregroundColor(.bhMuted)
                 .frame(width: 80, alignment: .leading)
 
             if isSecure {
                 SecureField(placeholder, text: $value)
-                    .font(.system(size: 11, design: .monospaced))
+                    .font(.bhCaption)
                     .foregroundColor(.bhText)
                     .textFieldStyle(.plain)
                     .padding(7)
@@ -666,7 +666,7 @@ struct EMField: View {
                     .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.bhBorder, lineWidth: 1))
             } else {
                 TextField(placeholder, text: $value)
-                    .font(.system(size: 11, design: .monospaced))
+                    .font(.bhCaption)
                     .foregroundColor(.bhText)
                     .textFieldStyle(.plain)
                     .keyboardType(keyboard)
@@ -696,11 +696,11 @@ struct ServerEditSheet: View {
                 HexBGView().ignoresSafeArea()
                 VStack(spacing: 20) {
                     Text("Change Server URL")
-                        .font(.system(size: 16, weight: .bold, design: .monospaced))
+                        .font(.headline.monospaced())
                         .foregroundColor(.bhText)
 
                     TextField("http://192.168.1.100:8080", text: $url)
-                        .font(.system(size: 13, design: .monospaced))
+                        .font(.bhBodySecondary)
                         .foregroundColor(.bhText)
                         .textFieldStyle(.plain)
                         .padding(10)
@@ -754,9 +754,9 @@ struct PurchaseSettingsSection: View {
             HStack(spacing: 8) {
                 Image(systemName: "checkmark.seal.fill")
                     .foregroundColor(.bhAmber)
-                    .font(.system(size: 13))
+                    .font(.subheadline)
                 Text("BillHive Pro")
-                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                    .font(.bhBodySecondary.weight(.semibold))
                     .foregroundColor(.bhAmber)
                 Spacer()
             }
@@ -771,9 +771,9 @@ struct PurchaseSettingsSection: View {
                 HStack(spacing: 8) {
                     Image(systemName: "clock")
                         .foregroundColor(.bhMuted)
-                        .font(.system(size: 13))
+                        .font(.subheadline)
                     Text(pm.trialStatusText)
-                        .font(.system(size: 12, design: .monospaced))
+                        .font(.bhBodySecondary)
                         .foregroundColor(.bhText)
                 }
 
@@ -796,7 +796,7 @@ struct PurchaseSettingsSection: View {
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "lock.open.fill")
-                            .font(.system(size: 11))
+                            .font(.caption)
                         Text("Unlock BillHive — \(pm.priceText)")
                     }
                     .frame(maxWidth: .infinity)
@@ -807,13 +807,13 @@ struct PurchaseSettingsSection: View {
                     Task { await pm.restore() }
                 } label: {
                     Text("Restore Previous Purchase")
-                        .font(.system(size: 11, design: .monospaced))
+                        .font(.bhCaption)
                         .foregroundColor(.bhMuted)
                 }
 
                 if let error = pm.errorMessage {
                     Text(error)
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(.bhCaption)
                         .foregroundColor(.bhRed)
                 }
             }

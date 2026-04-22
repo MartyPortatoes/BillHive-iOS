@@ -105,23 +105,23 @@ struct MailFallbackView: View {
                 // MARK: Header
                 HStack {
                     Text("No Mail Account")
-                        .font(.system(size: 18, weight: .bold, design: .default))
+                        .font(.bhViewTitle)
                         .foregroundColor(.bhText)
                     Spacer()
                     Button("Done") { dismiss() }
-                        .font(.system(size: 14, design: .monospaced))
+                        .font(.subheadline.monospaced())
                         .foregroundColor(.bhAmber)
                 }
 
                 // MARK: Instructions
                 Text("Mail app is not configured. Copy the email body below and paste it manually.")
-                    .font(.system(size: 12, design: .default))
+                    .font(.footnote)
                     .foregroundColor(.bhMuted)
 
                 // MARK: Email Body Display
                 ScrollView {
                     Text(request.body)
-                        .font(.system(size: 12, design: .monospaced))
+                        .font(.bhBodySecondary)
                         .foregroundColor(.bhText)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(12)

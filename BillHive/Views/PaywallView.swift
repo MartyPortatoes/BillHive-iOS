@@ -28,20 +28,21 @@ struct PaywallView: View {
                             .font(.system(size: 48))
                             .foregroundColor(.bhAmber)
                             .padding(.top, 40)
+                            .accessibilityHidden(true)
 
                         Text("BillHive")
-                            .font(.system(size: 28, weight: .bold, design: .default))
+                            .font(.largeTitle.weight(.bold))
                             .foregroundColor(.bhText)
 
                         if let context = featureContext {
                             Text(context)
-                                .font(.system(size: 13, design: .monospaced))
+                                .font(.bhBodySecondary)
                                 .foregroundColor(.bhMuted)
                         }
 
                         if purchaseManager.trialDaysRemaining == 0 && !purchaseManager.isPurchased {
                             Text("Your free trial has ended")
-                                .font(.system(size: 13, weight: .medium, design: .monospaced))
+                                .font(.bhBodySecondary.weight(.medium))
                                 .foregroundColor(.bhRed)
                                 .padding(.top, 4)
                         }
@@ -75,7 +76,7 @@ struct PaywallView: View {
                                         .tint(.black)
                                 } else {
                                     Text("Unlock BillHive — \(purchaseManager.priceText)")
-                                        .font(.system(size: 15, weight: .bold, design: .monospaced))
+                                        .font(.bhBody)
                                 }
                             }
                             .frame(maxWidth: .infinity)
@@ -89,13 +90,13 @@ struct PaywallView: View {
                             Task { await purchaseManager.restore() }
                         } label: {
                             Text("Restore Previous Purchase")
-                                .font(.system(size: 12, design: .monospaced))
+                                .font(.bhBodySecondary)
                                 .foregroundColor(.bhMuted)
                         }
 
                         if let error = purchaseManager.errorMessage {
                             Text(error)
-                                .font(.system(size: 11, design: .monospaced))
+                                .font(.bhCaption)
                                 .foregroundColor(.bhRed)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 20)
@@ -109,7 +110,7 @@ struct PaywallView: View {
                             dismiss()
                         } label: {
                             Text("Continue with trial (\(purchaseManager.trialDaysRemaining) days left)")
-                                .font(.system(size: 12, design: .monospaced))
+                                .font(.bhBodySecondary)
                                 .foregroundColor(.bhMuted)
                         }
                         .padding(.bottom, 20)
@@ -138,15 +139,15 @@ private struct FeatureRow: View {
     var body: some View {
         HStack(spacing: 14) {
             Image(systemName: icon)
-                .font(.system(size: 16))
+                .font(.body)
                 .foregroundColor(.bhAmber)
                 .frame(width: 28, alignment: .center)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                    .font(.bhBodySecondary.weight(.semibold))
                     .foregroundColor(.bhText)
                 Text(description)
-                    .font(.system(size: 11, design: .monospaced))
+                    .font(.bhCaption)
                     .foregroundColor(.bhMuted)
             }
         }

@@ -38,7 +38,7 @@ struct ContentView: View {
 
                     SendReceiveView()
                         .tabItem {
-                            Label("Send & Receive", systemImage: "arrow.up.arrow.down.circle")
+                            Label("Pay & Collect", systemImage: "arrow.up.arrow.down.circle")
                         }
                         .tag(2)
 
@@ -87,14 +87,14 @@ struct ErrorBannerView: View {
         HStack(spacing: 12) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundColor(.bhAmber)
-                .font(.system(size: 13))
+                .font(.subheadline)
             Text(message)
-                .font(.system(size: 11, design: .monospaced))
+                .font(.bhCaption)
                 .foregroundColor(.bhText)
                 .lineLimit(2)
             Spacer()
             Button("Retry", action: onRetry)
-                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .font(.bhCaption.weight(.semibold))
                 .foregroundColor(.bhAmber)
         }
         .padding(.horizontal, 16)
@@ -133,6 +133,58 @@ struct ToastView: View {
     }
 }
 
+// MARK: - Empty State
+
+/// A reusable empty-state placeholder with an icon, title, subtitle, and optional CTA.
+///
+/// Use in any view that may render with no data — gives the user a clear next
+/// action rather than a blank scroll view.
+struct EmptyStateView: View {
+    let systemImage: String
+    let title: String
+    let subtitle: String
+    var actionTitle: String? = nil
+    var action: (() -> Void)? = nil
+
+    var body: some View {
+        VStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(Color.bhAmber.opacity(0.1))
+                    .frame(width: 88, height: 88)
+                Image(systemName: systemImage)
+                    .font(.largeTitle)
+                    .foregroundColor(.bhAmber)
+            }
+
+            VStack(spacing: 6) {
+                Text(title)
+                    .font(.bhBody)
+                    .foregroundColor(.bhText)
+                    .multilineTextAlignment(.center)
+                Text(subtitle)
+                    .font(.bhCaption)
+                    .foregroundColor(.bhMuted)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.horizontal, 24)
+
+            if let actionTitle, let action {
+                Button(action: action) {
+                    Label(actionTitle, systemImage: "plus")
+                        .font(.bhBodySecondary)
+                }
+                .buttonStyle(BHPrimaryButtonStyle())
+                .padding(.top, 4)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 44)
+        .padding(.horizontal, 20)
+    }
+}
+
 // MARK: - Design Tokens
 
 /// App-wide color palette — dark theme inspired by the BillHive web app.
@@ -167,11 +219,38 @@ extension View {
     /// Applies the standard section title typography.
     func bhSectionTitle() -> some View {
         self
-            .font(.system(size: 10, weight: .medium, design: .monospaced))
+            .font(.bhSectionTitle)
             .textCase(.uppercase)
             .tracking(1.5)
             .foregroundColor(.bhMuted)
     }
+}
+
+// MARK: - Semantic Font Tokens
+//
+// All fonts scale with Dynamic Type. The `.monospacedDigit()` modifier
+// keeps decimal alignment without forcing a full monospaced design on
+// non-numeric text. Use `.monospaced()` only where glyph-grid alignment
+// matters (section labels, code-like text).
+extension Font {
+    /// Large view header title (e.g. "Bills", "Summary").
+    static let bhViewTitle = Font.title3.weight(.bold)
+    /// Subtitle under view headers — short description line.
+    static let bhSubtitle = Font.footnote
+    /// Uppercase section title inside cards.
+    static let bhSectionTitle = Font.caption2.weight(.medium).monospaced()
+    /// Primary body text — card titles, bill/person names.
+    static let bhBody = Font.subheadline.weight(.semibold).monospaced()
+    /// Secondary body text — row content, inputs.
+    static let bhBodySecondary = Font.footnote.monospaced()
+    /// Small caption / hint text.
+    static let bhCaption = Font.caption2.monospaced()
+    /// Large monetary amount — hero totals.
+    static let bhMoneyLarge = Font.title2.weight(.bold).monospacedDigit()
+    /// Medium monetary amount — bill totals.
+    static let bhMoneyMedium = Font.title3.weight(.semibold).monospacedDigit()
+    /// Small monetary amount — line items.
+    static let bhMoneySmall = Font.footnote.weight(.semibold).monospacedDigit()
 }
 
 // MARK: - Money Formatting
