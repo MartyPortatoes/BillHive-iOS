@@ -46,27 +46,13 @@ struct TrendsView: View {
                 } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        HStack(alignment: .top) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Trends")
-                                    .font(.bhViewTitle)
-                                    .foregroundColor(.bhText)
-                                Text("Month-over-month spend tracking.")
-                                    .font(.bhSubtitle)
-                                    .foregroundColor(.bhMuted)
+                        Picker("View", selection: $mode) {
+                            ForEach(TrendsViewMode.allCases, id: \.self) { m in
+                                Text(m.rawValue).tag(m)
                             }
-
-                            Spacer()
-
-                            Picker("View", selection: $mode) {
-                                ForEach(TrendsViewMode.allCases, id: \.self) { m in
-                                    Text(m.rawValue).tag(m)
-                                }
-                            }
-                            .pickerStyle(.segmented)
-                            .frame(width: 180)
                         }
-                        .padding(.top, 16)
+                        .pickerStyle(.segmented)
+                        .padding(.top, 4)
 
                         if sortedMonthKeys.count > 12 {
                             Button {
@@ -104,7 +90,8 @@ struct TrendsView: View {
                 .refreshable { await vm.refresh() }
                 } // else (unlocked)
             }
-            .navigationBarHidden(true)
+            .navigationTitle("Trends")
+            .navigationBarTitleDisplayMode(.large)
         }
     }
 }

@@ -19,11 +19,6 @@ struct SettingsView: View {
                 HexBGView().ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
-                        Text("Settings")
-                            .font(.bhViewTitle)
-                            .foregroundColor(.bhText)
-                            .padding(.top, 16)
-
                         // MARK: Purchase Section
 
                         #if BILLHIVE_LOCAL
@@ -175,7 +170,8 @@ struct SettingsView: View {
                 }
                 .refreshable { await vm.refresh() }
             }
-            .navigationBarHidden(true)
+            .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.large)
             .confirmationDialog("Clear all data?", isPresented: $showClearConfirm, titleVisibility: .visible) {
                 Button("Reset All Data", role: .destructive) {
                     Task {
@@ -695,10 +691,6 @@ struct ServerEditSheet: View {
             ZStack {
                 HexBGView().ignoresSafeArea()
                 VStack(spacing: 20) {
-                    Text("Change Server URL")
-                        .font(.headline.monospaced())
-                        .foregroundColor(.bhText)
-
                     TextField("http://192.168.1.100:8080", text: $url)
                         .font(.bhBodySecondary)
                         .foregroundColor(.bhText)
@@ -735,7 +727,8 @@ struct ServerEditSheet: View {
                 }
                 .padding(24)
             }
-            .navigationBarHidden(true)
+            .navigationTitle("Change Server URL")
+            .navigationBarTitleDisplayMode(.inline)
         }
     }
 }
@@ -750,15 +743,31 @@ struct PurchaseSettingsSection: View {
 
     var body: some View {
         if pm.isPurchased {
-            // Thin full-width banner when purchased
-            HStack(spacing: 8) {
-                Image(systemName: "checkmark.seal.fill")
-                    .foregroundColor(.bhAmber)
-                    .font(.subheadline)
-                Text("BillHive Pro")
-                    .font(.bhBodySecondary.weight(.semibold))
-                    .foregroundColor(.bhAmber)
-                Spacer()
+            // Full-width banner when purchased, with a Restore link for users
+            // who reinstall or change devices and need to re-fetch their entitlement.
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.seal.fill")
+                        .foregroundColor(.bhAmber)
+                        .font(.subheadline)
+                    Text("BillHive Pro")
+                        .font(.bhBodyName.weight(.semibold))
+                        .foregroundColor(.bhAmber)
+                    Spacer()
+                    Button {
+                        Task { await pm.restore() }
+                    } label: {
+                        Text("Restore")
+                            .font(.bhCaption.weight(.semibold))
+                            .foregroundColor(.bhAmber)
+                    }
+                    .accessibilityHint("Re-fetch your purchase from the App Store")
+                }
+                if let error = pm.errorMessage {
+                    Text(error)
+                        .font(.bhCaption)
+                        .foregroundColor(.bhRed)
+                }
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)

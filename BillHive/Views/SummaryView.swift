@@ -18,15 +18,10 @@ struct SummaryView: View {
                 HexBGView().ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Summary")
-                                .font(.bhViewTitle)
-                                .foregroundColor(.bhText)
-                            Text("What everyone owes this month — \(vm.monthLabel)")
-                                .font(.bhSubtitle)
-                                .foregroundColor(.bhMuted)
-                        }
-                        .padding(.top, 16)
+                        Text("What everyone owes this month — \(vm.monthLabel)")
+                            .font(.bhSubtitle)
+                            .foregroundColor(.bhMuted)
+                            .padding(.top, 4)
 
                         if vm.state.bills.isEmpty {
                             EmptyStateView(
@@ -44,7 +39,13 @@ struct SummaryView: View {
                 }
                 .refreshable { await vm.refresh() }
             }
-            .navigationBarHidden(true)
+            .navigationTitle("Summary")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    MonthPickerToolbar()
+                }
+            }
         }
     }
 
@@ -84,7 +85,7 @@ struct SummaryView: View {
                 if myShare > 0 {
                     HStack {
                         Text("\(bill.icon) \(bill.name)")
-                            .font(.bhBodySecondary)
+                            .font(.bhBodyName)
                             .foregroundColor(.bhMuted)
                         Spacer()
                         Text(myShare.asCurrency)
@@ -98,7 +99,7 @@ struct SummaryView: View {
 
             HStack {
                 Text("Total I'm paying")
-                    .font(.bhBodySecondary)
+                    .font(.bhBodyName)
                     .foregroundColor(.bhMuted)
                 Spacer()
                 Text(myTotal.asCurrency)
@@ -134,43 +135,38 @@ struct PersonSummaryCard: View {
     let personOwes: PersonOwes?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Circle()
-                    .fill(Color(hex: person.color) ?? .bhAmber)
-                    .frame(width: 10, height: 10)
+        HStack(spacing: 0) {
+            // Left-edge color stripe (more iOS-native than top stripe)
+            Rectangle()
+                .fill(Color(hex: person.color) ?? .bhAmber)
+                .frame(width: 4)
+
+            VStack(alignment: .leading, spacing: 8) {
                 Text(person.name)
-                    .font(.bhBody)
+                    .font(.bhBodyName)
                     .foregroundColor(.bhText)
-            }
 
-            Text((personOwes?.total ?? 0).asCurrency)
-                .font(.bhMoneyLarge)
-                .foregroundColor(Color(hex: person.color) ?? .bhAmber)
-                .minimumScaleFactor(0.6)
-                .lineLimit(1)
+                Text((personOwes?.total ?? 0).asCurrency)
+                    .font(.bhMoneyLarge)
+                    .foregroundColor(Color(hex: person.color) ?? .bhAmber)
+                    .minimumScaleFactor(0.6)
+                    .lineLimit(1)
 
-            if let bills = personOwes?.bills, !bills.isEmpty {
-                Text(bills.map { $0.billName }.joined(separator: " · "))
-                    .font(.bhCaption)
-                    .foregroundColor(.bhMuted)
-                    .lineLimit(2)
-            } else {
-                Text("Nothing owed")
-                    .font(.bhCaption)
-                    .foregroundColor(.bhMuted2)
+                if let bills = personOwes?.bills, !bills.isEmpty {
+                    Text(bills.map { $0.billName }.joined(separator: " · "))
+                        .font(.bhCaption)
+                        .foregroundColor(.bhMuted)
+                        .lineLimit(2)
+                } else {
+                    Text("Nothing owed")
+                        .font(.bhCaption)
+                        .foregroundColor(.bhMuted)
+                }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(
-            ZStack(alignment: .top) {
-                Color.bhSurface2
-                Rectangle()
-                    .fill(Color(hex: person.color) ?? .bhAmber)
-                    .frame(height: 3)
-            }
-        )
+        .background(Color.bhSurface2)
         .cornerRadius(10)
         .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.bhBorder, lineWidth: 1))
     }
@@ -190,7 +186,7 @@ struct FullBreakdownRow: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text("\(bill.icon) \(bill.name)")
-                    .font(.bhBody)
+                    .font(.bhBodyName)
                     .foregroundColor(.bhText)
                 Spacer()
                 Text(total.asCurrency)
@@ -207,7 +203,7 @@ struct FullBreakdownRow: View {
                             .fill(Color(hex: person.color) ?? .gray)
                             .frame(width: 6, height: 6)
                         Text(person.name)
-                            .font(.bhBodySecondary)
+                            .font(.bhBodyName)
                             .foregroundColor(.bhMuted)
                     }
                     Spacer()

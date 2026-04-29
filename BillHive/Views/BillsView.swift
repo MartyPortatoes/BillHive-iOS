@@ -2,11 +2,14 @@ import SwiftUI
 
 // MARK: - Bills View
 
-/// The main bills management screen — lists all bills as expandable cards
-/// with a month picker bar and an "Add Bill" button.
+/// The main bills management screen — a flat list of bill rows. Tapping a row
+/// opens the full editor sheet directly (the previous tap-to-expand preview
+/// has been folded into the editor itself for a single-tap-to-edit flow).
+///
+/// The month picker lives in the navigation bar trailing area to free vertical
+/// space and use a standard iOS affordance.
 struct BillsView: View {
     @EnvironmentObject var vm: AppViewModel
-    @State private var expandedBillId: String? = nil
     @State private var editingBillId: String? = nil
 
     var body: some View {
@@ -15,26 +18,13 @@ struct BillsView: View {
                 HexBGView().ignoresSafeArea()
                 ScrollView {
                     VStack(spacing: 0) {
-                        MonthPickerBar()
+                        Text("Add your bills and configure who owes what")
+                            .font(.bhSubtitle)
+                            .foregroundColor(.bhMuted)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, 16)
-                            .padding(.top, 12)
-
-                        VStack(spacing: 1) {
-                            Text("Bills")
-                                .font(.bhViewTitle)
-                                .foregroundColor(.bhText)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, 16)
-                                .padding(.top, 16)
-                                .padding(.bottom, 4)
-
-                            Text("Add your bills and configure who owes what.")
-                                .font(.bhSubtitle)
-                                .foregroundColor(.bhMuted)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, 16)
-                                .padding(.bottom, 16)
-                        }
+                            .padding(.top, 4)
+                            .padding(.bottom, 16)
 
                         if vm.state.bills.isEmpty {
                             EmptyStateView(
@@ -48,16 +38,9 @@ struct BillsView: View {
                         } else {
                             LazyVStack(spacing: 10) {
                                 ForEach(vm.state.bills) { bill in
-                                    BillCardView(
-                                        bill: bill,
-                                        isExpanded: expandedBillId == bill.id,
-                                        onToggle: {
-                                            withAnimation(.easeInOut(duration: 0.2)) {
-                                                expandedBillId = expandedBillId == bill.id ? nil : bill.id
-                                            }
-                                        },
-                                        onEdit: { editingBillId = bill.id }
-                                    )
+                                    BillRowView(bill: bill) {
+                                        editingBillId = bill.id
+                                    }
                                 }
                             }
                             .padding(.horizontal, 16)
@@ -71,7 +54,6 @@ struct BillsView: View {
                                             .foregroundColor(.bhAmber)
                                     }
                                 }
-                                .font(.bhBodySecondary)
                             }
                             .buttonStyle(BHSecondaryButtonStyle())
                             .padding(.horizontal, 16)
@@ -83,7 +65,21 @@ struct BillsView: View {
                 }
                 .refreshable { await vm.refresh() }
             }
-            .navigationBarHidden(true)
+            .navigationTitle("Bills")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    MonthPickerToolbar()
+                }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    }
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(.bhAmber)
+                }
+            }
             .sheet(isPresented: Binding(
                 get: { editingBillId != nil },
                 set: { if !$0 { editingBillId = nil } }
@@ -94,16 +90,6 @@ struct BillsView: View {
                         .environmentObject(vm)
                 }
             }
-            .toolbar {
-                ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button("Done") {
-                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                    }
-                        .font(.subheadline.weight(.medium))
-                        .foregroundColor(.bhAmber)
-                }
-            }
         }
     }
 
@@ -111,10 +97,7 @@ struct BillsView: View {
         if vm.isUnlocked || vm.state.bills.count < 2 {
             vm.addBill()
             if let last = vm.state.bills.last {
-                withAnimation {
-                    expandedBillId = last.id
-                }
-                // Immediately open the editor sheet for a new bill
+                // Open the editor sheet for the new bill
                 editingBillId = last.id
             }
         } else {
@@ -123,187 +106,117 @@ struct BillsView: View {
     }
 }
 
-// MARK: - Month Picker Bar
+// MARK: - Month Picker Toolbar
 
-/// Compact month/year picker aligned to the trailing edge.
-struct MonthPickerBar: View {
+/// Compact month/year picker designed to fit inside a navigation-bar
+/// trailing toolbar slot. Replaces the previous full-width `MonthPickerBar`.
+struct MonthPickerToolbar: View {
     @EnvironmentObject var vm: AppViewModel
     private let months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
     private let years = Array(2020...2035)
 
     var body: some View {
-        HStack(spacing: 6) {
-            Spacer()
-            HStack(spacing: 4) {
-                Picker("Month", selection: $vm.selectedMonth) {
-                    ForEach(1...12, id: \.self) { m in
-                        Text(months[m-1]).tag(m)
-                    }
+        HStack(spacing: 0) {
+            Picker("Month", selection: $vm.selectedMonth) {
+                ForEach(1...12, id: \.self) { m in
+                    Text(months[m-1]).tag(m)
                 }
-                .pickerStyle(.menu)
-                .tint(.bhText)
-                .font(.bhBodySecondary)
-
-                Picker("Year", selection: $vm.selectedYear) {
-                    ForEach(years, id: \.self) { y in
-                        Text(String(y)).tag(y)
-                    }
-                }
-                .pickerStyle(.menu)
-                .tint(.bhText)
-                .font(.bhBodySecondary)
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background(Color.bhSurface2)
-            .cornerRadius(8)
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.bhBorder, lineWidth: 1))
+            .pickerStyle(.menu)
+            .tint(.bhAmber)
+
+            Picker("Year", selection: $vm.selectedYear) {
+                ForEach(years, id: \.self) { y in
+                    Text(String(y)).tag(y)
+                }
+            }
+            .pickerStyle(.menu)
+            .tint(.bhAmber)
         }
         .onChange(of: vm.selectedMonth) { _ in vm.onMonthChange() }
         .onChange(of: vm.selectedYear) { _ in vm.onMonthChange() }
     }
 }
 
-// MARK: - Bill Card (Collapsed Header + Read-only Preview)
+// MARK: - Bill Row (single-tap-to-edit)
 
-/// An expandable card showing a bill's header (name, icon, total, my share)
-/// and, when expanded, a read-only per-person split preview with an Edit button.
+/// A single tappable bill row showing its icon, name, total, and the
+/// current user's share. Tapping the row opens the editor sheet.
 ///
-/// Full editing is delegated to `BillEditorSheet` via the `onEdit` callback.
-struct BillCardView: View {
+/// Replaces the previous expandable `BillCardView` — the read-only split
+/// preview is now part of the editor sheet.
+struct BillRowView: View {
     @EnvironmentObject var vm: AppViewModel
     let bill: Bill
-    let isExpanded: Bool
-    let onToggle: () -> Void
-    let onEdit: () -> Void
+    let onTap: () -> Void
 
     var total: Double { vm.getBillTotal(bill.id) }
     var myShare: Double { vm.computeBillSplit(bill)["me"] ?? 0 }
 
+    private var splitDescription: String {
+        bill.splitType == .pct ? "Splits by percent" : "Splits by amount"
+    }
+
     var body: some View {
-        VStack(spacing: 0) {
-            // Header row — always visible, tapping expands the preview
-            Button(action: onToggle) {
-                HStack(spacing: 10) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 7)
-                            .fill(Color(hex: bill.color)?.opacity(0.2) ?? Color.bhSurface3)
-                            .frame(width: 34, height: 34)
-                        Text(bill.icon)
-                            .font(.title3)
-                    }
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(bill.name.uppercased())
-                            .font(.bhBody)
-                            .tracking(0.8)
-                            .foregroundColor(.bhText)
-                        Text(bill.splitType == .pct ? "% split" : "Fixed split")
-                            .font(.bhCaption)
-                            .foregroundColor(.bhMuted)
-                    }
-
-                    Spacer()
-
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text(total > 0 ? total.asCurrency : "$—")
-                            .font(.bhMoneyMedium)
-                            .foregroundColor(total > 0 ? .bhAmber : .bhMuted)
-                        Text("my share \(myShare.asCurrency)")
-                            .font(.bhCaption)
-                            .foregroundColor(.bhMuted)
-                    }
-
-                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                        .font(.caption.weight(.medium))
-                        .foregroundColor(.bhMuted)
-                        .frame(width: 24)
-                        .rotationEffect(.degrees(0))
-                        .animation(.easeInOut(duration: 0.2), value: isExpanded)
+        Button(action: onTap) {
+            HStack(spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color(hex: bill.color)?.opacity(0.2) ?? Color.bhSurface3)
+                        .frame(width: 38, height: 38)
+                    Text(bill.icon)
+                        .font(.title3)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 14)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityHint(isExpanded ? "Collapse bill preview" : "Expand bill preview")
 
-            if isExpanded {
-                Divider().background(Color.bhBorder)
-                BillPreviewView(bill: bill, onEdit: onEdit)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(bill.name.isEmpty ? "Untitled bill" : bill.name)
+                        .font(.bhBodyName)
+                        .foregroundColor(.bhText)
+                        .lineLimit(1)
+                    Text(splitDescription)
+                        .font(.bhBodyNameSecondary)
+                        .foregroundColor(.bhMuted)
+                }
+
+                Spacer(minLength: 8)
+
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(total > 0 ? total.asCurrency : "$—")
+                        .font(.bhMoneyMedium)
+                        .foregroundColor(total > 0 ? .bhAmber : .bhMuted)
+                    Text("your share \(myShare.asCurrency)")
+                        .font(.bhCaption)
+                        .foregroundColor(.bhMuted)
+                }
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.bhMuted)
+                    .accessibilityHidden(true)
             }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
         }
-        .background(Color.bhSurface)
-        .cornerRadius(10)
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(isExpanded ? Color.bhBorder2 : Color.bhBorder, lineWidth: 1))
+        .buttonStyle(BillRowButtonStyle())
+        .accessibilityLabel("\(bill.name), total \(total.asCurrency), your share \(myShare.asCurrency)")
+        .accessibilityHint("Edit bill")
     }
 }
 
-// MARK: - Bill Preview (Read-only Split Summary)
+// MARK: - Bill Row Button Style
 
-/// The expanded read-only preview of a bill card — shows the per-person split
-/// for the current month along with an "Edit Bill" button that opens the full
-/// editor sheet.
-struct BillPreviewView: View {
-    @EnvironmentObject var vm: AppViewModel
-    let bill: Bill
-    let onEdit: () -> Void
-
-    var body: some View {
-        let split = vm.computeBillSplit(bill)
-        let contributingPeople = vm.state.people.filter { (split[$0.id] ?? 0) > 0 }
-
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Text("Split this month")
-                    .bhSectionTitle()
-                Spacer()
-                Text(bill.preserve ? "Auto-carry forward" : "")
-                    .font(.bhCaption)
-                    .foregroundColor(.bhMuted2)
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
-            .padding(.bottom, 8)
-
-            if contributingPeople.isEmpty {
-                Text("No amounts set for this month yet. Tap Edit to configure the split.")
-                    .font(.bhCaption)
-                    .foregroundColor(.bhMuted)
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 12)
-            } else {
-                ForEach(contributingPeople) { person in
-                    let amount = split[person.id] ?? 0
-                    HStack(spacing: 8) {
-                        Circle()
-                            .fill(Color(hex: person.color) ?? .gray)
-                            .frame(width: 8, height: 8)
-                        Text(person.name)
-                            .font(.bhBodySecondary)
-                            .foregroundColor(.bhText)
-                        Spacer()
-                        Text(amount.asCurrency)
-                            .font(.bhMoneySmall)
-                            .foregroundColor(.bhText)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 6)
-                }
-                .padding(.bottom, 4)
-            }
-
-            Divider().background(Color.bhBorder).padding(.horizontal, 16)
-
-            Button(action: onEdit) {
-                Label("Edit Bill", systemImage: "slider.horizontal.3")
-                    .font(.bhBodySecondary)
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(BHSecondaryButtonStyle())
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-        }
+/// Surface-styled button with a press state — replaces `.buttonStyle(.plain)`
+/// so users get visual feedback when tapping a bill row.
+struct BillRowButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(Color.bhSurface)
+            .cornerRadius(10)
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.bhBorder, lineWidth: 1))
+            .opacity(configuration.isPressed ? 0.7 : 1)
+            .animation(.easeInOut(duration: 0.12), value: configuration.isPressed)
     }
 }
 
@@ -311,6 +224,9 @@ struct BillPreviewView: View {
 
 /// Full-screen editor for a bill's settings, presented as a sheet with a
 /// navigation bar providing a clear "Done" affordance.
+///
+/// Includes a read-only "Split this month" preview at the top so users see
+/// the live result of their edits without needing to dismiss.
 ///
 /// Uses the bill's `id` to look up its live index in the view model rather
 /// than holding a stale `@Binding`, preventing index-out-of-bounds crashes
@@ -321,6 +237,7 @@ struct BillEditorSheet: View {
     let onDone: () -> Void
 
     @State private var showRemoveConfirm = false
+    @State private var showIconPicker = false
 
     /// Safely resolves the bill's current index on each render.
     private var billIndex: Int? {
@@ -335,20 +252,17 @@ struct BillEditorSheet: View {
                     VStack(alignment: .leading, spacing: 0) {
                         // MARK: Bill Identity (Icon, Name, Color)
                         HStack(spacing: 8) {
-                            TextField("", text: Binding(
-                                get: { bill.icon },
-                                set: { val in
-                                    guard let idx = billIndex else { return }
-                                    vm.state.bills[idx].icon = val
-                                    vm.save()
-                                }
-                            ))
-                            .font(.title2)
-                            .multilineTextAlignment(.center)
-                            .frame(width: 44, height: 44)
-                            .background(Color(hex: bill.color)?.opacity(0.2) ?? Color.bhSurface2)
-                            .cornerRadius(8)
-                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.bhBorder, lineWidth: 1))
+                            Button {
+                                showIconPicker = true
+                            } label: {
+                                Text(bill.icon.isEmpty ? "💡" : bill.icon)
+                                    .font(.title2)
+                                    .frame(width: 44, height: 44)
+                                    .background(Color(hex: bill.color)?.opacity(0.2) ?? Color.bhSurface2)
+                                    .cornerRadius(8)
+                                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.bhBorder, lineWidth: 1))
+                            }
+                            .accessibilityLabel("Choose icon")
 
                             TextField("Bill name", text: Binding(
                                 get: { bill.name },
@@ -358,7 +272,7 @@ struct BillEditorSheet: View {
                                     vm.save()
                                 }
                             ))
-                            .font(.bhBodySecondary)
+                            .font(.bhBodyName)
                             .foregroundColor(.bhText)
                             .textFieldStyle(.plain)
                             .padding(8)
@@ -381,12 +295,17 @@ struct BillEditorSheet: View {
                         .padding(.top, 16)
                         .padding(.bottom, 12)
 
+                        // MARK: Split Preview (read-only summary at the top)
+                        SplitPreviewSection(bill: bill)
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 12)
+
                         Divider().background(Color.bhBorder).padding(.horizontal, 16)
 
                         // MARK: Split Type Toggle
                         HStack(spacing: 8) {
                             Text("Split Type")
-                                .font(.bhBodySecondary)
+                                .font(.bhBodyName)
                                 .foregroundColor(.bhMuted)
                             Spacer()
                             HStack(spacing: 0) {
@@ -396,7 +315,7 @@ struct BillEditorSheet: View {
                                         vm.state.bills[idx].splitType = type
                                         vm.save()
                                     }
-                                    .font(.bhBodySecondary)
+                                    .font(.bhBodyName)
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 5)
                                     .background(bill.splitType == type ? Color.bhSurface3 : Color.clear)
@@ -414,7 +333,7 @@ struct BillEditorSheet: View {
                         // MARK: Total Bill Input
                         HStack {
                             Text("Total Bill")
-                                .font(.bhBodySecondary)
+                                .font(.bhBodyName)
                                 .foregroundColor(.bhMuted)
                             if bill.splitType == .fixed {
                                 Text("Remainder → \(vm.state.people.first { $0.id == (bill.lines.first { $0.id == bill.remainderLineId }?.personId ?? "") }?.name ?? "—")")
@@ -449,7 +368,7 @@ struct BillEditorSheet: View {
                             } else {
                                 Text("Amount").bhSectionTitle().frame(width: 80, alignment: .trailing)
                             }
-                            Spacer().frame(width: 28)
+                            Spacer().frame(width: 44)
                         }
                         .padding(.horizontal, 16)
                         .padding(.top, 10)
@@ -465,8 +384,8 @@ struct BillEditorSheet: View {
                             vm.addLine(to: bill.id)
                         } label: {
                             Label("Add Person", systemImage: "plus")
-                                .font(.bhBodySecondary)
-                                .foregroundColor(.bhMuted)
+                                .font(.bhBodyName)
+                                .foregroundColor(.bhAmber)
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 10)
@@ -484,7 +403,7 @@ struct BillEditorSheet: View {
                         )) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Auto-carry forward")
-                                    .font(.bhBodySecondary)
+                                    .font(.bhBodyName)
                                     .foregroundColor(.bhText)
                                 Text("Copy last month's amounts when switching months")
                                     .font(.bhCaption)
@@ -505,7 +424,7 @@ struct BillEditorSheet: View {
                         )) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Auto-pay")
-                                    .font(.bhBodySecondary)
+                                    .font(.bhBodyName)
                                     .foregroundColor(.bhText)
                                 Text("Skip \"paid\" task in monthly checklist")
                                     .font(.bhCaption)
@@ -522,7 +441,7 @@ struct BillEditorSheet: View {
                             showRemoveConfirm = true
                         } label: {
                             Label("Remove Bill", systemImage: "trash")
-                                .font(.bhBodySecondary)
+                                .font(.bhBodyName)
                                 .frame(maxWidth: .infinity)
                         }
                         .padding(.horizontal, 16)
@@ -548,6 +467,13 @@ struct BillEditorSheet: View {
                     .foregroundColor(.bhAmber)
                 }
             }
+            .sheet(isPresented: $showIconPicker) {
+                EmojiPickerSheet(selected: bill.icon) { newIcon in
+                    guard let idx = billIndex else { return }
+                    vm.state.bills[idx].icon = newIcon
+                    vm.save()
+                }
+            }
             .confirmationDialog("Remove \"\(bill.name)\"?", isPresented: $showRemoveConfirm, titleVisibility: .visible) {
                 Button("Remove Bill", role: .destructive) {
                     vm.removeBill(bill)
@@ -559,6 +485,123 @@ struct BillEditorSheet: View {
             }
         }
         .preferredColorScheme(.dark)
+    }
+}
+
+// MARK: - Split Preview Section
+
+/// Read-only summary of how the current bill splits across people for the
+/// active month. Lives at the top of the editor sheet so changes are
+/// immediately reflected.
+struct SplitPreviewSection: View {
+    @EnvironmentObject var vm: AppViewModel
+    let bill: Bill
+
+    var body: some View {
+        let split = vm.computeBillSplit(bill)
+        let contributingPeople = vm.state.people.filter { (split[$0.id] ?? 0) > 0 }
+
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("Split this month")
+                    .bhSectionTitle()
+                Spacer()
+                if bill.preserve {
+                    Text("Auto-carry forward")
+                        .font(.bhCaption)
+                        .foregroundColor(.bhMuted2)
+                }
+            }
+            .padding(.bottom, 8)
+
+            if contributingPeople.isEmpty {
+                Text("No amounts set yet — set the total and per-person split below.")
+                    .font(.bhCaption)
+                    .foregroundColor(.bhMuted)
+                    .padding(.bottom, 4)
+            } else {
+                ForEach(contributingPeople) { person in
+                    let amount = split[person.id] ?? 0
+                    HStack(spacing: 8) {
+                        Circle()
+                            .fill(Color(hex: person.color) ?? .gray)
+                            .frame(width: 8, height: 8)
+                        Text(person.name)
+                            .font(.bhBodyName)
+                            .foregroundColor(.bhText)
+                        Spacer()
+                        Text(amount.asCurrency)
+                            .font(.bhMoneySmall)
+                            .foregroundColor(.bhText)
+                    }
+                    .padding(.vertical, 5)
+                }
+            }
+        }
+        .padding(14)
+        .bhCard()
+    }
+}
+
+// MARK: - Emoji Picker Sheet
+
+/// A curated grid of common bill-related emoji shown as a small modal sheet.
+/// Replaces the previous freeform `TextField` icon entry, which surfaced the
+/// system emoji keyboard and was awkward on iOS.
+struct EmojiPickerSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let selected: String
+    let onSelect: (String) -> Void
+
+    private let emojis: [String] = [
+        "🏠", "🏡", "⚡️", "💡", "🔥", "💧", "🚿",
+        "🌐", "📡", "📺", "📞", "📱", "💻", "🛜",
+        "🚗", "⛽️", "🛞", "🚙", "🛡", "🩺", "💊",
+        "🍔", "🛒", "🥦", "☕️", "🍷", "🎵", "🎮",
+        "📚", "🎓", "🏋️", "🐶", "🐱", "🌱", "🧹",
+        "💳", "💰", "📅", "📦", "✈️", "🏖", "☁️"
+    ]
+
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 7)
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.bhBackground.ignoresSafeArea()
+                ScrollView {
+                    LazyVGrid(columns: columns, spacing: 8) {
+                        ForEach(emojis, id: \.self) { emoji in
+                            Button {
+                                onSelect(emoji)
+                                dismiss()
+                            } label: {
+                                Text(emoji)
+                                    .font(.title2)
+                                    .frame(width: 44, height: 44)
+                                    .background(emoji == selected ? Color.bhAmber.opacity(0.2) : Color.bhSurface2)
+                                    .cornerRadius(8)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(emoji == selected ? Color.bhAmber : Color.bhBorder, lineWidth: 1)
+                                    )
+                            }
+                            .accessibilityLabel("Select \(emoji)")
+                        }
+                    }
+                    .padding(16)
+                }
+            }
+            .navigationTitle("Choose Icon")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundColor(.bhAmber)
+                }
+            }
+        }
+        .preferredColorScheme(.dark)
+        .presentationDetents([.medium, .large])
     }
 }
 
@@ -612,7 +655,7 @@ struct BillLineRowView: View {
                 }
                 .pickerStyle(.menu)
                 .tint(.bhText)
-                .font(.bhBodySecondary)
+                .font(.bhBodyName)
                 .frame(width: 100)
 
                 Spacer()
@@ -657,6 +700,7 @@ struct BillLineRowView: View {
                     }
                 }
 
+                // 44pt hit area, smaller visual size
                 Button {
                     vm.removeLine(billId: bill.id, lineId: line.id)
                 } label: {
@@ -667,9 +711,12 @@ struct BillLineRowView: View {
                         .background(Color.bhSurface2)
                         .cornerRadius(5)
                         .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.bhBorder, lineWidth: 1))
+                        .frame(width: 44, height: 44) // 44pt tap target
+                        .contentShape(Rectangle())
                 }
                 .disabled(bill.lines.count <= 1)
                 .opacity(bill.lines.count <= 1 ? 0.3 : 1)
+                .accessibilityLabel("Remove line")
             }
             .padding(.horizontal, 16)
             .padding(.top, 9)

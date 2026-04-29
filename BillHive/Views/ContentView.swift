@@ -113,20 +113,20 @@ struct ToastView: View {
     var body: some View {
         HStack(spacing: 10) {
             Circle()
-                .fill(Color(hex: "#F5A800") ?? .orange)
+                .fill(Color.bhAmber)
                 .frame(width: 8, height: 8)
             Text(message)
-                .font(.system(.caption, design: .monospaced))
-                .foregroundColor(Color(hex: "#e4e5e8") ?? .white)
+                .font(.bhCaption)
+                .foregroundColor(.bhText)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .background(
             RoundedRectangle(cornerRadius: 10)
-                .fill(Color(hex: "#1c1e22") ?? Color(.systemGray6))
+                .fill(Color.bhSurface2)
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color(hex: "#34373d") ?? Color(.separator), lineWidth: 1)
+                        .stroke(Color.bhBorder2, lineWidth: 1)
                 )
         )
         .shadow(color: .black.opacity(0.4), radius: 12, y: 4)
@@ -173,7 +173,6 @@ struct EmptyStateView: View {
             if let actionTitle, let action {
                 Button(action: action) {
                     Label(actionTitle, systemImage: "plus")
-                        .font(.bhBodySecondary)
                 }
                 .buttonStyle(BHPrimaryButtonStyle())
                 .padding(.top, 4)
@@ -239,10 +238,15 @@ extension Font {
     static let bhSubtitle = Font.footnote
     /// Uppercase section title inside cards.
     static let bhSectionTitle = Font.caption2.weight(.medium).monospaced()
-    /// Primary body text — card titles, bill/person names.
+    /// Primary body text — used for tabular/code-like content. Monospaced.
     static let bhBody = Font.subheadline.weight(.semibold).monospaced()
-    /// Secondary body text — row content, inputs.
+    /// Secondary body text — row content, inputs. Monospaced.
     static let bhBodySecondary = Font.footnote.monospaced()
+    /// Proportional name text — bill names, person names, prose labels.
+    /// Use this instead of `bhBody` whenever the text is a proper noun or sentence.
+    static let bhBodyName = Font.subheadline.weight(.semibold)
+    /// Proportional secondary name text — sub-labels, hint copy under titles.
+    static let bhBodyNameSecondary = Font.footnote
     /// Small caption / hint text.
     static let bhCaption = Font.caption2.monospaced()
     /// Large monetary amount — hero totals.

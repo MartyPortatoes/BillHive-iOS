@@ -25,15 +25,10 @@ struct SendReceiveView: View {
                 HexBGView().ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Pay & Collect")
-                                .font(.bhViewTitle)
-                                .foregroundColor(.bhText)
-                            Text("Collect from others and pay your bills.")
-                                .font(.bhSubtitle)
-                                .foregroundColor(.bhMuted)
-                        }
-                        .padding(.top, 16)
+                        Text("Collect from others and pay your bills")
+                            .font(.bhSubtitle)
+                            .foregroundColor(.bhMuted)
+                            .padding(.top, 4)
 
                         // MARK: Collect Section
 
@@ -50,7 +45,7 @@ struct SendReceiveView: View {
                                 }
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("Collect")
-                                        .font(.headline.monospaced())
+                                        .font(.headline)
                                         .foregroundColor(.bhText)
                                     Text("Notify people what they owe and request payment")
                                         .font(.bhCaption)
@@ -99,7 +94,7 @@ struct SendReceiveView: View {
                                 }
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("Pay")
-                                        .font(.headline.monospaced())
+                                        .font(.headline)
                                         .foregroundColor(.bhText)
                                     Text("Pay your bills — tap Pay on any bill with a URL")
                                         .font(.bhCaption)
@@ -127,7 +122,7 @@ struct SendReceiveView: View {
                                 }
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("Monthly Checklist")
-                                        .font(.headline.monospaced())
+                                        .font(.headline)
                                         .foregroundColor(.bhText)
                                     Text("Track what's been done this month")
                                         .font(.bhCaption)
@@ -155,7 +150,13 @@ struct SendReceiveView: View {
                 }
                 .refreshable { await vm.refresh() }
             }
-            .navigationBarHidden(true)
+            .navigationTitle("Pay & Collect")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    MonthPickerToolbar()
+                }
+            }
         }
     }
 }
