@@ -1,8 +1,11 @@
-What's new in 1.6.0:
+What's new in 1.6.1:
 
-• Tap any bill to edit — read-only preview is now built into the editor sheet
-• Bill names display exactly as you type them (no more forced uppercase)
-• New emoji picker for bill icons — pick from a curated grid instead of typing
-• Standard iOS large titles and a month picker in the navigation bar
-• Restore Purchase now available even after you've already unlocked the app
-• Smaller refinements throughout: better tap targets, cleaner typography
+• Light & Dark mode — choose System, Light, or Dark from Settings → Appearance
+• Reorganized Settings into focused categories (Household, Data & Backup, Subscription, About)
+• Restored the slide-out bill preview when you tap a bill, with a dedicated Edit button
+• Cleaner navigation throughout — month picker is back in its familiar pill at the top
+• Backup export now uses iOS share sheet — save your data to Files, Mail, AirDrop, or your server
+• Smaller refinements: better empty states, improved tap targets, accessibility tweaks
+
+SelfHive only:
+• Backup server URL — add a secondary server (e.g. LAN IP + Tailscale IP) and the app falls back automatically when one is unreachable
