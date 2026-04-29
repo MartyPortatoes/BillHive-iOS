@@ -23,3 +23,11 @@ xcuserdata/
 
 # CocoaPods
 Pods/
+
+# App Store Connect API key — never commit
+_AppConnect/
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+fastlane/*.pkey

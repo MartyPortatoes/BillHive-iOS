@@ -1,0 +1,19 @@
+for_platform :ios do
+  team_id("V25M7FFAP2")
+end
+
+for_lane :beta_billhive do
+  app_identifier("com.billhive.app")
+end
+
+for_lane :release_billhive do
+  app_identifier("com.billhive.app")
+end
+
+for_lane :beta_selfhive do
+  app_identifier("com.billhive.selfhive")
+end
+
+for_lane :release_selfhive do
+  app_identifier("com.billhive.selfhive")
+end

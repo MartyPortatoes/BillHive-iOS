@@ -1,0 +1,7 @@
+What's new in 1.5.0:
+
+• Redesigned bill editor — tap a bill to preview, then edit in a focused sheet
+• First-run empty states across Bills, Summary, and Trends with clear next steps
+• "Send & Receive" is now "Pay & Collect" with clearer sub-sections
+• Full Dynamic Type support — text now scales with your iOS text-size preference
+• Accessibility improvements across the app

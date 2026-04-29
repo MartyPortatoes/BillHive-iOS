@@ -1,0 +1,154 @@
+default_platform(:ios)
+
+# Force UTF-8 so non-ASCII release notes (bullets, emoji) don't break deliver
+ENV["LANG"]    ||= "en_US.UTF-8"
+ENV["LC_ALL"]  ||= "en_US.UTF-8"
+
+# Paths
+PROJECT      = "BillHive.xcodeproj"
+APPCONNECT   = File.expand_path("../../_AppConnect", __dir__)
+KEY_ID       = "626USZ8VAQ"
+ISSUER_ID    = "cb60c965-0b6c-4c8c-a21c-1290dd674a1e"
+KEY_FILE     = "#{APPCONNECT}/AuthKey_#{KEY_ID}.p8"
+
+BILLHIVE_BUNDLE_ID  = "com.billhive.app"
+SELFHIVE_BUNDLE_ID  = "com.billhive.selfhive"
+
+platform :ios do
+
+  before_all do
+    UI.user_error!("Missing API key at #{KEY_FILE}") unless File.exist?(KEY_FILE)
+  end
+
+  # -------- Shared helpers --------
+
+  def asc_api_key
+    app_store_connect_api_key(
+      key_id: KEY_ID,
+      issuer_id: ISSUER_ID,
+      key_filepath: KEY_FILE,
+      duration: 1200,
+      in_house: false
+    )
+  end
+
+  def build_target(scheme:, bundle_id:)
+    # Sync signing via App Store Connect API
+    sync_code_signing(
+      type: "appstore",
+      app_identifier: [bundle_id],
+      api_key: asc_api_key,
+      readonly: false
+    ) if ENV["USE_MATCH"] == "1"
+
+    build_app(
+      project: PROJECT,
+      scheme: scheme,
+      configuration: "Release",
+      clean: true,
+      output_directory: "./build",
+      output_name: "#{scheme}.ipa",
+      export_method: "app-store"
+    )
+  end
+
+  # -------- TestFlight lanes --------
+
+  desc "Upload BillHive to TestFlight"
+  lane :beta_billhive do
+    build_target(scheme: "BillHive", bundle_id: BILLHIVE_BUNDLE_ID)
+    upload_to_testflight(
+      api_key: asc_api_key,
+      app_identifier: BILLHIVE_BUNDLE_ID,
+      skip_waiting_for_build_processing: true
+    )
+  end
+
+  desc "Upload SelfHive to TestFlight"
+  lane :beta_selfhive do
+    build_target(scheme: "SelfHive", bundle_id: SELFHIVE_BUNDLE_ID)
+    upload_to_testflight(
+      api_key: asc_api_key,
+      app_identifier: SELFHIVE_BUNDLE_ID,
+      skip_waiting_for_build_processing: true
+    )
+  end
+
+  desc "Upload both apps to TestFlight"
+  lane :beta_all do
+    beta_billhive
+    beta_selfhive
+  end
+
+  # -------- App Store release lanes --------
+
+  desc "Submit BillHive to App Store review (uses latest TestFlight build)"
+  lane :release_billhive do
+    upload_to_app_store(
+      api_key: asc_api_key,
+      app_identifier: BILLHIVE_BUNDLE_ID,
+      force: true,
+      skip_binary_upload: true,
+      skip_screenshots: true,
+      skip_metadata: false,
+      metadata_path: "./fastlane/metadata/billhive",
+      submit_for_review: true,
+      automatic_release: true,
+      submission_information: {
+        add_id_info_uses_idfa: false,
+        export_compliance_uses_encryption: false,
+        export_compliance_encryption_updated: false
+      },
+      precheck_include_in_app_purchases: false,
+      version_check_wait_retry_limit: 2
+    )
+  end
+
+  desc "Submit SelfHive to App Store review (uses latest TestFlight build)"
+  lane :release_selfhive do
+    upload_to_app_store(
+      api_key: asc_api_key,
+      app_identifier: SELFHIVE_BUNDLE_ID,
+      force: true,
+      skip_binary_upload: true,
+      skip_screenshots: true,
+      skip_metadata: false,
+      metadata_path: "./fastlane/metadata/selfhive",
+      submit_for_review: true,
+      automatic_release: true,
+      submission_information: {
+        add_id_info_uses_idfa: false,
+        export_compliance_uses_encryption: false,
+        export_compliance_encryption_updated: false
+      },
+      precheck_include_in_app_purchases: false,
+      version_check_wait_retry_limit: 2
+    )
+  end
+
+  desc "Submit both apps to App Store review"
+  lane :release_all do
+    release_billhive
+    release_selfhive
+  end
+
+  # -------- Version bump helper --------
+
+  desc "Bump marketing version, e.g. fastlane bump version:1.6.0"
+  lane :bump do |options|
+    UI.user_error!("Pass version:x.y.z") unless options[:version]
+    increment_version_number(
+      xcodeproj: PROJECT,
+      version_number: options[:version]
+    )
+    increment_build_number(xcodeproj: PROJECT)
+  end
+
+  after_all do |lane|
+    UI.success("✅ #{lane} complete")
+  end
+
+  error do |lane, exception|
+    UI.error("❌ #{lane}: #{exception.message}")
+  end
+end
