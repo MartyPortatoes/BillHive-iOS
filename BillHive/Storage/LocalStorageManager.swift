@@ -69,4 +69,12 @@ class LocalStorageManager {
             try? encoded.write(to: monthlyURL)
         }
     }
+
+    /// Overwrites the entire monthly file with the given dictionary.
+    /// Used by the bulk-clear path so we don't have to enumerate keys.
+    func saveAllMonths(_ months: [String: MonthData]) {
+        if let encoded = try? JSONEncoder().encode(months) {
+            try? encoded.write(to: monthlyURL)
+        }
+    }
 }

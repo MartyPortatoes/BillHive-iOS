@@ -11,138 +11,232 @@ import SwiftUI
 struct ServerSetupView: View {
     @EnvironmentObject var vm: AppViewModel
     @AppStorage("serverURL") private var serverURL: String = ""
+    @AppStorage("backupServerURL") private var backupServerURL: String = ""
+
+    // Primary
     @State private var inputURL = ""
     @State private var isTesting = false
     @State private var testResult: String? = nil
     @State private var testSuccess = false
 
+    // Backup (optional)
+    @State private var showBackupField = false
+    @State private var backupInputURL = ""
+    @State private var isTestingBackup = false
+    @State private var backupTestResult: String? = nil
+    @State private var backupTestSuccess = false
+
     var body: some View {
         ZStack {
             HexBGView().ignoresSafeArea()
 
-            VStack(spacing: 32) {
-                Spacer()
-
-                // Logo
-                VStack(spacing: 12) {
-                    TriHexLogoMark(size: 72)
-                    Text("SelfHive")
-                        .font(.largeTitle.weight(.black))
-                        .foregroundColor(.bhText)
-                    Text("self-hosted bill manager")
-                        .font(.bhCaption)
-                        .tracking(2)
-                        .textCase(.uppercase)
-                        .foregroundColor(.bhMuted)
-                }
-
-                // Setup card
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Connect to your SelfHive server")
-                        .font(.subheadline.weight(.semibold).monospaced())
-                        .foregroundColor(.bhText)
-
-                    Text("Enter the URL of your self-hosted SelfHive instance.")
-                        .font(.bhBodySecondary)
-                        .foregroundColor(.bhMuted)
-
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Server URL")
-                            .bhSectionTitle()
-
-                        TextField("http://192.168.1.100:8080", text: $inputURL)
-                            .textFieldStyle(.plain)
-                            .font(.bhBodySecondary)
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Logo
+                    VStack(spacing: 12) {
+                        TriHexLogoMark(size: 72)
+                        Text("SelfHive")
+                            .font(.largeTitle.weight(.black))
                             .foregroundColor(.bhText)
-                            .padding(10)
-                            .background(Color.bhSurface2)
-                            .cornerRadius(8)
-                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.bhBorder, lineWidth: 1))
-                            .autocorrectionDisabled()
-                            .textInputAutocapitalization(.never)
-                            .keyboardType(.URL)
+                        Text("self-hosted bill manager")
+                            .font(.bhCaption)
+                            .tracking(2)
+                            .textCase(.uppercase)
+                            .foregroundColor(.bhMuted)
                     }
+                    .padding(.top, 40)
 
-                    if let result = testResult {
-                        HStack(spacing: 6) {
-                            Image(systemName: testSuccess ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                .foregroundColor(testSuccess ? .bhAmber : .bhRed)
-                            Text(result)
-                                .font(.bhCaption)
-                                .foregroundColor(testSuccess ? .bhAmber : .bhRed)
+                    // Setup card
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Connect to your SelfHive server")
+                            .font(.subheadline.weight(.semibold).monospaced())
+                            .foregroundColor(.bhText)
+
+                        Text("Enter the URL of your self-hosted SelfHive instance.")
+                            .font(.bhBodySecondary)
+                            .foregroundColor(.bhMuted)
+
+                        // Primary URL field
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Server URL")
+                                .bhSectionTitle()
+
+                            TextField("http://192.168.1.100:8080", text: $inputURL)
+                                .textFieldStyle(.plain)
+                                .font(.bhBodySecondary)
+                                .foregroundColor(.bhText)
+                                .padding(10)
+                                .background(Color.bhSurface2)
+                                .cornerRadius(8)
+                                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.bhBorder, lineWidth: 1))
+                                .autocorrectionDisabled()
+                                .textInputAutocapitalization(.never)
+                                .keyboardType(.URL)
                         }
-                    }
 
-                    HStack(spacing: 12) {
-                        Button {
-                            Task { await testConnection() }
-                        } label: {
-                            HStack {
-                                if isTesting {
-                                    ProgressView().tint(.bhText).scaleEffect(0.7)
-                                }
-                                Text(isTesting ? "Testing..." : "Test Connection")
+                        if let result = testResult {
+                            HStack(spacing: 6) {
+                                Image(systemName: testSuccess ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                    .foregroundColor(testSuccess ? .bhAmber : .bhRed)
+                                Text(result)
+                                    .font(.bhCaption)
+                                    .foregroundColor(testSuccess ? .bhAmber : .bhRed)
                             }
-                            .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(BHSecondaryButtonStyle())
-                        .disabled(inputURL.isEmpty || isTesting)
 
-                        Button {
-                            saveAndConnect()
-                        } label: {
-                            Text("Connect")
+                        // Backup URL section (collapsible)
+                        if showBackupField {
+                            backupURLSection
+                        } else {
+                            Button {
+                                withAnimation { showBackupField = true }
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "plus.circle")
+                                        .font(.bhBodySecondary)
+                                    Text("Add backup server (optional)")
+                                        .font(.bhBodySecondary)
+                                }
+                                .foregroundColor(.bhAmber)
+                            }
+                        }
+
+                        HStack(spacing: 12) {
+                            Button {
+                                Task { await testPrimary() }
+                            } label: {
+                                HStack {
+                                    if isTesting {
+                                        ProgressView().tint(.bhText).scaleEffect(0.7)
+                                    }
+                                    Text(isTesting ? "Testing..." : "Test Connection")
+                                }
                                 .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(BHSecondaryButtonStyle())
+                            .disabled(inputURL.isEmpty || isTesting)
+
+                            Button {
+                                saveAndConnect()
+                            } label: {
+                                Text("Connect")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(BHPrimaryButtonStyle())
+                            .disabled(inputURL.isEmpty || !testSuccess)
                         }
-                        .buttonStyle(BHPrimaryButtonStyle())
-                        .disabled(inputURL.isEmpty || !testSuccess)
                     }
+                    .padding(20)
+                    .bhCard()
+                    .padding(.horizontal, 24)
+
+                    if showBackupField {
+                        Text("The app will automatically fall back to the backup if the primary server is unreachable.")
+                            .font(.bhCaption)
+                            .foregroundColor(.bhMuted)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
+                    }
+
+                    Text("Self-hosted · Your data stays on your server")
+                        .font(.bhCaption)
+                        .foregroundColor(.bhMuted2)
+                        .padding(.bottom, 24)
                 }
-                .padding(20)
-                .bhCard()
-                .padding(.horizontal, 24)
-
-                Spacer()
-
-                Text("Self-hosted · Your data stays on your server")
-                    .font(.bhCaption)
-                    .foregroundColor(.bhMuted2)
             }
+        }
+        .bhColorScheme()
+    }
+
+    // MARK: - Backup URL Section
+
+    @ViewBuilder
+    private var backupURLSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("Backup Server URL")
+                    .bhSectionTitle()
+                Spacer()
+                Button {
+                    withAnimation {
+                        showBackupField = false
+                        backupInputURL = ""
+                        backupTestResult = nil
+                        backupTestSuccess = false
+                    }
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.caption)
+                        .foregroundColor(.bhMuted)
+                }
+            }
+
+            TextField("http://100.x.y.z:8080", text: $backupInputURL)
+                .textFieldStyle(.plain)
+                .font(.bhBodySecondary)
+                .foregroundColor(.bhText)
+                .padding(10)
+                .background(Color.bhSurface2)
+                .cornerRadius(8)
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.bhBorder, lineWidth: 1))
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+                .keyboardType(.URL)
+
+            if let result = backupTestResult {
+                HStack(spacing: 6) {
+                    Image(systemName: backupTestSuccess ? "checkmark.circle.fill" : "xmark.circle.fill")
+                        .foregroundColor(backupTestSuccess ? .bhAmber : .bhRed)
+                    Text(result)
+                        .font(.bhCaption)
+                        .foregroundColor(backupTestSuccess ? .bhAmber : .bhRed)
+                }
+            }
+
+            Button {
+                Task { await testBackup() }
+            } label: {
+                HStack {
+                    if isTestingBackup {
+                        ProgressView().tint(.bhText).scaleEffect(0.7)
+                    }
+                    Text(isTestingBackup ? "Testing..." : "Test Backup")
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(BHSecondaryButtonStyle())
+            .disabled(backupInputURL.isEmpty || isTestingBackup)
         }
     }
 
-    private func testConnection() async {
+    // MARK: - Actions
+
+    private func testPrimary() async {
         isTesting = true
         testResult = nil
-        do {
-            var s = inputURL.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !s.hasPrefix("http") { s = "http://" + s }
-            s = s.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-            guard let url = URL(string: s + "/api/health") else {
-                throw URLError(.badURL)
-            }
-            var req = URLRequest(url: url)
-            req.timeoutInterval = 10
-            let (data, response) = try await URLSession.shared.data(for: req)
-            if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
-                testSuccess = false
-                testResult = "Server error \(http.statusCode)"
-            } else {
-                let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-                let ok = obj?["ok"] as? Bool == true
-                testSuccess = ok
-                testResult = ok ? "Connection successful!" : "Server responded but health check failed"
-            }
-        } catch {
-            testSuccess = false
-            testResult = error.localizedDescription
-        }
+        let result = await APIClient.testConnection(rawURL: inputURL)
+        testSuccess = result.success
+        testResult = result.message
         isTesting = false
+    }
+
+    private func testBackup() async {
+        isTestingBackup = true
+        backupTestResult = nil
+        let result = await APIClient.testConnection(rawURL: backupInputURL)
+        backupTestSuccess = result.success
+        backupTestResult = result.message
+        isTestingBackup = false
     }
 
     private func saveAndConnect() {
         serverURL = inputURL
         APIClient.shared.serverURL = inputURL
+        // Save backup only if it tested successfully (or skip silently if blank)
+        if showBackupField && backupTestSuccess && !backupInputURL.isEmpty {
+            backupServerURL = backupInputURL
+            APIClient.shared.backupServerURL = backupInputURL
+        }
     }
 }
 

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Content View
 
@@ -67,7 +68,7 @@ struct ContentView: View {
         }
         .animation(.easeInOut(duration: 0.25), value: vm.toastMessage)
         .animation(.easeInOut(duration: 0.25), value: vm.error)
-        .preferredColorScheme(.dark)
+        .bhColorScheme()
         .onChange(of: scenePhase) { phase in
             if phase == .active && !vm.isLocal {
                 Task { await vm.refresh() }
@@ -186,22 +187,89 @@ struct EmptyStateView: View {
 
 // MARK: - Design Tokens
 
-/// App-wide color palette — dark theme inspired by the BillHive web app.
+/// App-wide color palette. Surface and text tokens adapt to the current
+/// color scheme (light vs. dark); brand and status colors stay constant.
 ///
-/// Each color maps to the web app's CSS custom properties for visual consistency.
+/// The dark variant matches the BillHive web app's CSS custom properties.
+/// The light variant uses warm cream surfaces to complement the amber brand.
 extension Color {
-    static let bhBackground = Color(hex: "#0c0d0f") ?? Color(.systemBackground)
-    static let bhSurface = Color(hex: "#141518") ?? Color(.secondarySystemBackground)
-    static let bhSurface2 = Color(hex: "#1c1e22") ?? Color(.tertiarySystemBackground)
-    static let bhSurface3 = Color(hex: "#242629") ?? Color(.systemGray5)
-    static let bhBorder = Color(hex: "#2a2c31") ?? Color(.separator)
-    static let bhBorder2 = Color(hex: "#34373d") ?? Color(.separator)
-    static let bhText = Color(hex: "#e4e5e8") ?? .primary
-    static let bhMuted = Color(hex: "#767880") ?? .secondary
-    static let bhMuted2 = Color(hex: "#4a4c52") ?? Color(.systemGray3)
+    /// Primary background — page-level fill behind everything.
+    static let bhBackground = Color.bhDynamic(light: "#faf9f4", dark: "#0c0d0f")
+    /// Card / elevated surface.
+    static let bhSurface    = Color.bhDynamic(light: "#ffffff", dark: "#141518")
+    /// Secondary surface — input backgrounds, segmented controls.
+    static let bhSurface2   = Color.bhDynamic(light: "#f3f1ea", dark: "#1c1e22")
+    /// Tertiary surface — subtle bill icon tints, hover states.
+    static let bhSurface3   = Color.bhDynamic(light: "#e8e6dd", dark: "#242629")
+    /// Standard 1pt border.
+    static let bhBorder     = Color.bhDynamic(light: "#dad7cc", dark: "#2a2c31")
+    /// Emphasized border (active state, selection).
+    static let bhBorder2    = Color.bhDynamic(light: "#bfbcaf", dark: "#34373d")
+    /// Primary text color.
+    static let bhText       = Color.bhDynamic(light: "#0c0d0f", dark: "#e4e5e8")
+    /// Muted text — labels, captions.
+    static let bhMuted      = Color.bhDynamic(light: "#6f717a", dark: "#767880")
+    /// Most muted text — disabled, placeholder.
+    static let bhMuted2     = Color.bhDynamic(light: "#a4a7ad", dark: "#4a4c52")
+
+    /// Brand amber — same in both schemes.
     static let bhAmber = Color(hex: "#F5A800") ?? .orange
-    static let bhBlue = Color(hex: "#5bc4f5") ?? .blue
-    static let bhRed = Color(hex: "#ef5350") ?? .red
+    /// Info blue — same in both schemes.
+    static let bhBlue  = Color(hex: "#5bc4f5") ?? .blue
+    /// Error red — same in both schemes.
+    static let bhRed   = Color(hex: "#ef5350") ?? .red
+
+    /// Builds a `Color` whose value is resolved at render time based on the
+    /// current `UITraitCollection.userInterfaceStyle`. Lets the same token
+    /// emit different hex values for light vs. dark.
+    static func bhDynamic(light: String, dark: String) -> Color {
+        Color(uiColor: UIColor { traits in
+            let hex = (traits.userInterfaceStyle == .dark) ? dark : light
+            return UIColor(Color(hex: hex) ?? .gray)
+        })
+    }
+}
+
+// MARK: - Color Scheme Preference
+
+/// User-controllable color scheme override. Persists in `UserDefaults`
+/// and is applied via the `.bhColorScheme()` modifier on every view that
+/// needs to enforce a scheme (root + each sheet).
+enum ColorSchemePreference: String, CaseIterable, Identifiable {
+    case system, light, dark
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .system: return "System"
+        case .light:  return "Light"
+        case .dark:   return "Dark"
+        }
+    }
+    /// Resolves to the SwiftUI scheme to apply (`nil` = follow system).
+    var scheme: ColorScheme? {
+        switch self {
+        case .system: return nil
+        case .light:  return .light
+        case .dark:   return .dark
+        }
+    }
+}
+
+private struct BHColorSchemeModifier: ViewModifier {
+    @AppStorage("colorSchemePref") private var pref: String = ColorSchemePreference.dark.rawValue
+    func body(content: Content) -> some View {
+        let resolved = ColorSchemePreference(rawValue: pref) ?? .dark
+        return content.preferredColorScheme(resolved.scheme)
+    }
+}
+
+extension View {
+    /// Applies the user-selected color scheme preference. Must be set on
+    /// the root view AND every sheet (sheets create new presentation
+    /// contexts that don't inherit `preferredColorScheme`).
+    func bhColorScheme() -> some View {
+        modifier(BHColorSchemeModifier())
+    }
 }
 
 // MARK: - View Modifiers

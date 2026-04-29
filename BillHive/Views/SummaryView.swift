@@ -18,10 +18,17 @@ struct SummaryView: View {
                 HexBGView().ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        Text("What everyone owes this month — \(vm.monthLabel)")
-                            .font(.bhSubtitle)
-                            .foregroundColor(.bhMuted)
-                            .padding(.top, 4)
+                        MonthPickerBar()
+                            .padding(.top, 12)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Summary")
+                                .font(.bhViewTitle)
+                                .foregroundColor(.bhText)
+                            Text("What everyone owes this month — \(vm.monthLabel)")
+                                .font(.bhSubtitle)
+                                .foregroundColor(.bhMuted)
+                        }
 
                         if vm.state.bills.isEmpty {
                             EmptyStateView(
@@ -39,13 +46,7 @@ struct SummaryView: View {
                 }
                 .refreshable { await vm.refresh() }
             }
-            .navigationTitle("Summary")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    MonthPickerToolbar()
-                }
-            }
+            .navigationBarHidden(true)
         }
     }
 

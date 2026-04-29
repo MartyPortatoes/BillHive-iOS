@@ -120,7 +120,7 @@ struct PaywallView: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
+        .bhColorScheme()
         .interactiveDismissDisabled(!purchaseManager.isUnlocked)
         .onChange(of: purchaseManager.isPurchased) { purchased in
             if purchased { dismiss() }

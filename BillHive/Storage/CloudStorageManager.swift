@@ -119,6 +119,18 @@ class CloudStorageManager: NSObject {
         coordinatedWrite(data: encoded, to: fileURL)
     }
 
+    /// Overwrites the entire monthly file with the given dictionary.
+    /// Used by the bulk-clear path so we don't have to enumerate keys.
+    /// Also overwrites local storage to keep the two in sync.
+    func saveAllMonths(_ months: [String: MonthData]) {
+        LocalStorageManager.shared.saveAllMonths(months)
+
+        guard let fileURL = cloudMonthlyURL else { return }
+        guard let encoded = try? JSONEncoder().encode(months) else { return }
+        ensureCloudDocsDir()
+        coordinatedWrite(data: encoded, to: fileURL)
+    }
+
     // MARK: - Migration (Local → iCloud)
 
     /// Copies existing local data into iCloud if the cloud container is empty.

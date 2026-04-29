@@ -2,197 +2,158 @@ import SwiftUI
 
 // MARK: - Settings View
 
-/// Top-level settings screen with people management, email greetings,
-/// email relay configuration (server-only), data export/import, and server URL.
+/// Top-level settings screen — a compact list of category rows. Each row
+/// opens a full-screen sheet for that category (Household, Server, etc.),
+/// matching the same pattern used by the bill editor.
+///
+/// Reduces the cognitive load of a single long-scrolling settings page by
+/// grouping related controls and presenting them on demand.
 struct SettingsView: View {
     @EnvironmentObject var vm: AppViewModel
     @AppStorage("serverURL") private var serverURL: String = ""
-    @State private var showImportPicker = false
-    @State private var showClearConfirm = false
+    @AppStorage("backupServerURL") private var backupServerURL: String = ""
+    @AppStorage("colorSchemePref") private var colorSchemePref: String = ColorSchemePreference.dark.rawValue
+
+    // Category sheets
+    @State private var showHousehold = false
+    @State private var showEmailRelay = false
     @State private var showServerEdit = false
+    @State private var showDataBackup = false
+    @State private var showSubscription = false
+    @State private var showAbout = false
+
+    // Drafts for server edit sheet (kept here so they survive reopen)
     @State private var draftServerURL = ""
-    @State private var expandedPersonId: String? = nil
+    @State private var draftBackupURL = ""
+
+    /// Marketing version pulled from Info.plist (e.g. "1.6.0").
+    private var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
+    }
+
+    /// Subtitle for the Server row — adapts to whether a backup is set.
+    private var serverSubtitle: String {
+        if backupServerURL.isEmpty { return "Primary URL configured" }
+        return "Primary + backup configured"
+    }
+
+    #if BILLHIVE_LOCAL
+    /// Subtitle for the Subscription row — adapts to purchase state.
+    /// Only compiled into the BillHive target; SelfHive has no IAP.
+    private var subscriptionSubtitle: String {
+        let pm = PurchaseManager.shared
+        if pm.isPurchased { return "BillHive Pro · Unlocked" }
+        if pm.isTrialActive { return "Trial · \(pm.trialDaysRemaining) day\(pm.trialDaysRemaining == 1 ? "" : "s") left" }
+        return "Trial expired · Upgrade to unlock"
+    }
+    #endif
 
     var body: some View {
         NavigationStack {
             ZStack {
                 HexBGView().ignoresSafeArea()
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
-                        // MARK: Purchase Section
+                    VStack(spacing: 10) {
+                        // Inline Appearance picker — single control, no
+                        // need for a drilldown sheet
+                        AppearancePickerCard(selection: $colorSchemePref)
+
+                        SettingsCategoryRow(
+                            icon: "person.2.fill",
+                            title: "Household",
+                            subtitle: "People, greetings, and pay info",
+                            action: { showHousehold = true }
+                        )
+
+                        if !vm.isLocal {
+                            SettingsCategoryRow(
+                                icon: "envelope.fill",
+                                title: "Email Relay",
+                                subtitle: "SMTP, Mailgun, SendGrid, Resend",
+                                action: { showEmailRelay = true }
+                            )
+                        }
+
+                        if !vm.isLocal {
+                            SettingsCategoryRow(
+                                icon: "server.rack",
+                                title: "Server",
+                                subtitle: serverSubtitle,
+                                action: {
+                                    draftServerURL = serverURL
+                                    draftBackupURL = backupServerURL
+                                    showServerEdit = true
+                                }
+                            )
+                        }
+
+                        SettingsCategoryRow(
+                            icon: "externaldrive.fill",
+                            title: "Data & Backup",
+                            subtitle: "Export, import, or clear your data",
+                            action: { showDataBackup = true }
+                        )
 
                         #if BILLHIVE_LOCAL
-                        PurchaseSettingsSection()
+                        SettingsCategoryRow(
+                            icon: "lock.open.fill",
+                            title: "Subscription",
+                            subtitle: subscriptionSubtitle,
+                            action: { showSubscription = true }
+                        )
                         #endif
 
-                        // MARK: People Section
-
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("People")
-                                .bhSectionTitle()
-                                .padding(.bottom, 2)
-
-                            // Explanatory note about the primary person
-                            (Text("The ").font(.bhCaption).foregroundColor(.bhMuted)
-                            + Text("★ Primary").font(.bhCaption.weight(.semibold)).foregroundColor(.bhAmber)
-                            + Text(" person is ").font(.bhCaption).foregroundColor(.bhMuted)
-                            + Text("you").font(.bhCaption.weight(.bold)).foregroundColor(.bhText)
-                            + Text(" — the one who fronts all bills and collects from everyone else. This person cannot be removed.").font(.bhCaption).foregroundColor(.bhMuted))
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.bottom, 4)
-
-                            ForEach(Array(vm.state.people.enumerated()), id: \.element.id) { idx, person in
-                                PersonCardView(
-                                    idx: idx,
-                                    person: person,
-                                    isExpanded: expandedPersonId == person.id,
-                                    onToggle: {
-                                        withAnimation(.easeInOut(duration: 0.2)) {
-                                            expandedPersonId = expandedPersonId == person.id ? nil : person.id
-                                        }
-                                    }
-                                )
-                            }
-
-                            Button {
-                                vm.addPerson()
-                                if let last = vm.state.people.last {
-                                    withAnimation(.easeInOut(duration: 0.2)) {
-                                        expandedPersonId = last.id
-                                    }
-                                }
-                            } label: {
-                                Label("Add Person", systemImage: "plus")
-                                    .font(.bhCaption)
-                            }
-                            .buttonStyle(BHSecondaryButtonStyle())
-                        }
-
-                        // MARK: Email Greetings Section
-
-                        SettingsSection(title: "Email Greetings") {
-                            Text("Custom opening line for each person's bill email")
-                                .font(.bhCaption)
-                                .foregroundColor(.bhMuted)
-                                .padding(.bottom, 8)
-
-                            ForEach(vm.state.people.filter { $0.id != "me" }) { person in
-                                HStack(spacing: 8) {
-                                    Circle().fill(Color(hex: person.color) ?? .bhAmber).frame(width: 8, height: 8)
-                                    Text(person.name)
-                                        .font(.bhCaption)
-                                        .foregroundColor(.bhText)
-                                        .frame(width: 80, alignment: .leading)
-                                    TextField("Hey \(person.name),", text: Binding(
-                                        get: {
-                                            if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
-                                                return vm.state.people[idx].greeting
-                                            }
-                                            return ""
-                                        },
-                                        set: { newValue in
-                                            if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
-                                                vm.state.people[idx].greeting = newValue
-                                                vm.save()
-                                            }
-                                        }
-                                    ))
-                                    .font(.bhCaption)
-                                    .foregroundColor(.bhText)
-                                    .textFieldStyle(.plain)
-                                    .padding(7)
-                                    .background(Color.bhSurface2)
-                                    .cornerRadius(6)
-                                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.bhBorder, lineWidth: 1))
-                                }
-                                .padding(.vertical, 4)
-                            }
-                        }
-
-                        // MARK: Email Relay Section (server-only)
-
-                        if !vm.isLocal {
-                            EmailConfigSection()
-                        }
-
-                        // MARK: Data Section
-
-                        SettingsSection(title: "Data") {
-                            VStack(spacing: 10) {
-                                if let exportURL = APIClient.shared.exportURL() {
-                                    Link(destination: exportURL) {
-                                        HStack {
-                                            Image(systemName: "arrow.down.circle")
-                                            Text("Export Backup")
-                                        }
-                                        .frame(maxWidth: .infinity)
-                                    }
-                                    .buttonStyle(BHSecondaryButtonStyle())
-                                }
-
-                                Button {
-                                    showClearConfirm = true
-                                } label: {
-                                    HStack {
-                                        Image(systemName: "trash")
-                                        Text("Clear All Data")
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                }
-                                .buttonStyle(BHDangerButtonStyle())
-                            }
-                        }
-
-                        // MARK: Server Section (server-only)
-
-                        if !vm.isLocal {
-                            SettingsSection(title: "Server") {
-                                HStack {
-                                    Text(serverURL)
-                                        .font(.bhCaption)
-                                        .foregroundColor(.bhMuted)
-                                        .lineLimit(1)
-                                        .truncationMode(.middle)
-                                    Spacer()
-                                    Button("Change") {
-                                        draftServerURL = serverURL
-                                        showServerEdit = true
-                                    }
-                                    .font(.bhCaption)
-                                    .foregroundColor(.bhAmber)
-                                }
-                            }
-                        }
+                        SettingsCategoryRow(
+                            icon: "info.circle.fill",
+                            title: "About",
+                            subtitle: "Version \(appVersion)",
+                            action: { showAbout = true }
+                        )
 
                         Spacer(minLength: 24)
                     }
                     .padding(.horizontal, 16)
+                    .padding(.top, 8)
                 }
                 .refreshable { await vm.refresh() }
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)
-            .confirmationDialog("Clear all data?", isPresented: $showClearConfirm, titleVisibility: .visible) {
-                Button("Reset All Data", role: .destructive) {
-                    Task {
-                        try? await APIClient.shared.saveState(AppState())
-                        await vm.load()
-                        vm.toast("Data cleared")
-                    }
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("This will delete all bills, people, and monthly data. This cannot be undone.")
+            .sheet(isPresented: $showHousehold) {
+                HouseholdSettingsSheet().environmentObject(vm)
+            }
+            .sheet(isPresented: $showEmailRelay) {
+                EmailRelaySettingsSheet().environmentObject(vm)
             }
             .sheet(isPresented: $showServerEdit) {
-                ServerEditSheet(url: $draftServerURL, onSave: { newURL in
-                    serverURL = newURL
-                    APIClient.shared.serverURL = newURL
-                    Task { await vm.load() }
-                }, onLogout: {
-                    serverURL = ""
-                    APIClient.shared.serverURL = ""
-                })
+                ServerEditSheet(
+                    primaryURL: $draftServerURL,
+                    backupURL: $draftBackupURL,
+                    onSave: { newPrimary, newBackup in
+                        serverURL = newPrimary
+                        backupServerURL = newBackup
+                        APIClient.shared.serverURL = newPrimary
+                        APIClient.shared.backupServerURL = newBackup
+                        Task { await vm.load() }
+                    },
+                    onLogout: {
+                        serverURL = ""
+                        backupServerURL = ""
+                        APIClient.shared.serverURL = ""
+                        APIClient.shared.backupServerURL = ""
+                    }
+                )
+            }
+            .sheet(isPresented: $showDataBackup) {
+                DataBackupSettingsSheet().environmentObject(vm)
+            }
+            #if BILLHIVE_LOCAL
+            .sheet(isPresented: $showSubscription) {
+                SubscriptionSettingsSheet().environmentObject(vm)
+            }
+            #endif
+            .sheet(isPresented: $showAbout) {
+                AboutSettingsSheet(version: appVersion)
             }
         }
     }
@@ -677,58 +638,188 @@ struct EMField: View {
     }
 }
 
+// MARK: - Server Row
+
+/// A read-only row in the Settings server section, showing one configured
+/// URL and whether it's currently the active (last-known-good) server.
+struct ServerRow: View {
+    let label: String
+    let url: String
+    let isActive: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 6) {
+                Text(label)
+                    .font(.bhCaption.weight(.semibold))
+                    .foregroundColor(.bhText)
+                if isActive {
+                    Text("ACTIVE")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(.bhAmber)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(Color.bhAmber.opacity(0.15))
+                        .cornerRadius(3)
+                }
+                Spacer()
+            }
+            Text(url)
+                .font(.bhCaption)
+                .foregroundColor(.bhMuted)
+                .lineLimit(1)
+                .truncationMode(.middle)
+        }
+    }
+}
+
 // MARK: - Server Edit Sheet
 
-/// Modal sheet for changing the server URL or logging out.
+/// Modal sheet for editing the primary and (optional) backup server URLs.
+/// Each field has its own Test button to verify reachability before save.
 struct ServerEditSheet: View {
-    @Binding var url: String
-    let onSave: (String) -> Void
+    @Binding var primaryURL: String
+    @Binding var backupURL: String
+    let onSave: (_ primary: String, _ backup: String) -> Void
     let onLogout: () -> Void
     @Environment(\.dismiss) private var dismiss
+
+    @State private var isTestingPrimary = false
+    @State private var primaryResult: String? = nil
+    @State private var primarySuccess = false
+
+    @State private var isTestingBackup = false
+    @State private var backupResult: String? = nil
+    @State private var backupSuccess = false
 
     var body: some View {
         NavigationStack {
             ZStack {
                 HexBGView().ignoresSafeArea()
-                VStack(spacing: 20) {
-                    TextField("http://192.168.1.100:8080", text: $url)
-                        .font(.bhBodySecondary)
-                        .foregroundColor(.bhText)
-                        .textFieldStyle(.plain)
-                        .padding(10)
-                        .background(Color.bhSurface2)
-                        .cornerRadius(8)
-                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.bhBorder, lineWidth: 1))
-                        .autocorrectionDisabled()
-                        .textInputAutocapitalization(.never)
-                        .keyboardType(.URL)
+                ScrollView {
+                    VStack(spacing: 20) {
+                        // Primary URL
+                        urlField(
+                            title: "Primary Server URL",
+                            placeholder: "http://192.168.1.100:8080",
+                            text: $primaryURL,
+                            result: primaryResult,
+                            success: primarySuccess,
+                            isTesting: isTestingPrimary,
+                            onTest: { Task { await test(primary: true) } }
+                        )
 
-                    HStack(spacing: 12) {
-                        Button("Cancel") { dismiss() }.buttonStyle(BHSecondaryButtonStyle())
-                        Button("Save & Reconnect") {
-                            onSave(url)
-                            dismiss()
-                        }.buttonStyle(BHPrimaryButtonStyle())
-                    }
+                        // Backup URL
+                        urlField(
+                            title: "Backup Server URL (optional)",
+                            placeholder: "http://100.x.y.z:8080",
+                            text: $backupURL,
+                            result: backupResult,
+                            success: backupSuccess,
+                            isTesting: isTestingBackup,
+                            onTest: { Task { await test(primary: false) } }
+                        )
 
-                    Button {
-                        onLogout()
-                        dismiss()
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "rectangle.portrait.and.arrow.right")
-                            Text("Logout")
+                        Text("The app will use the primary server when reachable and automatically fall back to the backup otherwise.")
+                            .font(.bhCaption)
+                            .foregroundColor(.bhMuted)
+                            .multilineTextAlignment(.center)
+
+                        HStack(spacing: 12) {
+                            Button("Cancel") { dismiss() }
+                                .buttonStyle(BHSecondaryButtonStyle())
+                            Button("Save & Reconnect") {
+                                onSave(primaryURL, backupURL)
+                                dismiss()
+                            }
+                            .buttonStyle(BHPrimaryButtonStyle())
+                            .disabled(primaryURL.isEmpty)
                         }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(BHDangerButtonStyle())
 
+                        Button {
+                            onLogout()
+                            dismiss()
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "rectangle.portrait.and.arrow.right")
+                                Text("Logout")
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(BHDangerButtonStyle())
+                    }
+                    .padding(24)
+                }
+            }
+            .navigationTitle("Server Settings")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+
+    @ViewBuilder
+    private func urlField(title: String,
+                          placeholder: String,
+                          text: Binding<String>,
+                          result: String?,
+                          success: Bool,
+                          isTesting: Bool,
+                          onTest: @escaping () -> Void) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .bhSectionTitle()
+
+            TextField(placeholder, text: text)
+                .font(.bhBodySecondary)
+                .foregroundColor(.bhText)
+                .textFieldStyle(.plain)
+                .padding(10)
+                .background(Color.bhSurface2)
+                .cornerRadius(8)
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.bhBorder, lineWidth: 1))
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+                .keyboardType(.URL)
+
+            if let result {
+                HStack(spacing: 6) {
+                    Image(systemName: success ? "checkmark.circle.fill" : "xmark.circle.fill")
+                        .foregroundColor(success ? .bhAmber : .bhRed)
+                    Text(result)
+                        .font(.bhCaption)
+                        .foregroundColor(success ? .bhAmber : .bhRed)
                     Spacer()
                 }
-                .padding(24)
             }
-            .navigationTitle("Change Server URL")
-            .navigationBarTitleDisplayMode(.inline)
+
+            Button(action: onTest) {
+                HStack {
+                    if isTesting {
+                        ProgressView().tint(.bhText).scaleEffect(0.7)
+                    }
+                    Text(isTesting ? "Testing..." : "Test Connection")
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(BHSecondaryButtonStyle())
+            .disabled(text.wrappedValue.isEmpty || isTesting)
+        }
+    }
+
+    private func test(primary: Bool) async {
+        if primary {
+            isTestingPrimary = true
+            primaryResult = nil
+            let r = await APIClient.testConnection(rawURL: primaryURL)
+            primarySuccess = r.success
+            primaryResult = r.message
+            isTestingPrimary = false
+        } else {
+            isTestingBackup = true
+            backupResult = nil
+            let r = await APIClient.testConnection(rawURL: backupURL)
+            backupSuccess = r.success
+            backupResult = r.message
+            isTestingBackup = false
         }
     }
 }
@@ -857,5 +948,515 @@ extension Color {
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         guard uic.getRed(&r, green: &g, blue: &b, alpha: &a) else { return nil }
         return String(format: "#%02X%02X%02X", Int(r * 255), Int(g * 255), Int(b * 255))
+    }
+}
+
+// MARK: - Settings Category Row
+
+/// A tappable row in the top-level Settings list. Shows an amber-tinted
+/// circular icon, a title, a subtitle, and a trailing chevron.
+struct SettingsCategoryRow: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(Color.bhAmber.opacity(0.15))
+                        .frame(width: 36, height: 36)
+                    Image(systemName: icon)
+                        .font(.subheadline)
+                        .foregroundColor(.bhAmber)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.bhBodyName)
+                        .foregroundColor(.bhText)
+                    Text(subtitle)
+                        .font(.bhCaption)
+                        .foregroundColor(.bhMuted)
+                        .lineLimit(1)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.bhMuted)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+            .background(Color.bhSurface)
+            .cornerRadius(10)
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.bhBorder, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(title). \(subtitle)")
+    }
+}
+
+// MARK: - Household Settings Sheet
+
+/// Combined people management + email greetings, presented as a full-screen
+/// sheet from the Settings → Household row.
+struct HouseholdSettingsSheet: View {
+    @EnvironmentObject var vm: AppViewModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var expandedPersonId: String? = nil
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.bhBackground.ignoresSafeArea()
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        // People
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("People")
+                                .bhSectionTitle()
+                                .padding(.bottom, 2)
+
+                            (Text("The ").font(.bhCaption).foregroundColor(.bhMuted)
+                             + Text("★ Primary").font(.bhCaption.weight(.semibold)).foregroundColor(.bhAmber)
+                             + Text(" person is ").font(.bhCaption).foregroundColor(.bhMuted)
+                             + Text("you").font(.bhCaption.weight(.bold)).foregroundColor(.bhText)
+                             + Text(" — the one who fronts all bills and collects from everyone else. This person cannot be removed.").font(.bhCaption).foregroundColor(.bhMuted))
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding(.bottom, 4)
+
+                            ForEach(Array(vm.state.people.enumerated()), id: \.element.id) { idx, person in
+                                PersonCardView(
+                                    idx: idx,
+                                    person: person,
+                                    isExpanded: expandedPersonId == person.id,
+                                    onToggle: {
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            expandedPersonId = expandedPersonId == person.id ? nil : person.id
+                                        }
+                                    }
+                                )
+                            }
+
+                            Button {
+                                vm.addPerson()
+                                if let last = vm.state.people.last {
+                                    withAnimation { expandedPersonId = last.id }
+                                }
+                            } label: {
+                                Label("Add Person", systemImage: "plus")
+                                    .font(.bhCaption)
+                            }
+                            .buttonStyle(BHSecondaryButtonStyle())
+                        }
+
+                        // Greetings
+                        SettingsSection(title: "Email Greetings") {
+                            Text("Custom opening line for each person's bill email.")
+                                .font(.bhCaption)
+                                .foregroundColor(.bhMuted)
+                                .padding(.bottom, 8)
+
+                            ForEach(vm.state.people.filter { $0.id != "me" }) { person in
+                                HStack(spacing: 8) {
+                                    Circle().fill(Color(hex: person.color) ?? .bhAmber).frame(width: 8, height: 8)
+                                    Text(person.name)
+                                        .font(.bhCaption)
+                                        .foregroundColor(.bhText)
+                                        .frame(width: 80, alignment: .leading)
+                                    TextField("Hey \(person.name),", text: Binding(
+                                        get: {
+                                            if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
+                                                return vm.state.people[idx].greeting
+                                            }
+                                            return ""
+                                        },
+                                        set: { newValue in
+                                            if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
+                                                vm.state.people[idx].greeting = newValue
+                                                vm.save()
+                                            }
+                                        }
+                                    ))
+                                    .font(.bhCaption)
+                                    .foregroundColor(.bhText)
+                                    .textFieldStyle(.plain)
+                                    .padding(7)
+                                    .background(Color.bhSurface2)
+                                    .cornerRadius(6)
+                                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.bhBorder, lineWidth: 1))
+                                }
+                                .padding(.vertical, 4)
+                            }
+                        }
+
+                        Spacer(minLength: 24)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+                }
+            }
+            .navigationTitle("Household")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.bhAmber)
+                }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    }
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(.bhAmber)
+                }
+            }
+        }
+        .bhColorScheme()
+    }
+}
+
+// MARK: - Email Relay Settings Sheet
+
+/// Wraps the existing `EmailConfigSection` in a full-screen sheet from
+/// Settings → Email Relay (SelfHive only).
+struct EmailRelaySettingsSheet: View {
+    @EnvironmentObject var vm: AppViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.bhBackground.ignoresSafeArea()
+                ScrollView {
+                    EmailConfigSection()
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
+                        .padding(.bottom, 24)
+                }
+            }
+            .navigationTitle("Email Relay")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.bhAmber)
+                }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    }
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(.bhAmber)
+                }
+            }
+        }
+        .bhColorScheme()
+    }
+}
+
+// MARK: - Data & Backup Settings Sheet
+
+/// Export and clear-all in a focused full-screen sheet. Behavior adapts
+/// to the target:
+///
+/// - **BillHive (local / iCloud):** Builds a JSON snapshot from in-memory
+///   state + monthly data and shares it via `ShareLink`, letting the user
+///   save to Files, send via Mail, etc. iCloud sync is the primary backup
+///   for this target — the export is an offline insurance copy.
+/// - **SelfHive (remote server):** Links directly to the server's
+///   `/api/export` endpoint, which streams a JSON download.
+struct DataBackupSettingsSheet: View {
+    @EnvironmentObject var vm: AppViewModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var showClearConfirm = false
+    @State private var backupFileURL: URL? = nil
+    @State private var backupBuildError: String? = nil
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.bhBackground.ignoresSafeArea()
+                ScrollView {
+                    VStack(spacing: 16) {
+                        backupSection
+                        dangerSection
+                        Spacer(minLength: 24)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+                }
+            }
+            .navigationTitle("Data & Backup")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.bhAmber)
+                }
+            }
+            .confirmationDialog("Clear all data?", isPresented: $showClearConfirm, titleVisibility: .visible) {
+                Button("Reset All Data", role: .destructive) {
+                    Task {
+                        await vm.clearAllData()
+                        vm.toast("Data cleared")
+                        dismiss()
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will delete all bills, people, and monthly data. This cannot be undone.")
+            }
+            .onAppear {
+                if vm.isLocal { rebuildBackupFile() }
+            }
+        }
+        .bhColorScheme()
+    }
+
+    // MARK: - Backup Section
+
+    @ViewBuilder
+    private var backupSection: some View {
+        SettingsSection(title: "Backup") {
+            if vm.isLocal {
+                Text("Your data is automatically synced across your devices via iCloud. Use this to save an offline copy of all bills, people, and monthly data.")
+                    .font(.bhCaption)
+                    .foregroundColor(.bhMuted)
+                    .padding(.bottom, 8)
+
+                if let url = backupFileURL {
+                    ShareLink(item: url) {
+                        HStack {
+                            Image(systemName: "square.and.arrow.up")
+                            Text("Export Backup")
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(BHSecondaryButtonStyle())
+                } else if let err = backupBuildError {
+                    Text(err)
+                        .font(.bhCaption)
+                        .foregroundColor(.bhRed)
+                } else {
+                    ProgressView()
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                }
+            } else {
+                Text("Download a JSON backup of all bills, people, and monthly data from your server.")
+                    .font(.bhCaption)
+                    .foregroundColor(.bhMuted)
+                    .padding(.bottom, 8)
+
+                if let exportURL = APIClient.shared.exportURL() {
+                    Link(destination: exportURL) {
+                        HStack {
+                            Image(systemName: "arrow.down.circle")
+                            Text("Export Backup")
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(BHSecondaryButtonStyle())
+                } else {
+                    Text("No server configured.")
+                        .font(.bhCaption)
+                        .foregroundColor(.bhMuted)
+                }
+            }
+        }
+    }
+
+    // MARK: - Danger Section
+
+    @ViewBuilder
+    private var dangerSection: some View {
+        SettingsSection(title: "Danger Zone") {
+            Text("Permanently remove all bills, people, and monthly data. This cannot be undone.")
+                .font(.bhCaption)
+                .foregroundColor(.bhMuted)
+                .padding(.bottom, 8)
+
+            Button {
+                showClearConfirm = true
+            } label: {
+                HStack {
+                    Image(systemName: "trash")
+                    Text("Clear All Data")
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(BHDangerButtonStyle())
+        }
+    }
+
+    // MARK: - Local backup file builder
+
+    /// Encodes current state + monthly data and writes it to a uniquely
+    /// named JSON file in the temp directory. ShareLink reads the URL.
+    private func rebuildBackupFile() {
+        do {
+            let data = try vm.buildBackupJSON()
+            let stamp = ISO8601DateFormatter().string(from: Date())
+                .replacingOccurrences(of: ":", with: "-")
+            let url = FileManager.default.temporaryDirectory
+                .appendingPathComponent("billhive-backup-\(stamp).json")
+            try data.write(to: url, options: .atomic)
+            backupFileURL = url
+            backupBuildError = nil
+        } catch {
+            backupBuildError = "Couldn't build backup: \(error.localizedDescription)"
+            backupFileURL = nil
+        }
+    }
+}
+
+#if BILLHIVE_LOCAL
+// MARK: - Subscription Settings Sheet
+
+/// Trial / purchase / restore controls in a focused sheet.
+struct SubscriptionSettingsSheet: View {
+    @EnvironmentObject var vm: AppViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.bhBackground.ignoresSafeArea()
+                ScrollView {
+                    PurchaseSettingsSection()
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
+                        .padding(.bottom, 24)
+                }
+            }
+            .navigationTitle("Subscription")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.bhAmber)
+                }
+            }
+        }
+        .bhColorScheme()
+    }
+}
+#endif
+
+// MARK: - About Settings Sheet
+
+/// Version, credits, and a link out to the project site.
+struct AboutSettingsSheet: View {
+    let version: String
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.bhBackground.ignoresSafeArea()
+                ScrollView {
+                    VStack(spacing: 20) {
+                        VStack(spacing: 12) {
+                            TriHexLogoMark(size: 64)
+                            Text("BillHive")
+                                .font(.title2.weight(.bold))
+                                .foregroundColor(.bhText)
+                            Text("Version \(version)")
+                                .font(.bhCaption)
+                                .foregroundColor(.bhMuted)
+                        }
+                        .padding(.top, 32)
+
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("BillHive helps a household track recurring bills, split them between people, and collect what's owed.")
+                                .font(.bhCaption)
+                                .foregroundColor(.bhMuted)
+                                .multilineTextAlignment(.center)
+                                .frame(maxWidth: .infinity)
+                        }
+                        .padding(.horizontal, 24)
+
+                        if let url = URL(string: "https://billhive.app") {
+                            Link(destination: url) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "globe")
+                                    Text("Visit billhive.app")
+                                }
+                                .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(BHSecondaryButtonStyle())
+                            .padding(.horizontal, 24)
+                        }
+
+                        Spacer(minLength: 40)
+                    }
+                }
+            }
+            .navigationTitle("About")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.bhAmber)
+                }
+            }
+        }
+        .bhColorScheme()
+    }
+}
+
+// MARK: - Appearance Picker Card
+
+/// Inline card on the Settings root with a 3-way segmented control for
+/// color scheme: System / Light / Dark. The selection is bound to the
+/// `colorSchemePref` AppStorage key, which `.bhColorScheme()` reads from
+/// every view that needs to enforce a scheme.
+struct AppearancePickerCard: View {
+    @Binding var selection: String
+
+    var body: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(Color.bhAmber.opacity(0.15))
+                    .frame(width: 36, height: 36)
+                Image(systemName: "circle.lefthalf.filled")
+                    .font(.subheadline)
+                    .foregroundColor(.bhAmber)
+            }
+
+            Text("Appearance")
+                .font(.bhBodyName)
+                .foregroundColor(.bhText)
+
+            Spacer()
+
+            Picker("Appearance", selection: $selection) {
+                ForEach(ColorSchemePreference.allCases) { pref in
+                    Text(pref.label).tag(pref.rawValue)
+                }
+            }
+            .pickerStyle(.segmented)
+            .frame(maxWidth: 200)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(Color.bhSurface)
+        .cornerRadius(10)
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.bhBorder, lineWidth: 1))
     }
 }

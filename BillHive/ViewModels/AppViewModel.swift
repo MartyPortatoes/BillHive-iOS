@@ -233,6 +233,47 @@ class AppViewModel: ObservableObject {
     ///
     /// In remote mode, a 600ms debounce prevents rapid-fire API calls while
     /// the user is actively editing fields.
+    /// Builds a single JSON document containing the complete app state and
+    /// all monthly data. Used by the local-target backup export to give the
+    /// user a portable snapshot they can share or save to Files.
+    ///
+    /// Format mirrors the web app's `/api/export` response:
+    /// `{ "state": ..., "monthly": ..., "exportedAt": "ISO-8601" }`
+    func buildBackupJSON() throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let stateAny = try JSONSerialization.jsonObject(with: encoder.encode(state))
+        let monthlyAny = try JSONSerialization.jsonObject(with: encoder.encode(monthly))
+        let payload: [String: Any] = [
+            "state": stateAny,
+            "monthly": monthlyAny,
+            "exportedAt": ISO8601DateFormatter().string(from: Date())
+        ]
+        return try JSONSerialization.data(withJSONObject: payload,
+                                          options: [.prettyPrinted, .sortedKeys])
+    }
+
+    /// Resets state and monthly data to empty defaults and persists.
+    /// Works for both local (iCloud / Documents) and remote (server) modes.
+    func clearAllData() async {
+        state = AppState()
+        monthly = [:]
+        if isLocal {
+            #if BILLHIVE_LOCAL
+            CloudStorageManager.shared.saveState(state)
+            CloudStorageManager.shared.saveAllMonths(monthly)
+            #else
+            LocalStorageManager.shared.saveState(state)
+            LocalStorageManager.shared.saveAllMonths(monthly)
+            #endif
+        } else {
+            try? await api.saveState(state)
+            // For remote, individual months are kept as the server already
+            // has them — `getAllMonths()` will reflect this empty state.
+        }
+        await load()
+    }
+
     func save() {
         if isLocal {
             #if BILLHIVE_LOCAL
