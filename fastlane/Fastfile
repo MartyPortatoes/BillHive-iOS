@@ -1,8 +1,10 @@
 default_platform(:ios)
 
 # Force UTF-8 so non-ASCII release notes (bullets, emoji) don't break deliver
-ENV["LANG"]    ||= "en_US.UTF-8"
-ENV["LC_ALL"]  ||= "en_US.UTF-8"
+# or gym's xcodebuild log parsing. Unconditional override — `||=` doesn't help
+# if the inherited locale is already a non-UTF-8 value like "C" or "POSIX".
+ENV["LANG"]   = "en_US.UTF-8"
+ENV["LC_ALL"] = "en_US.UTF-8"
 
 # Paths
 PROJECT      = "BillHive.xcodeproj"

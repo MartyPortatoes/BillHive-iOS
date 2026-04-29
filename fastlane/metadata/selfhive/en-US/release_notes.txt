@@ -1,7 +1,8 @@
-What's new in 1.5.0:
+What's new in 1.6.0:
 
-• Redesigned bill editor — tap a bill to preview, then edit in a focused sheet
-• First-run empty states across Bills, Summary, and Trends with clear next steps
-• "Send & Receive" is now "Pay & Collect" with clearer sub-sections
-• Full Dynamic Type support — text now scales with your iOS text-size preference
-• Accessibility improvements across the app
+• Tap any bill to edit — read-only preview is now built into the editor sheet
+• Bill names display exactly as you type them (no more forced uppercase)
+• New emoji picker for bill icons — pick from a curated grid instead of typing
+• Standard iOS large titles and a month picker in the navigation bar
+• Restore Purchase now available even after you've already unlocked the app
+• Smaller refinements throughout: better tap targets, cleaner typography
