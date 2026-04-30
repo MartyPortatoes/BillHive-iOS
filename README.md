@@ -1,12 +1,21 @@
-# BillHive iOS App
+# BillHive iOS
 
-Native SwiftUI iOS app for [BillHive](https://github.com/martyportatoes/billflow) — self-hosted household bill management.
+Native SwiftUI companion to [BillHive](https://github.com/MartyPortatoes/BillHive) — household bill management for iPhone and iPad.
+
+The Xcode project ships **two targets** from one codebase:
+
+| Target | What it is | App Store |
+|---|---|---|
+| **BillHive** | Standalone, iCloud-synced. No server needed. | [Download](https://apps.apple.com/us/app/billhive-bill-splitting/id6759998736) |
+| **SelfHive** | Connects to a self-hosted [BillHive server](https://github.com/MartyPortatoes/BillHive). | [Download](https://apps.apple.com/us/app/selfhive-bill-splitting/id6760245713) |
+
+Same views, models, and view model — only the storage/sync layer differs.
 
 ## Requirements
 
 - **Xcode 15+**
 - **iOS 16.0+** (uses Swift Charts)
-- A running [BillHive server](https://github.com/martyportatoes/billflow)
+- For SelfHive only: a running [BillHive server](https://github.com/MartyPortatoes/BillHive)
 
 ## Opening in Xcode
 
@@ -14,62 +23,76 @@ Native SwiftUI iOS app for [BillHive](https://github.com/martyportatoes/billflow
 open BillHive.xcodeproj
 ```
 
-Then select your target device/simulator and press **⌘R** to run.
+Pick the `BillHive` or `SelfHive` scheme, select a device/simulator, and press **⌘R**.
 
 ## First Launch
 
-On first launch, you'll see a **Server Setup** screen. Enter the base URL of your self-hosted BillHive instance:
+**BillHive** — opens straight into the app. Your data lives in iCloud Drive (`iCloud.com.billhive.app/Documents/`) and stays in sync across devices on the same Apple ID.
+
+**SelfHive** — shows a Server Setup screen. Enter the base URL of your self-hosted instance:
 
 ```
 http://192.168.1.100:8080
 ```
 
-or if behind a reverse proxy:
+or behind a reverse proxy with TLS:
 
 ```
 https://bills.yourdomain.com
 ```
 
-The app will test the connection before saving. Once connected, all your existing bills, people, and monthly data will load automatically.
+The app tests the connection before saving. You can also configure a backup URL (e.g. a Tailscale IP) for automatic failover when away from your home network.
 
 ## Features
 
 | Tab | Description |
 |---|---|
-| 📋 Bills | Enter monthly amounts for each bill. Supports % and fixed splits. |
-| 💰 Summary | See what each person owes this month, plus your total outlay. |
-| 📤 Send & Receive | Email summaries, Zelle/Venmo payment links, monthly checklist. |
-| 📈 Trends | Month-over-month charts (line, donut, stacked bar) via Swift Charts. |
-| ⚙️ Settings | Manage people, payment methods, email relay, bill config, data export. |
+| Bills | Enter monthly amounts for each bill. Supports % and fixed splits. |
+| Summary | See what each person owes this month, plus your total outlay. |
+| Pay & Collect | Email summaries, Zelle / Venmo / Cash App payment links, monthly checklist. |
+| Trends | Month-over-month charts (line, donut, stacked bar) via Swift Charts. |
+| Settings | Manage people, payment methods, email relay, bill config, data export. |
 
 ## Architecture
 
 ```
 BillHive/
-├── BillHiveApp.swift          # App entry point
+├── BillHiveApp.swift              # @main for BillHive target (iCloud)
+├── SelfHiveApp.swift              # @main for SelfHive target (server)
+├── PurchaseManager.swift          # StoreKit 2 — IAP + 14-day trial
 ├── Models/
-│   ├── Person.swift           # Person + PayMethod models
-│   ├── Bill.swift             # Bill + BillLine models
-│   ├── MonthData.swift        # Monthly data, AppState, MonthKey helpers
-│   └── EmailConfig.swift      # Email provider config
+│   ├── Person.swift               # Person + PayMethod
+│   ├── Bill.swift                 # Bill + BillLine + SplitType
+│   ├── MonthData.swift            # MonthData, AppState, MonthKey
+│   └── EmailConfig.swift          # Email provider config
 ├── Network/
-│   └── APIClient.swift        # URLSession-based REST client
+│   └── APIClient.swift            # URLSession REST client (SelfHive)
+├── Storage/
+│   ├── CloudStorageManager.swift  # iCloud Documents (BillHive)
+│   └── LocalStorageManager.swift  # Local Documents fallback
 ├── ViewModels/
-│   └── AppViewModel.swift     # Central state + business logic
+│   └── AppViewModel.swift         # @MainActor state + business logic
 └── Views/
-    ├── ContentView.swift       # TabView root + ToastView + design tokens
-    ├── ServerSetupView.swift   # First-launch server configuration
-    ├── BillsView.swift         # Bills tab
-    ├── SummaryView.swift       # Summary tab
-    ├── SendReceiveView.swift   # Send & Receive tab
-    ├── TrendsView.swift        # Trends tab (Swift Charts)
-    └── SettingsView.swift      # Settings tab
+    ├── ContentView.swift          # TabView root, design tokens, privacy overlay
+    ├── ServerSetupView.swift      # First-launch URL onboarding (SelfHive)
+    ├── BillsView.swift
+    ├── SummaryView.swift
+    ├── SendReceiveView.swift
+    ├── TrendsView.swift
+    ├── SettingsView.swift
+    ├── PaywallView.swift          # IAP / trial gate
+    ├── MailComposeView.swift      # iOS Mail compose (BillHive)
+    └── HexagonBackground.swift    # Brand background + button styles
 ```
 
 ## Network Security
 
-The app connects to your local/private BillHive server over HTTP or HTTPS. Since servers may be on a local network without a trusted certificate, `NSAllowsArbitraryLoads` is set to `true` in the generated Info.plist. For production use behind a reverse proxy with a valid TLS certificate, you may restrict this.
+**BillHive** uses default iOS App Transport Security (HTTPS only) — it never makes outbound HTTP requests, just iCloud and the system Mail compose sheet.
 
-## Changing Server
+**SelfHive** sets `NSAllowsArbitraryLoads: true` in its Info.plist because users routinely point it at LAN IPs (`192.168.x.x`) or Tailscale CGNAT addresses (`100.x.y.z`) where TLS isn't available. For production use behind a reverse proxy with a real certificate, you can tighten ATS or migrate to Tailscale's MagicDNS HTTPS to remove the exception entirely.
 
-Go to **Settings → Server** and tap **Change** to update the server URL. The app will reconnect and reload all data.
+URL handling is hardened: bill payment URLs and custom Zelle URLs are HTTPS-only validated, and Venmo / Cash App deep-link handles are percent-encoded before interpolation.
+
+## Changing the Server (SelfHive)
+
+Go to **Settings → Server** and tap **Change** to update the URL. The app reconnects and reloads all data.
