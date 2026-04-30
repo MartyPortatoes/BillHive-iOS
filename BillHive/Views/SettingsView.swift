@@ -1389,11 +1389,11 @@ struct AboutSettingsSheet: View {
                         }
                         .padding(.horizontal, 24)
 
-                        if let url = URL(string: "https://billhive.app") {
+                        if let url = URL(string: "https://billhiveapp.com") {
                             Link(destination: url) {
                                 HStack(spacing: 6) {
                                     Image(systemName: "globe")
-                                    Text("Visit billhive.app")
+                                    Text("Visit billhiveapp.com")
                                 }
                                 .frame(maxWidth: .infinity)
                             }
