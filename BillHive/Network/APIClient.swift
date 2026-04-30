@@ -96,9 +96,35 @@ class APIClient: ObservableObject {
         let raw = (kind == .primary) ? serverURL : backupServerURL
         var s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !s.isEmpty else { return nil }
-        if !s.hasPrefix("http") { s = "http://" + s }
+        if !s.lowercased().hasPrefix("http://") && !s.lowercased().hasPrefix("https://") {
+            s = APIClient.defaultScheme(forHost: s) + "://" + s
+        }
         s = s.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         return URL(string: s)
+    }
+
+    /// Picks a default scheme when the user types a bare host. Returns `http`
+    /// for hosts that look like RFC 1918 / Tailscale CGNAT / link-local /
+    /// .local Bonjour / loopback (where TLS is rarely available), otherwise
+    /// `https` so we never silently downgrade traffic to a public host.
+    static func defaultScheme(forHost input: String) -> String {
+        // Strip optional port; we only care about the host portion.
+        let hostPart = input.split(separator: "/").first.map(String.init) ?? input
+        let host = hostPart.split(separator: ":").first.map(String.init)?.lowercased() ?? hostPart.lowercased()
+        if host == "localhost" || host == "127.0.0.1" || host == "::1" { return "http" }
+        if host.hasSuffix(".local") { return "http" }
+        // IPv4 dotted-quad check + private/CGNAT range detection.
+        let parts = host.split(separator: ".").compactMap { Int($0) }
+        if parts.count == 4, parts.allSatisfy({ (0...255).contains($0) }) {
+            let a = parts[0], b = parts[1]
+            if a == 10 { return "http" }                                // 10.0.0.0/8
+            if a == 192 && b == 168 { return "http" }                   // 192.168.0.0/16
+            if a == 172 && (16...31).contains(b) { return "http" }      // 172.16.0.0/12
+            if a == 169 && b == 254 { return "http" }                   // 169.254.0.0/16
+            if a == 100 && (64...127).contains(b) { return "http" }     // 100.64.0.0/10 (Tailscale CGNAT)
+            if a == 127 { return "http" }                               // loopback
+        }
+        return "https"
     }
 
     /// Builds a full request URL by appending `path` to the given server's
@@ -231,7 +257,9 @@ class APIClient: ObservableObject {
     static func testConnection(rawURL: String, timeout: TimeInterval = 10) async -> (success: Bool, message: String) {
         var s = rawURL.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !s.isEmpty else { return (false, "URL is empty") }
-        if !s.hasPrefix("http") { s = "http://" + s }
+        if !s.lowercased().hasPrefix("http://") && !s.lowercased().hasPrefix("https://") {
+            s = APIClient.defaultScheme(forHost: s) + "://" + s
+        }
         s = s.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         guard let url = URL(string: s + "/api/health") else { return (false, "Invalid URL") }
 

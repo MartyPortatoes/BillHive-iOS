@@ -1,5 +1,27 @@
 import SwiftUI
 
+// MARK: - URL Sanitization
+
+/// Returns `url` only if it parses cleanly and uses the `https` scheme.
+/// User-entered or imported URLs may otherwise contain `tel:`, `sms:`, `file:`,
+/// or arbitrary app-scheme URLs that would route to whatever handler the user
+/// has installed — turning a "Pay" button into a deep-link injection vector.
+func bhSafeWebURL(_ raw: String) -> URL? {
+    let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty,
+          let url = URL(string: trimmed),
+          let scheme = url.scheme?.lowercased(),
+          scheme == "https" else { return nil }
+    return url
+}
+
+/// Percent-encodes a single URL path or query component. Used to keep
+/// user-entered Venmo handles and CashApp tags from injecting `&` / `?` / `#`
+/// into deep-link URLs we construct.
+func bhEncodeURLComponent(_ s: String) -> String {
+    s.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? ""
+}
+
 // MARK: - Pay & Collect View
 
 /// Central hub for paying bills and collecting from household members.
@@ -177,30 +199,35 @@ struct ReceiveCard: View {
     let onSendEmail: () -> Void
 
     /// Constructs a Zelle payment URL from the person's pay ID or custom Zelle URL.
+    /// Custom URLs are filtered through `bhSafeWebURL` so a malicious imported
+    /// backup can't substitute a `tel:` or `myapp://` scheme.
     var zelleURL: URL? {
-        if let zu = person.zelleUrl, !zu.isEmpty { return URL(string: zu) }
+        if let zu = person.zelleUrl, let url = bhSafeWebURL(zu) { return url }
         if person.payMethod == .zelle, !person.payId.isEmpty {
-            let encoded = person.payId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+            let encoded = bhEncodeURLComponent(person.payId)
             return URL(string: "https://enroll.zellepay.com/qr-codes?data=\(encoded)")
         }
         return nil
     }
 
     /// Constructs a Venmo deep link with the charge amount pre-filled.
+    /// The handle is percent-encoded so `&` / `?` / `#` in a (corrupted) payId
+    /// can't inject extra query parameters into the deep link.
     var venmoURL: URL? {
         guard person.payMethod == .venmo, !person.payId.isEmpty else { return nil }
-        let handle = person.payId.hasPrefix("@") ? String(person.payId.dropFirst()) : person.payId
+        let raw = person.payId.hasPrefix("@") ? String(person.payId.dropFirst()) : person.payId
+        let handle = bhEncodeURLComponent(raw)
         let amount = personOwes?.total ?? 0
-        let note = "Bills"
-        let encoded = note.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "Bills"
-        return URL(string: "venmo://paycharge?txn=charge&recipients=\(handle)&amount=\(String(format: "%.2f", amount))&note=\(encoded)")
+        let note = bhEncodeURLComponent("Bills")
+        return URL(string: "venmo://paycharge?txn=charge&recipients=\(handle)&amount=\(String(format: "%.2f", amount))&note=\(note)")
     }
 
     /// Constructs a Cash App profile URL from the person's cashtag.
     var cashAppURL: URL? {
         guard person.payMethod == .cashapp, !person.payId.isEmpty else { return nil }
-        let tag = person.payId.hasPrefix("$") ? person.payId : "$\(person.payId)"
-        return URL(string: "https://cash.app/\(tag)")
+        let raw = person.payId.hasPrefix("$") ? String(person.payId.dropFirst()) : person.payId
+        let tag = bhEncodeURLComponent(raw)
+        return URL(string: "https://cash.app/$\(tag)")
     }
 
     /// The resolved payment URL, trying Zelle → Venmo → Cash App.
@@ -371,7 +398,7 @@ struct SendCard: View {
 
                 Spacer()
 
-                if !bill.payUrl.isEmpty, let url = URL(string: bill.payUrl) {
+                if let url = bhSafeWebURL(bill.payUrl) {
                     Link(destination: url) {
                         HStack(spacing: 4) {
                             Image(systemName: "arrow.up.right.square")
@@ -414,7 +441,7 @@ struct SendCard: View {
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
 
-                if !bill.payUrl.isEmpty, let url = URL(string: bill.payUrl) {
+                if let url = bhSafeWebURL(bill.payUrl) {
                     Link(destination: url) {
                         Image(systemName: "arrow.up.right.square")
                             .font(.subheadline)

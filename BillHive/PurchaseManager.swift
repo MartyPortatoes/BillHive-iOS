@@ -24,7 +24,10 @@ class PurchaseManager: ObservableObject {
     // MARK: - Published State
 
     /// Whether the user has full access (purchased OR within trial period).
-    @Published var isUnlocked: Bool = true
+    /// Defaults to `false` so the paywall holds during the cold-start window
+    /// before `setup()` has computed the real entitlement state. `setup()`
+    /// flips this to `true` for purchasers and active-trial users.
+    @Published var isUnlocked: Bool = false
     /// Whether the user has purchased the IAP (distinct from trial).
     @Published var isPurchased: Bool = false
     /// Days remaining in the trial, or 0 if expired/purchased.

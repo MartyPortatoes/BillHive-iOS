@@ -65,13 +65,45 @@ struct ContentView: View {
                     .zIndex(999)
                     .padding(.bottom, 90)
             }
+
+            // Privacy overlay — covers the app while scenePhase is .inactive
+            // (the moment iOS captures the App Switcher snapshot) or .background.
+            // Without this, the snapshot would expose financial amounts, names,
+            // server hostnames, and (for SelfHive) email addresses to anyone
+            // who scrolls through the App Switcher on an unlocked device.
+            if scenePhase != .active {
+                PrivacyOverlayView()
+                    .transition(.opacity)
+                    .zIndex(1000)
+            }
         }
         .animation(.easeInOut(duration: 0.25), value: vm.toastMessage)
         .animation(.easeInOut(duration: 0.25), value: vm.error)
+        .animation(.easeInOut(duration: 0.15), value: scenePhase)
         .bhColorScheme()
         .onChange(of: scenePhase) { phase in
             if phase == .active && !vm.isLocal {
                 Task { await vm.refresh() }
+            }
+        }
+    }
+}
+
+// MARK: - Privacy Overlay
+
+/// Solid background + logo shown over the entire app whenever the scene is
+/// not `.active`. Prevents the iOS App Switcher snapshot from capturing
+/// sensitive financial data, email addresses, or server URLs.
+struct PrivacyOverlayView: View {
+    var body: some View {
+        ZStack {
+            Color.bhBackground
+                .ignoresSafeArea()
+            VStack(spacing: 14) {
+                TriHexLogoMark(size: 56)
+                Text("BillHive")
+                    .font(.title2.weight(.heavy))
+                    .foregroundColor(.bhText)
             }
         }
     }
