@@ -45,9 +45,12 @@
 		C121 /* CloudStorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B005 /* CloudStorageManager.swift */; };
 		D101 /* PurchaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D001 /* PurchaseManager.swift */; };
 		D102 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D002 /* PaywallView.swift */; };
+		FB71FE2A90774EEE23B6BD99 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 2C173FDBDA342DADD6A519C6 /* PrivacyInfo.xcprivacy */; };
+		FE179B858657045051BE8BA3 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 2C173FDBDA342DADD6A519C6 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		2C173FDBDA342DADD6A519C6 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		A001 /* SelfHiveApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelfHiveApp.swift; sourceTree = "<group>"; };
 		A002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A003 /* BillsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BillsView.swift; sourceTree = "<group>"; };
@@ -101,6 +104,7 @@
 				A213 /* ViewModels */,
 				A214 /* Views */,
 				B200 /* Storage */,
+				2C173FDBDA342DADD6A519C6 /* PrivacyInfo.xcprivacy */,
 			);
 			path = BillHive;
 			sourceTree = "<group>";
@@ -245,6 +249,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A115 /* Assets.xcassets in Resources */,
+				FE179B858657045051BE8BA3 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -253,6 +258,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C116 /* Assets.xcassets in Resources */,
+				FB71FE2A90774EEE23B6BD99 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

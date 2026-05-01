@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- BillHive does not track users (no third-party SDKs, no analytics,
+         no ads). The app makes outbound network calls only to the user's
+         own iCloud or self-hosted server. -->
+    <key>NSPrivacyTracking</key>
+    <false/>
+
+    <!-- No tracking domains. -->
+    <key>NSPrivacyTrackingDomains</key>
+    <array/>
+
+    <!-- The app does not collect data on behalf of the developer. All
+         user-entered data (bills, people, amounts, email addresses) stays
+         on-device, in the user's iCloud, or on the user's own self-hosted
+         server. None of it is transmitted to BillHive's developer. -->
+    <key>NSPrivacyCollectedDataTypes</key>
+    <array/>
+
+    <!-- Required-reason API declarations (Apple compliance, 2024+). -->
+    <key>NSPrivacyAccessedAPITypes</key>
+    <array>
+        <!-- UserDefaults: stores serverURL, backupServerURL, activeServer,
+             colorSchemePref, and trial-start date. All app-internal config
+             accessed by this app only — reason CA92.1. -->
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>CA92.1</string>
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>
