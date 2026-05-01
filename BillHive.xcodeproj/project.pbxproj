@@ -43,14 +43,17 @@
 		C117 /* ServerSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A008 /* ServerSetupView.swift */; };
 		C120 /* HexagonBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = A020 /* HexagonBackground.swift */; };
 		C121 /* CloudStorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B005 /* CloudStorageManager.swift */; };
+		C6A798081B45D80F3D1C46CC /* AppLockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F36082B3E5E2218E0EDF5A9 /* AppLockView.swift */; };
 		D101 /* PurchaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D001 /* PurchaseManager.swift */; };
 		D102 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D002 /* PaywallView.swift */; };
+		DDF14A89B0E5DEA72B80B449 /* AppLockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F36082B3E5E2218E0EDF5A9 /* AppLockView.swift */; };
 		FB71FE2A90774EEE23B6BD99 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 2C173FDBDA342DADD6A519C6 /* PrivacyInfo.xcprivacy */; };
 		FE179B858657045051BE8BA3 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 2C173FDBDA342DADD6A519C6 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		2C173FDBDA342DADD6A519C6 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		6F36082B3E5E2218E0EDF5A9 /* AppLockView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppLockView.swift; sourceTree = "<group>"; };
 		A001 /* SelfHiveApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelfHiveApp.swift; sourceTree = "<group>"; };
 		A002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A003 /* BillsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BillsView.swift; sourceTree = "<group>"; };
@@ -149,6 +152,7 @@
 				A020 /* HexagonBackground.swift */,
 				B003 /* MailComposeView.swift */,
 				D002 /* PaywallView.swift */,
+				6F36082B3E5E2218E0EDF5A9 /* AppLockView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -285,6 +289,7 @@
 				A113 /* APIClient.swift in Sources */,
 				A114 /* AppViewModel.swift in Sources */,
 				A116 /* LocalStorageManager.swift in Sources */,
+				C6A798081B45D80F3D1C46CC /* AppLockView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -312,6 +317,7 @@
 				C121 /* CloudStorageManager.swift in Sources */,
 				D101 /* PurchaseManager.swift in Sources */,
 				D102 /* PaywallView.swift in Sources */,
+				DDF14A89B0E5DEA72B80B449 /* AppLockView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

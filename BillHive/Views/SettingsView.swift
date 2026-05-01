@@ -18,6 +18,7 @@ struct SettingsView: View {
     @State private var showHousehold = false
     @State private var showEmailRelay = false
     @State private var showServerEdit = false
+    @State private var showPrivacySecurity = false
     @State private var showDataBackup = false
     @State private var showSubscription = false
     @State private var showAbout = false
@@ -94,6 +95,13 @@ struct SettingsView: View {
                             action: { showDataBackup = true }
                         )
 
+                        SettingsCategoryRow(
+                            icon: "lock.shield.fill",
+                            title: "Privacy & Security",
+                            subtitle: AppLockManager.shared.isEnabled ? "App Lock on" : "App Lock off",
+                            action: { showPrivacySecurity = true }
+                        )
+
                         #if BILLHIVE_LOCAL
                         SettingsCategoryRow(
                             icon: "lock.open.fill",
@@ -146,6 +154,9 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showDataBackup) {
                 DataBackupSettingsSheet().environmentObject(vm)
+            }
+            .sheet(isPresented: $showPrivacySecurity) {
+                PrivacySecuritySheet()
             }
             #if BILLHIVE_LOCAL
             .sheet(isPresented: $showSubscription) {

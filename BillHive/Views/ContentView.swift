@@ -9,6 +9,7 @@ import UIKit
 /// dark color scheme enforcement, and scene-phase driven data refresh.
 struct ContentView: View {
     @EnvironmentObject var vm: AppViewModel
+    @StateObject private var lock = AppLockManager.shared
     @State private var selectedTab = 0
     @Environment(\.scenePhase) private var scenePhase
 
@@ -76,13 +77,26 @@ struct ContentView: View {
                     .transition(.opacity)
                     .zIndex(1000)
             }
+
+            // App Lock — full-screen biometric/passcode gate when enabled.
+            // Sits above the privacy overlay so that as the app returns to
+            // foreground after a timeout, the lock screen is what's revealed.
+            if lock.isLocked {
+                AppLockView(lock: lock)
+                    .transition(.opacity)
+                    .zIndex(1001)
+            }
         }
         .animation(.easeInOut(duration: 0.25), value: vm.toastMessage)
         .animation(.easeInOut(duration: 0.25), value: vm.error)
         .animation(.easeInOut(duration: 0.15), value: scenePhase)
+        .animation(.easeInOut(duration: 0.2), value: lock.isLocked)
         .bhColorScheme()
         .onChange(of: scenePhase) { phase in
-            if phase == .active && !vm.isLocal {
+            lock.handleScenePhase(phase)
+            // Don't refresh from server while we're behind the lock — would
+            // pull data into a view the user isn't authenticated for yet.
+            if phase == .active && !vm.isLocal && !lock.isLocked {
                 Task { await vm.refresh() }
             }
         }
