@@ -1,11 +1,8 @@
-What's new in 1.6.1:
+What's new in 1.7.0:
 
-• Light & Dark mode — choose System, Light, or Dark from Settings → Appearance
-• Reorganized Settings into focused categories (Household, Data & Backup, Subscription, About)
-• Restored the slide-out bill preview when you tap a bill, with a dedicated Edit button
-• Cleaner navigation throughout — month picker is back in its familiar pill at the top
-• Backup export now uses iOS share sheet — save your data to Files, Mail, AirDrop, or your server
-• Smaller refinements: better empty states, improved tap targets, accessibility tweaks
-
-SelfHive only:
-• Backup server URL — add a secondary server (e.g. LAN IP + Tailscale IP) and the app falls back automatically when one is unreachable
+• Per-device API keys — generate a key in BillHive's web UI (Settings → Connected Devices), paste it into Server Setup or Settings → Server. Optional "Require API key" mode locks out any iOS device without a valid key.
+• App Lock — require Face ID or Touch ID to open SelfHive (Settings → Privacy & Security)
+• App Switcher privacy overlay — financial data is hidden when the app is backgrounded
+• Smarter URL handling — public hostnames auto-default to HTTPS instead of plain HTTP
+• Hardened payment links — Pay buttons only follow secure (https) URLs, protecting against tampered backups
+• Behind-the-scenes Apple privacy compliance (PrivacyInfo manifest)
