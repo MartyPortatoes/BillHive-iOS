@@ -84,11 +84,20 @@ platform :ios do
 
   # -------- App Store release lanes --------
 
+  # Reads the marketing version from the Xcode project. Required so deliver
+  # can create the App Store Connect "version" record when one doesn't exist
+  # yet for this release — without app_version, deliver looks for an already-
+  # editable version draft and errors out on a fresh upload.
+  def project_version_for(target)
+    get_version_number(xcodeproj: PROJECT, target: target)
+  end
+
   desc "Submit BillHive to App Store review (uses latest TestFlight build)"
   lane :release_billhive do
     upload_to_app_store(
       api_key: asc_api_key,
       app_identifier: BILLHIVE_BUNDLE_ID,
+      app_version: project_version_for("BillHive"),
       force: true,
       skip_binary_upload: true,
       skip_screenshots: true,
@@ -111,6 +120,7 @@ platform :ios do
     upload_to_app_store(
       api_key: asc_api_key,
       app_identifier: SELFHIVE_BUNDLE_ID,
+      app_version: project_version_for("SelfHive"),
       force: true,
       skip_binary_upload: true,
       skip_screenshots: true,
