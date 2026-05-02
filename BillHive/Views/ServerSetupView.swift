@@ -26,6 +26,10 @@ struct ServerSetupView: View {
     @State private var backupTestResult: String? = nil
     @State private var backupTestSuccess = false
 
+    // API key (optional, for self-hosted servers that require device keys)
+    @State private var showApiKeyField = false
+    @State private var inputApiKey = ""
+
     var body: some View {
         ZStack {
             HexBGView().ignoresSafeArea()
@@ -101,6 +105,24 @@ struct ServerSetupView: View {
                             }
                         }
 
+                        // API key section (collapsible, auto-expanded when the
+                        // server reports it requires device keys).
+                        if showApiKeyField {
+                            apiKeySection
+                        } else {
+                            Button {
+                                withAnimation { showApiKeyField = true }
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "key.fill")
+                                        .font(.bhBodySecondary)
+                                    Text("Add API key (optional)")
+                                        .font(.bhBodySecondary)
+                                }
+                                .foregroundColor(.bhAmber)
+                            }
+                        }
+
                         HStack(spacing: 12) {
                             Button {
                                 Task { await testPrimary() }
@@ -146,6 +168,45 @@ struct ServerSetupView: View {
             }
         }
         .bhColorScheme()
+    }
+
+    // MARK: - API Key Section
+
+    @ViewBuilder
+    private var apiKeySection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("API Key")
+                    .bhSectionTitle()
+                Spacer()
+                Button {
+                    withAnimation {
+                        showApiKeyField = false
+                        inputApiKey = ""
+                    }
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.caption)
+                        .foregroundColor(.bhMuted)
+                }
+            }
+
+            SecureField("bh_live_…", text: $inputApiKey)
+                .textFieldStyle(.plain)
+                .font(.bhBodySecondary)
+                .foregroundColor(.bhText)
+                .padding(10)
+                .background(Color.bhSurface2)
+                .cornerRadius(8)
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.bhBorder, lineWidth: 1))
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+
+            Text("If your server requires API keys (Settings → Connected Devices in BillHive web), paste yours here. Otherwise leave blank.")
+                .font(.bhCaption)
+                .foregroundColor(.bhMuted)
+                .lineLimit(nil)
+        }
     }
 
     // MARK: - Backup URL Section
@@ -214,16 +275,21 @@ struct ServerSetupView: View {
     private func testPrimary() async {
         isTesting = true
         testResult = nil
-        let result = await APIClient.testConnection(rawURL: inputURL)
+        let result = await APIClient.testConnection(rawURL: inputURL, apiKey: inputApiKey)
         testSuccess = result.success
         testResult = result.message
+        // Auto-reveal the API key field when the server reports it requires
+        // keys but we didn't (or don't have a working) one.
+        if result.requiresKey && inputApiKey.isEmpty {
+            withAnimation { showApiKeyField = true }
+        }
         isTesting = false
     }
 
     private func testBackup() async {
         isTestingBackup = true
         backupTestResult = nil
-        let result = await APIClient.testConnection(rawURL: backupInputURL)
+        let result = await APIClient.testConnection(rawURL: backupInputURL, apiKey: inputApiKey)
         backupTestSuccess = result.success
         backupTestResult = result.message
         isTestingBackup = false
@@ -236,6 +302,11 @@ struct ServerSetupView: View {
         if showBackupField && backupTestSuccess && !backupInputURL.isEmpty {
             backupServerURL = backupInputURL
             APIClient.shared.backupServerURL = backupInputURL
+        }
+        // Persist the API key (or clear if empty) — KeychainHelper handles
+        // the deletion case automatically when given an empty string.
+        if showApiKeyField {
+            APIClient.shared.apiKey = inputApiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         }
     }
 }

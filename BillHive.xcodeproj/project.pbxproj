@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7F8D18298D4086DB92D1D198 /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FFCF577EF4B0DEF9E50F1E2 /* KeychainHelper.swift */; };
+		A03273CF00AE2E3255BAE2E5 /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FFCF577EF4B0DEF9E50F1E2 /* KeychainHelper.swift */; };
 		A101 /* SelfHiveApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A001 /* SelfHiveApp.swift */; };
 		A102 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A002 /* ContentView.swift */; };
 		A103 /* BillsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A003 /* BillsView.swift */; };
@@ -53,6 +55,7 @@
 
 /* Begin PBXFileReference section */
 		2C173FDBDA342DADD6A519C6 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		2FFCF577EF4B0DEF9E50F1E2 /* KeychainHelper.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = KeychainHelper.swift; sourceTree = "<group>"; };
 		6F36082B3E5E2218E0EDF5A9 /* AppLockView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppLockView.swift; sourceTree = "<group>"; };
 		A001 /* SelfHiveApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelfHiveApp.swift; sourceTree = "<group>"; };
 		A002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -171,6 +174,7 @@
 			children = (
 				B002 /* LocalStorageManager.swift */,
 				B005 /* CloudStorageManager.swift */,
+				2FFCF577EF4B0DEF9E50F1E2 /* KeychainHelper.swift */,
 			);
 			path = Storage;
 			sourceTree = "<group>";
@@ -290,6 +294,7 @@
 				A114 /* AppViewModel.swift in Sources */,
 				A116 /* LocalStorageManager.swift in Sources */,
 				C6A798081B45D80F3D1C46CC /* AppLockView.swift in Sources */,
+				7F8D18298D4086DB92D1D198 /* KeychainHelper.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -318,6 +323,7 @@
 				D101 /* PurchaseManager.swift in Sources */,
 				D102 /* PaywallView.swift in Sources */,
 				DDF14A89B0E5DEA72B80B449 /* AppLockView.swift in Sources */,
+				A03273CF00AE2E3255BAE2E5 /* KeychainHelper.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

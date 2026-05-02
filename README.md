@@ -43,6 +43,8 @@ https://bills.yourdomain.com
 
 The app tests the connection before saving. You can also configure a backup URL (e.g. a Tailscale IP) for automatic failover when away from your home network.
 
+**Optional API key (per-device auth)** — generate a key in BillHive web → Settings → Connected Devices, then paste it into SelfHive's Server Setup screen (or later via Settings → Server). The key is stored in iOS Keychain (`WhenUnlockedThisDeviceOnly`), sent as `Authorization: Bearer` on every API request, and never written to UserDefaults or backed up via iCloud. If your server has the **Require API key for iOS apps** toggle on, this is mandatory.
+
 ## Features
 
 | Tab | Description |

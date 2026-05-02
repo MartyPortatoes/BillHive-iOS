@@ -703,6 +703,9 @@ struct ServerEditSheet: View {
     @State private var backupResult: String? = nil
     @State private var backupSuccess = false
 
+    // API key — pre-populated from Keychain so the user can see/edit/clear it.
+    @State private var apiKey: String = APIClient.shared.apiKey
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -736,10 +739,14 @@ struct ServerEditSheet: View {
                             .foregroundColor(.bhMuted)
                             .multilineTextAlignment(.center)
 
+                        // API key
+                        apiKeyField
+
                         HStack(spacing: 12) {
                             Button("Cancel") { dismiss() }
                                 .buttonStyle(BHSecondaryButtonStyle())
                             Button("Save & Reconnect") {
+                                APIClient.shared.apiKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
                                 onSave(primaryURL, backupURL)
                                 dismiss()
                             }
@@ -764,6 +771,45 @@ struct ServerEditSheet: View {
             }
             .navigationTitle("Server Settings")
             .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+
+    // API key field — SecureField pre-populated from Keychain. Empty value
+    // on save clears the stored key. Connection tests include the entered
+    // key (not the saved one) so the user can verify a new key before
+    // committing.
+    @ViewBuilder
+    private var apiKeyField: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("API Key (optional)")
+                    .bhSectionTitle()
+                Spacer()
+                if !apiKey.isEmpty {
+                    Button {
+                        apiKey = ""
+                    } label: {
+                        Text("Clear")
+                            .font(.bhCaption)
+                            .foregroundColor(.bhRed)
+                    }
+                }
+            }
+
+            SecureField("bh_live_…", text: $apiKey)
+                .font(.bhBodySecondary)
+                .foregroundColor(.bhText)
+                .textFieldStyle(.plain)
+                .padding(10)
+                .background(Color.bhSurface2)
+                .cornerRadius(8)
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.bhBorder, lineWidth: 1))
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+
+            Text("Generate one in BillHive web → Settings → Connected Devices. Stored in iOS Keychain, not iCloud.")
+                .font(.bhCaption)
+                .foregroundColor(.bhMuted)
         }
     }
 
@@ -820,14 +866,14 @@ struct ServerEditSheet: View {
         if primary {
             isTestingPrimary = true
             primaryResult = nil
-            let r = await APIClient.testConnection(rawURL: primaryURL)
+            let r = await APIClient.testConnection(rawURL: primaryURL, apiKey: apiKey)
             primarySuccess = r.success
             primaryResult = r.message
             isTestingPrimary = false
         } else {
             isTestingBackup = true
             backupResult = nil
-            let r = await APIClient.testConnection(rawURL: backupURL)
+            let r = await APIClient.testConnection(rawURL: backupURL, apiKey: apiKey)
             backupSuccess = r.success
             backupResult = r.message
             isTestingBackup = false

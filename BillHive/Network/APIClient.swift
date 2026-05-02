@@ -37,6 +37,24 @@ enum ServerKind: String, Codable {
     case backup
 }
 
+// MARK: - Connection Test Result
+
+/// Returned from `APIClient.testConnection`. Provides the server's reported
+/// auth state in addition to the basic success/message tuple, so the UI can
+/// distinguish "server reachable but requires a key" from "server reachable,
+/// no key needed" and prompt the user accordingly.
+struct ConnectionTestResult {
+    /// True when /api/health returned 200 AND, if the server requires keys,
+    /// our request authenticated successfully.
+    let success: Bool
+    /// User-facing message for display in the setup UI.
+    let message: String
+    /// Whether the server has the "Require API key for iOS apps" toggle on.
+    /// When `true` and the test was made without a key, the UI should prompt
+    /// the user to enter one.
+    let requiresKey: Bool
+}
+
 // MARK: - API Client
 
 /// Singleton HTTP client for communicating with the SelfHive server.
@@ -81,11 +99,32 @@ class APIClient: ObservableObject {
         !backupServerURL.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
+    /// Per-device API key (Bearer token). Stored in Keychain, not UserDefaults,
+    /// so it isn't backed up to iCloud/iTunes and isn't readable by other apps.
+    /// Setting an empty string deletes the persisted key.
+    @Published var apiKey: String {
+        didSet {
+            KeychainHelper.saveApiKey(apiKey)
+        }
+    }
+
+    /// First 12 chars of the stored key (e.g. "bh_live_a8f3"), or empty if none.
+    /// Useful for displaying "configured" state without exposing the full key.
+    var apiKeyPrefix: String {
+        String(apiKey.prefix(12))
+    }
+
+    /// Whether an API key is configured.
+    var hasApiKey: Bool {
+        !apiKey.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
     private init() {
         self.serverURL = UserDefaults.standard.string(forKey: "serverURL") ?? ""
         self.backupServerURL = UserDefaults.standard.string(forKey: "backupServerURL") ?? ""
         let stored = UserDefaults.standard.string(forKey: "activeServer") ?? "primary"
         self.activeServer = ServerKind(rawValue: stored) ?? .primary
+        self.apiKey = KeychainHelper.loadApiKey() ?? ""
     }
 
     // MARK: - URL Building
@@ -173,6 +212,12 @@ class APIClient: ObservableObject {
             req.setValue(contentType, forHTTPHeaderField: "Content-Type")
             req.httpBody = try JSONEncoder().encode(body)
         }
+        // Per-device API key. The server validates it via SHA-256 lookup; an
+        // invalid Bearer (e.g. revoked key) gets a 401 from the server's
+        // resolveAuth middleware before any handler runs.
+        if hasApiKey {
+            req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        }
         req.timeoutInterval = timeout
         let (data, response) = try await URLSession.shared.data(for: req)
         if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
@@ -254,27 +299,91 @@ class APIClient: ObservableObject {
 
     /// Pings a specific URL (not from configured state) — used during
     /// onboarding to test a candidate URL before saving it.
-    static func testConnection(rawURL: String, timeout: TimeInterval = 10) async -> (success: Bool, message: String) {
+    ///
+    /// If `apiKey` is non-empty, it's sent as `Authorization: Bearer` so the
+    /// user can verify their key works. The server's /api/health endpoint
+    /// reports `requireDeviceKeys` and `authMethod`; we use those to give
+    /// nuanced feedback ("server requires a key", "connected as marty", etc.).
+    static func testConnection(rawURL: String,
+                               apiKey: String = "",
+                               timeout: TimeInterval = 10) async -> ConnectionTestResult {
         var s = rawURL.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !s.isEmpty else { return (false, "URL is empty") }
+        guard !s.isEmpty else {
+            return ConnectionTestResult(success: false, message: "URL is empty", requiresKey: false)
+        }
         if !s.lowercased().hasPrefix("http://") && !s.lowercased().hasPrefix("https://") {
             s = APIClient.defaultScheme(forHost: s) + "://" + s
         }
         s = s.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        guard let url = URL(string: s + "/api/health") else { return (false, "Invalid URL") }
+        guard let url = URL(string: s + "/api/health") else {
+            return ConnectionTestResult(success: false, message: "Invalid URL", requiresKey: false)
+        }
 
         var req = URLRequest(url: url)
         req.timeoutInterval = timeout
+        let trimmedKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedKey.isEmpty {
+            req.setValue("Bearer \(trimmedKey)", forHTTPHeaderField: "Authorization")
+        }
         do {
             let (data, response) = try await URLSession.shared.data(for: req)
-            if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
-                return (false, "Server error \(http.statusCode)")
+            if let http = response as? HTTPURLResponse {
+                if http.statusCode == 401 {
+                    return ConnectionTestResult(
+                        success: false,
+                        message: "Authentication failed. Check your API key.",
+                        requiresKey: true
+                    )
+                }
+                if !(200..<300).contains(http.statusCode) {
+                    return ConnectionTestResult(
+                        success: false,
+                        message: "Server error \(http.statusCode)",
+                        requiresKey: false
+                    )
+                }
             }
-            let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-            let ok = obj?["ok"] as? Bool == true
-            return (ok, ok ? "Connection successful!" : "Server responded but health check failed")
+            let obj = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+            let ok           = obj?["ok"] as? Bool == true
+            let requiresKey  = obj?["requireDeviceKeys"] as? Bool == true
+            let authMethod   = obj?["authMethod"] as? String ?? "fallback"
+            let resolvedUser = obj?["user"] as? String ?? "local"
+
+            guard ok else {
+                return ConnectionTestResult(
+                    success: false,
+                    message: "Server responded but health check failed",
+                    requiresKey: requiresKey
+                )
+            }
+            // Authenticated via Bearer — strongest signal.
+            if authMethod == "bearer" {
+                return ConnectionTestResult(
+                    success: true,
+                    message: "Connected as \(resolvedUser)",
+                    requiresKey: requiresKey
+                )
+            }
+            // Server requires keys but we didn't provide one (or the proxy
+            // header-based path got us in for /api/health). Tell the user.
+            if requiresKey && trimmedKey.isEmpty {
+                return ConnectionTestResult(
+                    success: false,
+                    message: "This server requires an API key. Add one below to connect.",
+                    requiresKey: true
+                )
+            }
+            return ConnectionTestResult(
+                success: true,
+                message: "Connection successful!",
+                requiresKey: requiresKey
+            )
         } catch {
-            return (false, error.localizedDescription)
+            return ConnectionTestResult(
+                success: false,
+                message: error.localizedDescription,
+                requiresKey: false
+            )
         }
     }
 
