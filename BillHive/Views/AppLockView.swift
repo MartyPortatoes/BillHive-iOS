@@ -72,46 +72,74 @@ final class AppLockManager: ObservableObject {
 
     // MARK: - Authentication
 
-    /// Prompts the user to authenticate. Falls back from biometrics to the
-    /// device passcode automatically. Returns whether the unlock succeeded.
+    /// Prompts the user to authenticate with biometrics (Face ID / Touch ID).
     ///
-    /// If the device has no passcode set at all (so we can't gate anything),
-    /// we set `isLocked = false` so the user isn't soft-bricked at the lock
-    /// screen — better to let them in than trap them.
+    /// Primary path uses `.deviceOwnerAuthenticationWithBiometrics` so that
+    /// the system passcode is NOT offered as a fallback — the whole point of
+    /// the feature is that only the enrolled face/finger can unlock.
+    ///
+    /// If biometrics become temporarily unavailable (locked out after too many
+    /// failures, or disabled in Settings after enrollment), we fall back to
+    /// `.deviceOwnerAuthentication` (passcode) to prevent soft-locking the
+    /// user out of the app entirely.
     @discardableResult
     func unlock() async -> Bool {
         let context = LAContext()
+        // Hide the "Enter Password" fallback button on the biometric prompt.
+        context.localizedFallbackTitle = ""
+
         var probeError: NSError?
-        guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &probeError) else {
-            // No passcode set, biometrics unavailable, etc.
-            isLocked = false
-            return true
-        }
-        do {
-            let ok = try await context.evaluatePolicy(
-                .deviceOwnerAuthentication,
-                localizedReason: "Unlock BillHive"
-            )
-            if ok { isLocked = false }
-            return ok
-        } catch {
-            return false
+        if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &probeError) {
+            // Happy path: biometrics available — require them, no passcode.
+            do {
+                let ok = try await context.evaluatePolicy(
+                    .deviceOwnerAuthenticationWithBiometrics,
+                    localizedReason: "Unlock BillHive"
+                )
+                if ok { isLocked = false }
+                return ok
+            } catch {
+                return false
+            }
+        } else {
+            // Biometrics unavailable (locked out, unenrolled after setup, etc.).
+            // Fall back to passcode to prevent permanent soft-lock.
+            let fallback = LAContext()
+            var fallbackError: NSError?
+            guard fallback.canEvaluatePolicy(.deviceOwnerAuthentication, error: &fallbackError) else {
+                // No auth mechanism at all — let the user in.
+                isLocked = false
+                return true
+            }
+            do {
+                let ok = try await fallback.evaluatePolicy(
+                    .deviceOwnerAuthentication,
+                    localizedReason: "Biometrics unavailable — enter passcode to unlock BillHive"
+                )
+                if ok { isLocked = false }
+                return ok
+            } catch {
+                return false
+            }
         }
     }
 
-    /// Called when the user flips the toggle ON in Settings. Verifies they
-    /// can actually authenticate BEFORE we persist `isEnabled = true`, so
-    /// they can never lock themselves out.
+    /// Called when the user flips the toggle ON in Settings. Requires actual
+    /// biometric authentication — if the device has no biometrics enrolled
+    /// the feature cannot be enabled.
     @discardableResult
     func tryEnable() async -> Bool {
         let context = LAContext()
+        context.localizedFallbackTitle = ""
+
         var probeError: NSError?
-        guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &probeError) else {
+        guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &probeError) else {
+            // No biometrics available — cannot enable the feature.
             return false
         }
         do {
             let ok = try await context.evaluatePolicy(
-                .deviceOwnerAuthentication,
+                .deviceOwnerAuthenticationWithBiometrics,
                 localizedReason: "Enable BillHive App Lock"
             )
             if ok { isEnabled = true }
@@ -134,7 +162,7 @@ final class AppLockManager: ObservableObject {
 
 private func currentBiometryType() -> LABiometryType {
     let ctx = LAContext()
-    _ = ctx.canEvaluatePolicy(.deviceOwnerAuthentication, error: nil)
+    _ = ctx.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil)
     return ctx.biometryType
 }
 

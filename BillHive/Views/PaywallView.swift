@@ -15,8 +15,17 @@ struct PaywallView: View {
     var featureContext: String? = nil
 
     var body: some View {
-        ZStack {
+        ZStack(alignment: .topTrailing) {
             Color.bhBackground.ignoresSafeArea()
+
+            // Close button — always visible
+            Button { dismiss() } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.title2)
+                    .foregroundStyle(Color.bhMuted, Color.bhSurface2)
+            }
+            .padding(16)
+            .zIndex(1)
 
             ScrollView {
                 VStack(spacing: 24) {
@@ -103,17 +112,13 @@ struct PaywallView: View {
                         }
                     }
 
-                    // MARK: Dismiss (if trial still active)
+                    // MARK: Trial hint
 
                     if purchaseManager.isTrialActive {
-                        Button {
-                            dismiss()
-                        } label: {
-                            Text("Continue with trial (\(purchaseManager.trialDaysRemaining) days left)")
-                                .font(.bhBodySecondary)
-                                .foregroundColor(.bhMuted)
-                        }
-                        .padding(.bottom, 20)
+                        Text("Trial: \(purchaseManager.trialDaysRemaining) days remaining")
+                            .font(.bhCaption)
+                            .foregroundColor(.bhMuted)
+                            .padding(.bottom, 20)
                     }
 
                     Spacer(minLength: 40)
@@ -121,7 +126,6 @@ struct PaywallView: View {
             }
         }
         .bhColorScheme()
-        .interactiveDismissDisabled(!purchaseManager.isUnlocked)
         .onChange(of: purchaseManager.isPurchased) { purchased in
             if purchased { dismiss() }
         }

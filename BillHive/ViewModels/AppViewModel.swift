@@ -645,30 +645,52 @@ class AppViewModel: ObservableObject {
 
     /// Builds the checklist items for a given month.
     ///
-    /// Returns three groups of items in order:
-    /// 1. "Email sent to [person]" — one per non-me person
-    /// 2. "[Bill name] paid" — one per bill
-    /// 3. "Payment received from [person]" — one per non-me person
+    /// Mirrors the web app's `buildChecklistDefs()` exactly — same item IDs
+    /// and labels so checked states sync correctly via `/api/state`.
+    ///
+    /// Order:
+    /// 1. "Enter all bill amounts" (static)
+    /// 2. Per person who owes > 0: payment-method-specific request task
+    /// 3. Per person who owes > 0: "Email bill summary to [name]"
+    /// 4. Per bill (non-autopay, has payUrl): "Pay [bill]"
     func checklistItems(for key: String) -> [(id: String, label: String, done: Bool)] {
         var items: [(id: String, label: String, done: Bool)] = []
         let cl = state.checklist[key] ?? [:]
         let owes = computePersonOwes()
 
-        // Only include people who actually owe money (skip covered people with $0 total)
+        // Static first item
+        let enterId = "enter"
+        items.append((id: enterId, label: "Enter all bill amounts", done: cl[enterId] ?? false))
+
+        // Per-person collect items (only people who actually owe money)
         let owingPeople = state.people.filter { $0.id != "me" && (owes[$0.id]?.total ?? 0) > 0 }
 
         for person in owingPeople {
-            let id = "email-\(person.id)"
-            items.append((id: id, label: "Email sent to \(person.name)", done: cl[id] ?? false))
+            // Payment-method-specific request task
+            switch person.payMethod {
+            case .zelle:
+                let id = "zelle_\(person.id)"
+                items.append((id: id, label: "Send Zelle request to \(person.name)", done: cl[id] ?? false))
+            case .venmo:
+                let id = "venmo_\(person.id)"
+                items.append((id: id, label: "Send Venmo request to \(person.name)", done: cl[id] ?? false))
+            case .cashapp:
+                let id = "cashapp_\(person.id)"
+                items.append((id: id, label: "Send Cash App request to \(person.name)", done: cl[id] ?? false))
+            case .none, .manual:
+                break
+            }
+            // Email task
+            let emailId = "email_\(person.id)"
+            items.append((id: emailId, label: "Email bill summary to \(person.name)", done: cl[emailId] ?? false))
         }
-        for bill in state.bills where !bill.autoPay {
-            let id = "paid-\(bill.id)"
-            items.append((id: id, label: "\(bill.name) paid", done: cl[id] ?? false))
+
+        // Per-bill pay items (skip auto-pay, only include bills with a payUrl)
+        for bill in state.bills where !bill.autoPay && !bill.payUrl.isEmpty {
+            let id = "pay_\(bill.id)"
+            items.append((id: id, label: "Pay \(bill.name)", done: cl[id] ?? false))
         }
-        for person in owingPeople {
-            let id = "recv-\(person.id)"
-            items.append((id: id, label: "Payment received from \(person.name)", done: cl[id] ?? false))
-        }
+
         return items
     }
 

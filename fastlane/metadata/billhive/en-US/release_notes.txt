@@ -1,7 +1,6 @@
-What's new in 1.7.0:
+What's new in 1.7.1:
 
-• App Lock — require Face ID or Touch ID to open BillHive (Settings → Privacy & Security)
-• App Switcher privacy overlay — financial data is hidden when the app is backgrounded
-• Hardened payment links — Pay buttons only follow secure (https) URLs, protecting against tampered backups
-• Settings → About now points to billhiveapp.com
-• Behind-the-scenes Apple privacy compliance (PrivacyInfo manifest)
+• Face ID now required — App Lock uses actual biometrics instead of allowing passcode bypass
+• Paywall dismissible — you can now close the Unlock screen at any time
+• Collapsible Pay URLs — bill payment links slide open on tap, keeping the Pay section clean
+• Monthly Checklist syncs with web — same items, same labels, same checked states across platforms

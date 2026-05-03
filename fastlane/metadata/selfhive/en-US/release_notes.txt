@@ -1,8 +1,6 @@
-What's new in 1.7.0:
+What's new in 1.7.1:
 
-• Per-device API keys — generate a key in BillHive's web UI (Settings → Connected Devices), paste it into Server Setup or Settings → Server. Optional "Require API key" mode locks out any iOS device without a valid key.
-• App Lock — require Face ID or Touch ID to open SelfHive (Settings → Privacy & Security)
-• App Switcher privacy overlay — financial data is hidden when the app is backgrounded
-• Smarter URL handling — public hostnames auto-default to HTTPS instead of plain HTTP
-• Hardened payment links — Pay buttons only follow secure (https) URLs, protecting against tampered backups
-• Behind-the-scenes Apple privacy compliance (PrivacyInfo manifest)
+• Face ID now required — App Lock uses actual biometrics instead of allowing passcode bypass
+• Server settings redesigned — organized into Connection and API Key sections with a proper Done button
+• Collapsible Pay URLs — bill payment links slide open on tap, keeping the Pay section clean
+• Monthly Checklist syncs with web — same items, same labels, same checked states across platforms

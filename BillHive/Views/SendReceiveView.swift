@@ -34,6 +34,7 @@ func bhEncodeURLComponent(_ s: String) -> String {
 struct SendReceiveView: View {
     @EnvironmentObject var vm: AppViewModel
     @State private var expandedPersonId: String? = nil
+    @State private var expandedSendId: String? = nil
     @State private var sendingEmailFor: String? = nil
 
     /// All household members except the primary user.
@@ -132,7 +133,15 @@ struct SendReceiveView: View {
                             }
 
                             ForEach(vm.state.bills) { bill in
-                                SendCard(bill: bill)
+                                SendCard(
+                                    bill: bill,
+                                    isExpanded: expandedSendId == bill.id,
+                                    onToggle: {
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            expandedSendId = expandedSendId == bill.id ? nil : bill.id
+                                        }
+                                    }
+                                )
                             }
                         }
 
@@ -366,96 +375,117 @@ struct ReceiveCard: View {
 
 // MARK: - Send Card
 
-/// A card for a single bill in the Pay section, showing the bill total
-/// and an editable payment URL field with a "Pay" link button.
+/// A card for a single bill in the Pay section. Mirrors the Bills tab pattern:
+/// the header is tappable to toggle expand/collapse, with a chevron at the
+/// trailing edge. The Pay URL editor only shows when expanded — keeping the
+/// list clean for everyday use while still allowing inline edits when needed.
 struct SendCard: View {
     @EnvironmentObject var vm: AppViewModel
     let bill: Bill
+    let isExpanded: Bool
+    let onToggle: () -> Void
 
     /// Safely looks up the bill's current array index each time.
     private var billIndex: Int? { vm.state.bills.firstIndex(where: { $0.id == bill.id }) }
 
     var body: some View {
         VStack(spacing: 0) {
-            // MARK: Main Row
+            // MARK: Header row — tap anywhere except the Pay link to toggle.
+            // The outer Button uses `.plain` style so the inner Link's tap
+            // gesture wins inside its own bounds; everywhere else triggers
+            // onToggle.
+            Button(action: onToggle) {
+                HStack(spacing: 10) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 7)
+                            .fill(Color(hex: bill.color)?.opacity(0.2) ?? Color.bhSurface3)
+                            .frame(width: 34, height: 34)
+                        Text(bill.icon).font(.body)
+                    }
 
-            HStack(spacing: 10) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 7)
-                        .fill(Color(hex: bill.color)?.opacity(0.2) ?? Color.bhSurface3)
-                        .frame(width: 34, height: 34)
-                    Text(bill.icon).font(.body)
-                }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(bill.name)
+                            .font(.bhBody)
+                            .foregroundColor(.bhText)
+                        Text(vm.getBillTotal(bill.id).asCurrency)
+                            .font(.bhCaption)
+                            .foregroundColor(.bhMuted)
+                    }
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(bill.name)
-                        .font(.bhBody)
-                        .foregroundColor(.bhText)
-                    Text(vm.getBillTotal(bill.id).asCurrency)
-                        .font(.bhCaption)
-                        .foregroundColor(.bhMuted)
-                }
+                    Spacer(minLength: 8)
 
-                Spacer()
-
-                if let url = bhSafeWebURL(bill.payUrl) {
-                    Link(destination: url) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "arrow.up.right.square")
-                                .font(.caption)
-                            Text("Pay")
-                                .font(.bhBodySecondary.weight(.semibold))
+                    if let url = bhSafeWebURL(bill.payUrl) {
+                        Link(destination: url) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrow.up.right.square")
+                                    .font(.caption)
+                                Text("Pay")
+                                    .font(.bhBodySecondary.weight(.semibold))
+                            }
+                            .foregroundColor(Color(hex: "#0c0d0f"))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 7)
+                            .background(Color.bhAmber)
+                            .cornerRadius(7)
                         }
-                        .foregroundColor(Color(hex: "#0c0d0f"))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
-                        .background(Color.bhAmber)
-                        .cornerRadius(7)
+                    }
+
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(.bhMuted)
+                        .frame(width: 20)
+                        .animation(.easeInOut(duration: 0.2), value: isExpanded)
+                        .accessibilityHidden(true)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("\(bill.name), \(vm.getBillTotal(bill.id).asCurrency)")
+            .accessibilityHint(isExpanded ? "Collapse Pay URL editor" : "Expand to edit Pay URL")
+
+            // MARK: Pay URL editor — only when expanded
+            if isExpanded {
+                Divider().background(Color.bhBorder)
+
+                HStack(spacing: 8) {
+                    Text("Pay URL")
+                        .bhSectionTitle()
+                        .frame(width: 60, alignment: .leading)
+
+                    TextField("https://your-bank.com/pay", text: Binding(
+                        get: { bill.payUrl },
+                        set: { val in
+                            guard let idx = billIndex else { return }
+                            vm.state.bills[idx].payUrl = val
+                            vm.save()
+                        }
+                    ))
+                    .font(.bhCaption)
+                    .foregroundColor(.bhText)
+                    .textFieldStyle(.plain)
+                    .keyboardType(.URL)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+
+                    if let url = bhSafeWebURL(bill.payUrl) {
+                        Link(destination: url) {
+                            Image(systemName: "arrow.up.right.square")
+                                .font(.subheadline)
+                                .foregroundColor(.bhAmber)
+                        }
                     }
                 }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Color.bhSurface2)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-
-            Divider().background(Color.bhBorder)
-
-            // MARK: Pay URL Field
-
-            HStack(spacing: 8) {
-                Text("Pay URL")
-                    .bhSectionTitle()
-                    .frame(width: 60, alignment: .leading)
-
-                TextField("https://your-bank.com/pay", text: Binding(
-                    get: { bill.payUrl },
-                    set: { val in
-                        guard let idx = billIndex else { return }
-                        vm.state.bills[idx].payUrl = val
-                        vm.save()
-                    }
-                ))
-                .font(.bhCaption)
-                .foregroundColor(.bhText)
-                .textFieldStyle(.plain)
-                .keyboardType(.URL)
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
-
-                if let url = bhSafeWebURL(bill.payUrl) {
-                    Link(destination: url) {
-                        Image(systemName: "arrow.up.right.square")
-                            .font(.subheadline)
-                            .foregroundColor(.bhAmber)
-                    }
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(Color.bhSurface2)
         }
         .background(Color.bhSurface)
         .cornerRadius(10)
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.bhBorder, lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(isExpanded ? Color.bhBorder2 : Color.bhBorder, lineWidth: 1))
     }
 }
 

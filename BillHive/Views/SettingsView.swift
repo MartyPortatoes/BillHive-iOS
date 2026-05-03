@@ -709,50 +709,56 @@ struct ServerEditSheet: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                HexBGView().ignoresSafeArea()
+                Color.bhBackground.ignoresSafeArea()
                 ScrollView {
-                    VStack(spacing: 20) {
-                        // Primary URL
-                        urlField(
-                            title: "Primary Server URL",
-                            placeholder: "http://192.168.1.100:8080",
-                            text: $primaryURL,
-                            result: primaryResult,
-                            success: primarySuccess,
-                            isTesting: isTestingPrimary,
-                            onTest: { Task { await test(primary: true) } }
-                        )
+                    VStack(spacing: 16) {
+                        // MARK: Connection Section
+                        SettingsSection(title: "Connection") {
+                            urlField(
+                                title: "Primary Server URL",
+                                placeholder: "http://192.168.1.100:8080",
+                                text: $primaryURL,
+                                result: primaryResult,
+                                success: primarySuccess,
+                                isTesting: isTestingPrimary,
+                                onTest: { Task { await test(primary: true) } }
+                            )
 
-                        // Backup URL
-                        urlField(
-                            title: "Backup Server URL (optional)",
-                            placeholder: "http://100.x.y.z:8080",
-                            text: $backupURL,
-                            result: backupResult,
-                            success: backupSuccess,
-                            isTesting: isTestingBackup,
-                            onTest: { Task { await test(primary: false) } }
-                        )
+                            Divider().background(Color.bhBorder)
 
-                        Text("The app will use the primary server when reachable and automatically fall back to the backup otherwise.")
-                            .font(.bhCaption)
-                            .foregroundColor(.bhMuted)
-                            .multilineTextAlignment(.center)
+                            urlField(
+                                title: "Backup Server URL (optional)",
+                                placeholder: "http://100.x.y.z:8080",
+                                text: $backupURL,
+                                result: backupResult,
+                                success: backupSuccess,
+                                isTesting: isTestingBackup,
+                                onTest: { Task { await test(primary: false) } }
+                            )
 
-                        // API key
-                        apiKeyField
-
-                        HStack(spacing: 12) {
-                            Button("Cancel") { dismiss() }
-                                .buttonStyle(BHSecondaryButtonStyle())
-                            Button("Save & Reconnect") {
-                                APIClient.shared.apiKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
-                                onSave(primaryURL, backupURL)
-                                dismiss()
-                            }
-                            .buttonStyle(BHPrimaryButtonStyle())
-                            .disabled(primaryURL.isEmpty)
+                            Text("The app will use the primary server when reachable and automatically fall back to the backup otherwise.")
+                                .font(.bhCaption)
+                                .foregroundColor(.bhMuted)
+                                .multilineTextAlignment(.leading)
+                                .padding(.top, 4)
                         }
+
+                        // MARK: API Key Section
+                        SettingsSection(title: "API Key") {
+                            apiKeyContent
+                        }
+
+                        // MARK: Actions
+                        Button {
+                            APIClient.shared.apiKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+                            onSave(primaryURL, backupURL)
+                            dismiss()
+                        } label: {
+                            Text("Save & Reconnect")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(BHPrimaryButtonStyle())
+                        .disabled(primaryURL.isEmpty)
 
                         Button {
                             onLogout()
@@ -765,25 +771,37 @@ struct ServerEditSheet: View {
                             .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(BHDangerButtonStyle())
+
+                        Spacer(minLength: 24)
                     }
-                    .padding(24)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
                 }
             }
-            .navigationTitle("Server Settings")
+            .navigationTitle("Server")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.bhAmber)
+                }
+            }
         }
+        .bhColorScheme()
     }
 
-    // API key field — SecureField pre-populated from Keychain. Empty value
+    // API key content — SecureField pre-populated from Keychain. Empty value
     // on save clears the stored key. Connection tests include the entered
     // key (not the saved one) so the user can verify a new key before
     // committing.
     @ViewBuilder
-    private var apiKeyField: some View {
+    private var apiKeyContent: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("API Key (optional)")
-                    .bhSectionTitle()
+                Text("Optional")
+                    .font(.bhCaption)
+                    .foregroundColor(.bhMuted)
                 Spacer()
                 if !apiKey.isEmpty {
                     Button {
