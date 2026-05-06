@@ -18,6 +18,21 @@
       "productID" : "com.billhive.app.unlock",
       "referenceName" : "BillHive Full Unlock",
       "type" : "NonConsumable"
+    },
+    {
+      "displayPrice" : "0.99",
+      "familyShareable" : false,
+      "internalID" : "2",
+      "localizations" : [
+        {
+          "description" : "Unlock SelfHive — full access to your self-hosted bill manager.",
+          "displayName" : "SelfHive Full Unlock",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.billhive.selfhive.unlock",
+      "referenceName" : "SelfHive Full Unlock",
+      "type" : "NonConsumable"
     }
   ],
   "settings" : {

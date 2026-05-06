@@ -39,11 +39,6 @@ struct TrendsView: View {
         NavigationStack {
             ZStack {
                 HexBGView().ignoresSafeArea()
-                if !vm.isUnlocked {
-                    TrendsLockedView {
-                        vm.presentPaywall(context: "Unlock Trends to see analytics")
-                    }
-                } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         Picker("View", selection: $mode) {
@@ -88,7 +83,6 @@ struct TrendsView: View {
                     .padding(.horizontal, 16)
                 }
                 .refreshable { await vm.refresh() }
-                } // else (unlocked)
             }
             .navigationTitle("Trends")
             .navigationBarTitleDisplayMode(.large)

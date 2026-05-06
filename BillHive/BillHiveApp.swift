@@ -17,6 +17,7 @@ struct BillHiveApp: App {
     @StateObject private var vm = AppViewModel(isLocal: true)
     @StateObject private var purchaseManager = PurchaseManager.shared
     @Environment(\.scenePhase) private var scenePhase
+    @State private var showLockedPaywall = false
 
     var body: some Scene {
         WindowGroup {
@@ -27,6 +28,9 @@ struct BillHiveApp: App {
                     CloudStorageManager.shared.migrateLocalToCloudIfNeeded()
                     await purchaseManager.setup()
                     await vm.load()
+                    if !purchaseManager.isUnlocked {
+                        showLockedPaywall = true
+                    }
                 }
                 .sheet(item: $vm.pendingMailCompose) { req in
                     if MFMailComposeViewController.canSendMail() {
@@ -35,12 +39,18 @@ struct BillHiveApp: App {
                         MailFallbackView(request: req)
                     }
                 }
-                .sheet(isPresented: $vm.showPaywall) {
-                    PaywallView(featureContext: vm.paywallContext)
+                .fullScreenCover(isPresented: $showLockedPaywall) {
+                    PaywallView(allowDismiss: false)
+                }
+                .onChange(of: purchaseManager.isUnlocked) { unlocked in
+                    if unlocked { showLockedPaywall = false }
                 }
                 .onChange(of: scenePhase) { _ in
                     if scenePhase == .active {
                         purchaseManager.refreshUnlockState()
+                        if !purchaseManager.isUnlocked && !showLockedPaywall {
+                            showLockedPaywall = true
+                        }
                         Task { await vm.reloadFromCloud() }
                     }
                 }

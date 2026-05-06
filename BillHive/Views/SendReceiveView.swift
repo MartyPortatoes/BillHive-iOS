@@ -95,14 +95,10 @@ struct SendReceiveView: View {
                                         }
                                     },
                                     onSendEmail: {
-                                        if vm.isUnlocked {
-                                            Task {
-                                                sendingEmailFor = person.id
-                                                await vm.sendPersonEmail(personId: person.id)
-                                                sendingEmailFor = nil
-                                            }
-                                        } else {
-                                            vm.presentPaywall(context: "Unlock to send email summaries")
+                                        Task {
+                                            sendingEmailFor = person.id
+                                            await vm.sendPersonEmail(personId: person.id)
+                                            sendingEmailFor = nil
                                         }
                                     }
                                 )

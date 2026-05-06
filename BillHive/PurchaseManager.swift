@@ -16,7 +16,13 @@ class PurchaseManager: ObservableObject {
     // MARK: - Configuration
 
     /// The product identifier configured in App Store Connect.
+    #if BILLHIVE_LOCAL
     nonisolated static let productId = "com.billhive.app.unlock"
+    nonisolated static let brandName = "BillHive"
+    #else
+    nonisolated static let productId = "com.billhive.selfhive.unlock"
+    nonisolated static let brandName = "SelfHive"
+    #endif
 
     /// Number of days for the free trial.
     static let trialDays = 14

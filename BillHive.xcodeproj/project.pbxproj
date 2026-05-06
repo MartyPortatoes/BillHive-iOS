@@ -48,6 +48,8 @@
 		C6A798081B45D80F3D1C46CC /* AppLockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F36082B3E5E2218E0EDF5A9 /* AppLockView.swift */; };
 		D101 /* PurchaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D001 /* PurchaseManager.swift */; };
 		D102 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D002 /* PaywallView.swift */; };
+		E101 /* PurchaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D001 /* PurchaseManager.swift */; };
+		E102 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D002 /* PaywallView.swift */; };
 		DDF14A89B0E5DEA72B80B449 /* AppLockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F36082B3E5E2218E0EDF5A9 /* AppLockView.swift */; };
 		FB71FE2A90774EEE23B6BD99 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 2C173FDBDA342DADD6A519C6 /* PrivacyInfo.xcprivacy */; };
 		FE179B858657045051BE8BA3 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 2C173FDBDA342DADD6A519C6 /* PrivacyInfo.xcprivacy */; };
@@ -84,6 +86,7 @@
 		D001 /* PurchaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseManager.swift; sourceTree = "<group>"; };
 		D002 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		D003 /* Products.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Products.storekit; sourceTree = "<group>"; };
+		E001 /* SelfHive.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SelfHive.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -102,6 +105,7 @@
 				B001 /* BillHiveApp.swift */,
 				D001 /* PurchaseManager.swift */,
 				B006 /* BillHive.entitlements */,
+				E001 /* SelfHive.entitlements */,
 				B007 /* SelfHive-Info.plist */,
 				D003 /* Products.storekit */,
 				A015 /* Assets.xcassets */,
@@ -293,6 +297,8 @@
 				A113 /* APIClient.swift in Sources */,
 				A114 /* AppViewModel.swift in Sources */,
 				A116 /* LocalStorageManager.swift in Sources */,
+				E101 /* PurchaseManager.swift in Sources */,
+				E102 /* PaywallView.swift in Sources */,
 				C6A798081B45D80F3D1C46CC /* AppLockView.swift in Sources */,
 				7F8D18298D4086DB92D1D198 /* KeychainHelper.swift in Sources */,
 			);
@@ -455,6 +461,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIconSelfHive;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = BillHive/SelfHive.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 9;
 				INFOPLIST_FILE = "BillHive/SelfHive-Info.plist";
@@ -476,6 +483,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIconSelfHive;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = BillHive/SelfHive.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 9;
 				INFOPLIST_FILE = "BillHive/SelfHive-Info.plist";

@@ -706,13 +706,8 @@ class AppViewModel: ObservableObject {
     // MARK: - Purchase Gating
 
     /// Whether the app is fully unlocked (purchased or within trial).
-    /// SelfHive (server target) is always unlocked — IAP only applies to the standalone BillHive target.
     var isUnlocked: Bool {
-        #if BILLHIVE_LOCAL
-        return PurchaseManager.shared.isUnlocked
-        #else
-        return true
-        #endif
+        PurchaseManager.shared.isUnlocked
     }
 
     /// Presents the paywall sheet with an optional context message.

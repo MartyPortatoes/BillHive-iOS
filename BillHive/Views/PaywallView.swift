@@ -13,19 +13,22 @@ struct PaywallView: View {
 
     /// Optional context string shown at the top (e.g. "Unlock Trends").
     var featureContext: String? = nil
+    /// When false, hides the close button (used for full-app lockout in SelfHive).
+    var allowDismiss: Bool = true
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
             Color.bhBackground.ignoresSafeArea()
 
-            // Close button — always visible
-            Button { dismiss() } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.title2)
-                    .foregroundStyle(Color.bhMuted, Color.bhSurface2)
+            if allowDismiss {
+                Button { dismiss() } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(Color.bhMuted, Color.bhSurface2)
+                }
+                .padding(16)
+                .zIndex(1)
             }
-            .padding(16)
-            .zIndex(1)
 
             ScrollView {
                 VStack(spacing: 24) {
@@ -39,7 +42,7 @@ struct PaywallView: View {
                             .padding(.top, 40)
                             .accessibilityHidden(true)
 
-                        Text("BillHive")
+                        Text(PurchaseManager.brandName)
                             .font(.largeTitle.weight(.bold))
                             .foregroundColor(.bhText)
 
@@ -63,7 +66,11 @@ struct PaywallView: View {
                         FeatureRow(icon: "list.clipboard.fill", title: "Unlimited Bills", description: "Track as many bills as you need")
                         FeatureRow(icon: "chart.line.uptrend.xyaxis", title: "Trends & Analytics", description: "Month-over-month spending insights")
                         FeatureRow(icon: "envelope.fill", title: "Email Summaries", description: "Send bill breakdowns to your household")
+                        #if BILLHIVE_LOCAL
                         FeatureRow(icon: "icloud.fill", title: "iCloud Sync", description: "Access your data across all devices")
+                        #else
+                        FeatureRow(icon: "server.rack", title: "Self-Hosted", description: "Your data stays on your server")
+                        #endif
                         FeatureRow(icon: "lock.open.fill", title: "One-Time Purchase", description: "Pay once, yours forever — no subscription")
                     }
                     .padding(.horizontal, 20)
@@ -84,7 +91,7 @@ struct PaywallView: View {
                                     ProgressView()
                                         .tint(.black)
                                 } else {
-                                    Text("Unlock BillHive — \(purchaseManager.priceText)")
+                                    Text("Unlock \(PurchaseManager.brandName) — \(purchaseManager.priceText)")
                                         .font(.bhBody)
                                 }
                             }

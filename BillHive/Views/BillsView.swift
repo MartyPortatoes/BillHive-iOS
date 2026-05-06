@@ -67,14 +67,7 @@ struct BillsView: View {
                             .padding(.horizontal, 16)
 
                             Button(action: addBillAction) {
-                                HStack(spacing: 6) {
-                                    Label("Add Bill", systemImage: "plus")
-                                    if !vm.isUnlocked && vm.state.bills.count >= 2 {
-                                        Image(systemName: "lock.fill")
-                                            .font(.caption2)
-                                            .foregroundColor(.bhAmber)
-                                    }
-                                }
+                                Label("Add Bill", systemImage: "plus")
                             }
                             .buttonStyle(BHSecondaryButtonStyle())
                             .padding(.horizontal, 16)
@@ -111,15 +104,10 @@ struct BillsView: View {
     }
 
     private func addBillAction() {
-        if vm.isUnlocked || vm.state.bills.count < 2 {
-            vm.addBill()
-            if let last = vm.state.bills.last {
-                withAnimation { expandedBillId = last.id }
-                // Open the editor sheet for the new bill
-                editingBillId = last.id
-            }
-        } else {
-            vm.presentPaywall(context: "Unlock unlimited bills")
+        vm.addBill()
+        if let last = vm.state.bills.last {
+            withAnimation { expandedBillId = last.id }
+            editingBillId = last.id
         }
     }
 }

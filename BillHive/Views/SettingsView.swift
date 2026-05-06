@@ -49,16 +49,12 @@ struct SettingsView: View {
         return "Primary + backup configured"
     }
 
-    #if BILLHIVE_LOCAL
-    /// Subtitle for the Subscription row — adapts to purchase state.
-    /// Only compiled into the BillHive target; SelfHive has no IAP.
     private var subscriptionSubtitle: String {
         let pm = PurchaseManager.shared
-        if pm.isPurchased { return "BillHive Pro · Unlocked" }
+        if pm.isPurchased { return "\(PurchaseManager.brandName) Pro · Unlocked" }
         if pm.isTrialActive { return "Trial · \(pm.trialDaysRemaining) day\(pm.trialDaysRemaining == 1 ? "" : "s") left" }
         return "Trial expired · Upgrade to unlock"
     }
-    #endif
 
     var body: some View {
         NavigationStack {
@@ -120,14 +116,12 @@ struct SettingsView: View {
                             action: { showPrivacySecurity = true }
                         )
 
-                        #if BILLHIVE_LOCAL
                         SettingsCategoryRow(
                             icon: "lock.open.fill",
                             title: "Subscription",
                             subtitle: subscriptionSubtitle,
                             action: { showSubscription = true }
                         )
-                        #endif
 
                         SettingsCategoryRow(
                             icon: "info.circle.fill",
@@ -179,11 +173,9 @@ struct SettingsView: View {
             .sheet(isPresented: $showPrivacySecurity) {
                 PrivacySecuritySheet()
             }
-            #if BILLHIVE_LOCAL
             .sheet(isPresented: $showSubscription) {
                 SubscriptionSettingsSheet().environmentObject(vm)
             }
-            #endif
             .sheet(isPresented: $showAbout) {
                 AboutSettingsSheet(version: appVersion)
             }
@@ -920,7 +912,6 @@ struct ServerEditSheet: View {
     }
 }
 
-#if BILLHIVE_LOCAL
 // MARK: - Purchase Settings Section
 
 /// Shows trial status, purchase button, and restore link in Settings.
@@ -937,7 +928,7 @@ struct PurchaseSettingsSection: View {
                     Image(systemName: "checkmark.seal.fill")
                         .foregroundColor(.bhAmber)
                         .font(.subheadline)
-                    Text("BillHive Pro")
+                    Text("\(PurchaseManager.brandName) Pro")
                         .font(.bhBodyName.weight(.semibold))
                         .foregroundColor(.bhAmber)
                     Spacer()
@@ -993,7 +984,7 @@ struct PurchaseSettingsSection: View {
                     HStack(spacing: 6) {
                         Image(systemName: "lock.open.fill")
                             .font(.caption)
-                        Text("Unlock BillHive — \(pm.priceText)")
+                        Text("Unlock \(PurchaseManager.brandName) — \(pm.priceText)")
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -1030,7 +1021,6 @@ struct PurchaseSettingsSection: View {
         }
     }
 }
-#endif
 
 // MARK: - Color → Hex Conversion
 
@@ -1587,7 +1577,6 @@ struct DataBackupSettingsSheet: View {
     }
 }
 
-#if BILLHIVE_LOCAL
 // MARK: - Subscription Settings Sheet
 
 /// Trial / purchase / restore controls in a focused sheet.
@@ -1619,7 +1608,6 @@ struct SubscriptionSettingsSheet: View {
         .bhColorScheme()
     }
 }
-#endif
 
 // MARK: - About Settings Sheet
 
