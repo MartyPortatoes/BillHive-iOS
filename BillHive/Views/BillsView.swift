@@ -213,7 +213,7 @@ struct BillCardView: View {
                     Spacer(minLength: 8)
 
                     VStack(alignment: .trailing, spacing: 2) {
-                        Text(total > 0 ? total.asCurrency : "$—")
+                        Text(total > 0 ? total.asCurrency : "\(CurrencyManager.symbol)—")
                             .font(.bhMoneyMedium)
                             .foregroundColor(total > 0 ? .bhAmber : .bhMuted)
                         Text("your share \(myShare.asCurrency)")

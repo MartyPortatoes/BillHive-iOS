@@ -15,6 +15,7 @@ struct SettingsView: View {
     @AppStorage("colorSchemePref") private var colorSchemePref: String = ColorSchemePreference.dark.rawValue
 
     // Category sheets
+    @State private var showCurrency = false
     @State private var showHousehold = false
     @State private var showEmailRelay = false
     @State private var showServerEdit = false
@@ -30,6 +31,16 @@ struct SettingsView: View {
     /// Marketing version pulled from Info.plist (e.g. "1.6.0").
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
+    }
+
+    /// Subtitle for the Currency row — shows current selection.
+    private var currencySubtitle: String {
+        let code = CurrencyManager.resolvedCode
+        let name = Locale.current.localizedString(forCurrencyCode: code) ?? code
+        if vm.state.settings.currencyCode.isEmpty {
+            return "Auto · \(name) (\(code))"
+        }
+        return "\(name) (\(code))"
     }
 
     /// Subtitle for the Server row — adapts to whether a backup is set.
@@ -58,6 +69,13 @@ struct SettingsView: View {
                         // Inline Appearance picker — single control, no
                         // need for a drilldown sheet
                         AppearancePickerCard(selection: $colorSchemePref)
+
+                        SettingsCategoryRow(
+                            icon: "banknote.fill",
+                            title: "Currency",
+                            subtitle: currencySubtitle,
+                            action: { showCurrency = true }
+                        )
 
                         SettingsCategoryRow(
                             icon: "person.2.fill",
@@ -127,6 +145,9 @@ struct SettingsView: View {
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)
+            .sheet(isPresented: $showCurrency) {
+                CurrencySettingsSheet().environmentObject(vm)
+            }
             .sheet(isPresented: $showHousehold) {
                 HouseholdSettingsSheet().environmentObject(vm)
             }
@@ -1077,6 +1098,175 @@ struct SettingsCategoryRow: View {
     }
 }
 
+// MARK: - Currency Settings Sheet
+
+/// Searchable currency picker presented from Settings → Currency.
+/// Shows an "Auto" option (device locale), popular currencies, then the full ISO list.
+struct CurrencySettingsSheet: View {
+    @EnvironmentObject var vm: AppViewModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var search = ""
+
+    private static let popular = ["USD", "EUR", "GBP", "CAD", "AUD", "JPY", "CHF", "CNY", "INR", "MXN", "BRL", "KRW", "SGD", "HKD", "NZD", "SEK", "NOK", "DKK"]
+
+    private var allCodes: [String] {
+        Locale.commonISOCurrencyCodes.sorted()
+    }
+
+    private func displayName(_ code: String) -> String {
+        Locale.current.localizedString(forCurrencyCode: code) ?? code
+    }
+
+    private func matches(_ code: String) -> Bool {
+        if search.isEmpty { return true }
+        let q = search.lowercased()
+        return code.lowercased().contains(q) || displayName(code).lowercased().contains(q)
+    }
+
+    private var filteredPopular: [String] {
+        Self.popular.filter { matches($0) }
+    }
+
+    private var filteredAll: [String] {
+        allCodes.filter { !Self.popular.contains($0) && matches($0) }
+    }
+
+    private var selected: String { vm.state.settings.currencyCode }
+
+    private var autoLabel: String {
+        let code = Locale.current.currency?.identifier ?? "USD"
+        let name = displayName(code)
+        return "\(name) (\(code))"
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.bhBackground.ignoresSafeArea()
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        // Search bar
+                        HStack(spacing: 8) {
+                            Image(systemName: "magnifyingglass")
+                                .foregroundColor(.bhMuted)
+                                .font(.bhCaption)
+                            TextField("Search currencies", text: $search)
+                                .font(.bhBodySecondary)
+                                .foregroundColor(.bhText)
+                                .textFieldStyle(.plain)
+                                .autocorrectionDisabled()
+                            if !search.isEmpty {
+                                Button { search = "" } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundColor(.bhMuted)
+                                        .font(.bhCaption)
+                                }
+                            }
+                        }
+                        .padding(10)
+                        .background(Color.bhSurface2)
+                        .cornerRadius(8)
+                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.bhBorder, lineWidth: 1))
+
+                        // Auto option
+                        if search.isEmpty {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("AUTOMATIC")
+                                    .font(.caption2.weight(.medium).monospaced())
+                                    .tracking(1.2)
+                                    .foregroundColor(.bhMuted)
+
+                                currencyRow(code: "", label: "Auto", detail: autoLabel, isSelected: selected.isEmpty)
+                            }
+                        }
+
+                        // Popular currencies
+                        if !filteredPopular.isEmpty {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("POPULAR")
+                                    .font(.caption2.weight(.medium).monospaced())
+                                    .tracking(1.2)
+                                    .foregroundColor(.bhMuted)
+
+                                ForEach(filteredPopular, id: \.self) { code in
+                                    currencyRow(code: code, label: "\(displayName(code))", detail: code, isSelected: selected == code)
+                                }
+                            }
+                        }
+
+                        // All other currencies
+                        if !filteredAll.isEmpty {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("ALL CURRENCIES")
+                                    .font(.caption2.weight(.medium).monospaced())
+                                    .tracking(1.2)
+                                    .foregroundColor(.bhMuted)
+
+                                ForEach(filteredAll, id: \.self) { code in
+                                    currencyRow(code: code, label: "\(displayName(code))", detail: code, isSelected: selected == code)
+                                }
+                            }
+                        }
+
+                        Spacer(minLength: 24)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+                }
+            }
+            .navigationTitle("Currency")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.bhAmber)
+                }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    }
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(.bhAmber)
+                }
+            }
+        }
+        .bhColorScheme()
+    }
+
+    @ViewBuilder
+    private func currencyRow(code: String, label: String, detail: String, isSelected: Bool) -> some View {
+        Button {
+            vm.state.settings.currencyCode = code
+            CurrencyManager.currencyCode = code
+            vm.save()
+        } label: {
+            HStack(spacing: 12) {
+                Text(label)
+                    .font(.bhBodySecondary.weight(.medium))
+                    .foregroundColor(.bhText)
+                Spacer()
+                Text(detail)
+                    .font(.bhCaption)
+                    .foregroundColor(.bhMuted)
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.caption.weight(.bold))
+                        .foregroundColor(.bhAmber)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .contentShape(Rectangle())
+            .background(isSelected ? Color.bhAmber.opacity(0.08) : Color.bhSurface)
+            .cornerRadius(8)
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(isSelected ? Color.bhAmber.opacity(0.3) : Color.bhBorder, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 // MARK: - Household Settings Sheet
 
 /// Combined people management + email greetings, presented as a full-screen
@@ -1464,17 +1654,30 @@ struct AboutSettingsSheet: View {
                         }
                         .padding(.horizontal, 24)
 
-                        if let url = URL(string: "https://billhiveapp.com") {
-                            Link(destination: url) {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "globe")
-                                    Text("Visit billhiveapp.com")
+                        VStack(spacing: 10) {
+                            if let url = URL(string: "https://billhiveapp.com") {
+                                Link(destination: url) {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "globe")
+                                        Text("Visit billhiveapp.com")
+                                    }
+                                    .frame(maxWidth: .infinity)
                                 }
-                                .frame(maxWidth: .infinity)
+                                .buttonStyle(BHSecondaryButtonStyle())
                             }
-                            .buttonStyle(BHSecondaryButtonStyle())
-                            .padding(.horizontal, 24)
+
+                            if let url = URL(string: "https://github.com/MartyPortatoes/BillHive") {
+                                Link(destination: url) {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "chevron.left.forwardslash.chevron.right")
+                                        Text("GitHub Repository")
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                }
+                                .buttonStyle(BHSecondaryButtonStyle())
+                            }
                         }
+                        .padding(.horizontal, 24)
 
                         Spacer(minLength: 40)
                     }

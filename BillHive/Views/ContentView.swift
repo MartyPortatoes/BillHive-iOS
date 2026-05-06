@@ -371,24 +371,48 @@ extension Font {
     static let bhMoneySmall = Font.footnote.weight(.semibold).monospacedDigit()
 }
 
-// MARK: - Money Formatting
+// MARK: - Currency Manager
 
-/// Shared `NumberFormatter` for currency display, avoiding repeated allocation.
-///
-/// Configured for USD with exactly 2 decimal places. Thread-safe because
-/// `NumberFormatter` is a class and this instance is only read after initial setup.
-private let currencyFormatter: NumberFormatter = {
-    let f = NumberFormatter()
-    f.numberStyle = .currency
-    f.currencySymbol = "$"
-    f.minimumFractionDigits = 2
-    f.maximumFractionDigits = 2
-    return f
-}()
+/// Manages the app-wide currency formatter. The currency code is set from
+/// `AppSettings.currencyCode` on launch; changes rebuild the formatter so
+/// all `.asCurrency` calls pick up the new symbol and decimal rules.
+enum CurrencyManager {
+    private static var _code: String = {
+        let saved = UserDefaults.standard.string(forKey: "currencyCode") ?? ""
+        if !saved.isEmpty { return saved }
+        return Locale.current.currency?.identifier ?? "USD"
+    }()
+    private static var _formatter: NumberFormatter = makeFormatter(_code)
+
+    static var currencyCode: String {
+        get { _code }
+        set {
+            let resolved = newValue.isEmpty ? (Locale.current.currency?.identifier ?? "USD") : newValue
+            guard resolved != _code else { return }
+            _code = resolved
+            _formatter = makeFormatter(resolved)
+            UserDefaults.standard.set(newValue, forKey: "currencyCode")
+        }
+    }
+
+    static var formatter: NumberFormatter { _formatter }
+
+    static var symbol: String { _formatter.currencySymbol ?? _code }
+
+    /// The resolved code (never empty — returns the auto-detected code when the user hasn't chosen one).
+    static var resolvedCode: String { _code }
+
+    private static func makeFormatter(_ code: String) -> NumberFormatter {
+        let f = NumberFormatter()
+        f.numberStyle = .currency
+        f.currencyCode = code
+        f.locale = Locale.current
+        return f
+    }
+}
 
 extension Double {
-    /// Formats the value as a US dollar amount (e.g. "$1,234.56").
     var asCurrency: String {
-        currencyFormatter.string(from: NSNumber(value: self)) ?? "$\(String(format: "%.2f", self))"
+        CurrencyManager.formatter.string(from: NSNumber(value: self)) ?? String(format: "%.2f", self)
     }
 }

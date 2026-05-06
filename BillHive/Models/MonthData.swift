@@ -60,11 +60,26 @@ struct AppSettings: Codable, Equatable, Sendable {
     var mortgageUrl: String
     /// Display name for the mortgage provider.
     var mortgageProvider: String
+    /// ISO 4217 currency code (e.g. "USD", "EUR"). Empty string means auto-detect from device locale.
+    var currencyCode: String
 
-    init(myEmail: String = "", mortgageUrl: String = "", mortgageProvider: String = "") {
+    init(myEmail: String = "", mortgageUrl: String = "", mortgageProvider: String = "", currencyCode: String = "") {
         self.myEmail = myEmail
         self.mortgageUrl = mortgageUrl
         self.mortgageProvider = mortgageProvider
+        self.currencyCode = currencyCode
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case myEmail, mortgageUrl, mortgageProvider, currencyCode
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        myEmail = try c.decodeIfPresent(String.self, forKey: .myEmail) ?? ""
+        mortgageUrl = try c.decodeIfPresent(String.self, forKey: .mortgageUrl) ?? ""
+        mortgageProvider = try c.decodeIfPresent(String.self, forKey: .mortgageProvider) ?? ""
+        currencyCode = try c.decodeIfPresent(String.self, forKey: .currencyCode) ?? ""
     }
 }
 

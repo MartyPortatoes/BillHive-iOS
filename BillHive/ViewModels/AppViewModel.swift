@@ -149,6 +149,7 @@ class AppViewModel: ObservableObject {
                 self.error = error.localizedDescription
             }
         }
+        CurrencyManager.currencyCode = state.settings.currencyCode
         isLoading = false
     }
 
@@ -781,10 +782,10 @@ class AppViewModel: ObservableObject {
         let greeting = person.greeting.isEmpty ? "Hi \(person.name)," : person.greeting
         var lines = [greeting, "", "Here's your bill summary for \(monthLabel):", ""]
         for bo in personOwes?.bills ?? [] {
-            lines.append("• \(bo.billName): \(String(format: "$%.2f", bo.amount))")
+            lines.append("• \(bo.billName): \(bo.amount.asCurrency)")
         }
         lines.append("")
-        lines.append(String(format: "Total: $%.2f", personOwes?.total ?? 0))
+        lines.append("Total: \((personOwes?.total ?? 0).asCurrency)")
         return lines.joined(separator: "\n")
     }
 }
