@@ -135,6 +135,9 @@ class AppViewModel: ObservableObject {
             normalizePctLines()
             autoFillPreservedBills()
         } else {
+            // Probe both servers concurrently (4s timeout) so we switch to
+            // whichever is reachable on the current network before loading data.
+            await api.probeServers()
             do {
                 async let stateTask = api.getState()
                 async let monthsTask = api.getAllMonths()

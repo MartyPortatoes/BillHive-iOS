@@ -297,6 +297,80 @@ class APIClient: ObservableObject {
         return obj?["ok"] as? Bool == true
     }
 
+    /// Concurrently pings both primary and backup servers with a short timeout
+    /// and switches `activeServer` to whichever responds first.
+    ///
+    /// Call on app launch and foreground return to detect network changes
+    /// (e.g. switching from home Wi-Fi to cellular/VPN) without making the
+    /// user wait for a 15-second timeout on the stale server.
+    ///
+    /// When only one server is configured, this is a simple health ping.
+    /// Returns `true` if at least one server responded.
+    func probeServers() async -> Bool {
+        let probeTimeout: TimeInterval = 4
+
+        guard !serverURL.isEmpty else { return false }
+
+        // Single server — just ping it
+        guard hasBackup else {
+            guard let url = fullURL("/api/health", kind: .primary) else { return false }
+            do {
+                let data = try await performRequest(url, method: "GET", body: Optional<String>.none, timeout: probeTimeout)
+                let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+                let ok = obj?["ok"] as? Bool == true
+                if ok { isReachable = true }
+                return ok
+            } catch {
+                isReachable = false
+                return false
+            }
+        }
+
+        // Two servers — race them concurrently, pick the winner
+        let primaryURL = fullURL("/api/health", kind: .primary)
+        let backupURL  = fullURL("/api/health", kind: .backup)
+
+        // Use a task group to race both pings; first success wins.
+        let winner: ServerKind? = await withTaskGroup(of: ServerKind?.self) { group in
+            if let url = primaryURL {
+                group.addTask { [self] in
+                    do {
+                        let data = try await self.performRequest(url, method: "GET", body: Optional<String>.none, timeout: probeTimeout)
+                        let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+                        return (obj?["ok"] as? Bool == true) ? .primary : nil
+                    } catch { return nil }
+                }
+            }
+            if let url = backupURL {
+                group.addTask { [self] in
+                    do {
+                        let data = try await self.performRequest(url, method: "GET", body: Optional<String>.none, timeout: probeTimeout)
+                        let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+                        return (obj?["ok"] as? Bool == true) ? .backup : nil
+                    } catch { return nil }
+                }
+            }
+
+            // Return the first non-nil result (the faster server)
+            for await result in group {
+                if let kind = result {
+                    group.cancelAll()
+                    return kind
+                }
+            }
+            return nil
+        }
+
+        if let winner {
+            if activeServer != winner { activeServer = winner }
+            isReachable = true
+            return true
+        }
+
+        isReachable = false
+        return false
+    }
+
     /// Pings a specific URL (not from configured state) — used during
     /// onboarding to test a candidate URL before saving it.
     ///
