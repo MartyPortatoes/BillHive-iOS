@@ -22,6 +22,10 @@ class PurchaseManager: ObservableObject {
     #else
     nonisolated static let productId = "com.billhive.selfhive.unlock"
     nonisolated static let brandName = "SelfHive"
+    /// The first marketing version that ships with the free + IAP model.
+    /// Users whose original App Store purchase was an earlier version are
+    /// automatically grandfathered as purchased (they already paid upfront).
+    nonisolated static let iapTransitionVersion = "1.8.0"
     #endif
 
     /// Number of days for the free trial.
@@ -69,6 +73,7 @@ class PurchaseManager: ObservableObject {
     func setup() async {
         await fetchProduct()
         await checkEntitlements()
+        await checkGrandfathered()
         ensureTrialStartDate()
         refreshUnlockState()
     }
@@ -97,6 +102,62 @@ class PurchaseManager: ObservableObject {
             }
         }
         isPurchased = false
+    }
+
+    // MARK: - Grandfathering
+
+    private let grandfatheredKey = "billhive_grandfathered"
+
+    /// Checks whether this user originally purchased the app before it became
+    /// free + IAP, and if so, automatically marks them as purchased.
+    ///
+    /// Uses `AppTransaction` (iOS 16+) to read the `originalAppVersion` —
+    /// the marketing version (`CFBundleShortVersionString`) at the time the
+    /// user first downloaded the app from the App Store. If that version is
+    /// earlier than the IAP transition version, the user paid upfront and
+    /// deserves lifetime access.
+    ///
+    /// The result is cached in UserDefaults so subsequent launches don't
+    /// require a network round-trip to Apple's servers.
+    private func checkGrandfathered() async {
+        guard !isPurchased else { return }
+
+        // Fast path: already determined on a previous launch
+        if UserDefaults.standard.bool(forKey: grandfatheredKey) {
+            isPurchased = true
+            return
+        }
+
+        #if !BILLHIVE_LOCAL
+        // SelfHive transitioned from paid upfront ($0.99) to free + IAP.
+        do {
+            let result = try await AppTransaction.shared
+            if case .verified(let appTransaction) = result {
+                if Self.isVersion(appTransaction.originalAppVersion,
+                                  earlierThan: Self.iapTransitionVersion) {
+                    isPurchased = true
+                    UserDefaults.standard.set(true, forKey: grandfatheredKey)
+                }
+            }
+        } catch {
+            // AppTransaction can fail offline on a fresh install; no action needed.
+            // The user can always tap "Restore Previous Purchase" to re-check.
+        }
+        #endif
+    }
+
+    /// Semantic version comparison: returns `true` if `v1` is strictly earlier than `v2`.
+    /// Handles both marketing versions ("1.7.2") and build numbers ("9").
+    private static func isVersion(_ v1: String, earlierThan v2: String) -> Bool {
+        let c1 = v1.split(separator: ".").compactMap { Int($0) }
+        let c2 = v2.split(separator: ".").compactMap { Int($0) }
+        for i in 0..<max(c1.count, c2.count) {
+            let a = i < c1.count ? c1[i] : 0
+            let b = i < c2.count ? c2[i] : 0
+            if a < b { return true }
+            if a > b { return false }
+        }
+        return false // equal versions are not "earlier"
     }
 
     // MARK: - Trial
@@ -185,10 +246,12 @@ class PurchaseManager: ObservableObject {
     }
 
     /// Restores previous purchases (required by App Store guidelines).
+    /// Also re-checks grandfathering for users who paid before the IAP transition.
     func restore() async {
         do {
             try await AppStore.sync()
             await checkEntitlements()
+            await checkGrandfathered()
             refreshUnlockState()
         } catch {
             errorMessage = "Restore failed: \(error.localizedDescription)"
