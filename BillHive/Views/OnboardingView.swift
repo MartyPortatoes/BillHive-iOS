@@ -103,6 +103,7 @@ struct OnboardingView: View {
     @ViewBuilder
     private func pageFrame<Mockup: View>(
         selectedTab: Int,
+        connectorStyle: ConnectorStyle = .gentleArc,
         @ViewBuilder mockup: () -> Mockup,
         title: String,
         subtitle: String
@@ -134,11 +135,13 @@ struct OnboardingView: View {
                 titleText(title)
                     .padding(.horizontal, 32)
                 subtitleText(subtitle)
-                Spacer(minLength: 20)
+                    .padding(.bottom, 12)
+                TabConnector(tabIndex: selectedTab, style: connectorStyle)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 10)
                 MenuMock(selectedTab: selectedTab, isIPad: false)
-                    .frame(maxWidth: maxContentWidth)
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 28) // breathing room above the dots
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 16)
             }
         }
     }
@@ -187,6 +190,7 @@ struct OnboardingView: View {
     private var billsPage: some View {
         pageFrame(
             selectedTab: 0,
+            connectorStyle: .swoopLeft,
             mockup: {
                 VStack(spacing: 10) {
                     BillMockRow(icon: "house.fill", name: "Rent", amount: "$1,500")
@@ -201,7 +205,8 @@ struct OnboardingView: View {
 
     private var householdPage: some View {
         pageFrame(
-            selectedTab: 4, // Settings — Household lives inside Settings
+            selectedTab: 4,
+            connectorStyle: .loop,
             mockup: {
                 HStack(spacing: 18) {
                     PersonMockAvatar(label: "You",    color: .bhAmber)
@@ -218,6 +223,7 @@ struct OnboardingView: View {
     private var summaryPage: some View {
         pageFrame(
             selectedTab: 1,
+            connectorStyle: .wave,
             mockup: { SummaryMockCard() },
             title: "See Who Owes What",
             subtitle: "BillHive does the math — a clear monthly breakdown of who pays whom."
@@ -227,6 +233,7 @@ struct OnboardingView: View {
     private var payCollectPage: some View {
         pageFrame(
             selectedTab: 2,
+            connectorStyle: .wideArc,
             mockup: {
                 VStack(spacing: 10) {
                     CollectMockRow(person: "Megan",  method: "Zelle",    amount: "$224.50", accentHex: "#5bc4f5")
@@ -459,14 +466,12 @@ private struct MenuMock: View {
     let selectedTab: Int
     let isIPad: Bool
 
-    /// Mirrors the order/icons/labels of the live TabView in ContentView.
-    /// Kept in sync manually — there are only five entries.
-    private static let tabs: [(icon: String, label: String)] = [
-        ("list.clipboard",              "Bills"),
-        ("dollarsign.circle",           "Summary"),
-        ("arrow.up.arrow.down.circle",  "Pay & Collect"),
-        ("chart.line.uptrend.xyaxis",   "Trends"),
-        ("gearshape",                   "Settings"),
+    private static let tabs: [(icon: String, selectedIcon: String, label: String)] = [
+        ("list.clipboard",              "list.clipboard.fill",              "Bills"),
+        ("dollarsign.circle",           "dollarsign.circle.fill",           "Summary"),
+        ("arrow.up.arrow.down.circle",  "arrow.up.arrow.down.circle.fill", "Pay & Collect"),
+        ("chart.line.uptrend.xyaxis",   "chart.line.uptrend.xyaxis",       "Trends"),
+        ("gearshape",                   "gearshape.fill",                   "Settings"),
     ]
 
     var body: some View {
@@ -480,14 +485,14 @@ private struct MenuMock: View {
     // MARK: iPhone — bottom tab bar
 
     private var tabBar: some View {
-        HStack(spacing: 2) {
+        HStack(spacing: 0) {
             ForEach(0..<Self.tabs.count, id: \.self) { i in
                 let tab = Self.tabs[i]
                 let selected = selectedTab == i
-                VStack(spacing: 3) {
-                    Image(systemName: tab.icon)
-                        .font(.system(size: 24, weight: .regular))
-                        .frame(height: 26)
+                VStack(spacing: 2) {
+                    Image(systemName: selected ? tab.selectedIcon : tab.icon)
+                        .font(.system(size: 22, weight: .regular))
+                        .frame(height: 28)
                     Text(tab.label)
                         .font(.system(size: 10, weight: .medium))
                         .lineLimit(1)
@@ -495,21 +500,14 @@ private struct MenuMock: View {
                 }
                 .foregroundColor(selected ? .bhAmber : .bhMuted)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .background(
-                    // Rounded "selected" pill behind icon + label, mirroring
-                    // iOS 18's floating tab bar highlight.
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(Color.white.opacity(selected ? 0.07 : 0))
-                )
             }
         }
-        .padding(.vertical, 5)
-        .padding(.horizontal, 5)
+        .padding(.vertical, 10)
+        .padding(.horizontal, 4)
         .background(Color.bhSurface2)
-        .cornerRadius(22)
+        .cornerRadius(20)
         .overlay(
-            RoundedRectangle(cornerRadius: 22)
+            RoundedRectangle(cornerRadius: 20)
                 .stroke(Color.bhBorder, lineWidth: 1)
         )
     }
@@ -542,5 +540,170 @@ private struct MenuMock: View {
             Capsule()
                 .stroke(Color.bhBorder, lineWidth: 1)
         )
+    }
+}
+
+// MARK: - Connector Line + Arrow
+
+private enum ConnectorStyle {
+    case swoopLeft
+    case loop
+    case wave
+    case wideArc
+    case gentleArc
+}
+
+/// Draws a fun dotted line from the center-top (below the subtitle) down to
+/// an arrow that points at the selected tab in the menu bar below.
+private struct TabConnector: View {
+    let tabIndex: Int
+    let style: ConnectorStyle
+    private let tabCount = 5
+    private let arrowSize: CGFloat = 16
+
+    var body: some View {
+        GeometryReader { geo in
+            let w = geo.size.width
+            let h = geo.size.height
+            let tabWidth = w / CGFloat(tabCount)
+            let targetX = tabWidth * CGFloat(tabIndex) + tabWidth / 2
+            let startX = w / 2
+            let endY = h - arrowSize
+
+            connectorPath(
+                from: CGPoint(x: startX, y: 0),
+                to: CGPoint(x: targetX, y: endY),
+                in: geo.size
+            )
+            .stroke(
+                Color.bhAmber.opacity(0.5),
+                style: StrokeStyle(lineWidth: 2, lineCap: .round, dash: [6, 5])
+            )
+
+            Triangle()
+                .fill(Color.bhAmber)
+                .frame(width: arrowSize, height: arrowSize * 0.65)
+                .position(x: targetX, y: h - arrowSize * 0.65 / 2)
+        }
+        .frame(minHeight: 60, maxHeight: .infinity)
+    }
+
+    private func connectorPath(from start: CGPoint, to end: CGPoint, in size: CGSize) -> Path {
+        switch style {
+        case .swoopLeft:
+            return swoopLeftPath(from: start, to: end, in: size)
+        case .loop:
+            return loopPath(from: start, to: end, in: size)
+        case .wave:
+            return wavePath(from: start, to: end, in: size)
+        case .wideArc:
+            return wideArcPath(from: start, to: end, in: size)
+        case .gentleArc:
+            return gentleArcPath(from: start, to: end, in: size)
+        }
+    }
+
+    // Gentle swoop curving out left then back to the target
+    private func swoopLeftPath(from s: CGPoint, to e: CGPoint, in sz: CGSize) -> Path {
+        return Path { p in
+            p.move(to: s)
+            p.addCurve(
+                to: e,
+                control1: CGPoint(x: s.x - sz.width * 0.35, y: s.y + (e.y - s.y) * 0.3),
+                control2: CGPoint(x: e.x + sz.width * 0.15, y: e.y - (e.y - s.y) * 0.25)
+            )
+        }
+    }
+
+    // Line curves left, loops around itself, then lands on the far-right tab
+    private func loopPath(from s: CGPoint, to e: CGPoint, in sz: CGSize) -> Path {
+        let dy = e.y - s.y
+        return Path { p in
+            p.move(to: s)
+            // First segment: curve out to the left
+            let mid1 = CGPoint(x: s.x - sz.width * 0.15, y: s.y + dy * 0.35)
+            p.addCurve(
+                to: mid1,
+                control1: CGPoint(x: s.x - sz.width * 0.25, y: s.y + dy * 0.05),
+                control2: CGPoint(x: s.x - sz.width * 0.3, y: s.y + dy * 0.3)
+            )
+            // Loop: small clockwise circle
+            let loopR: CGFloat = dy * 0.12
+            let loopCenter = CGPoint(x: mid1.x + loopR, y: mid1.y)
+            p.addArc(
+                center: loopCenter,
+                radius: loopR,
+                startAngle: .degrees(180),
+                endAngle: .degrees(540),
+                clockwise: false
+            )
+            // Final segment: swoop from loop exit to target
+            p.addCurve(
+                to: e,
+                control1: CGPoint(x: mid1.x + sz.width * 0.25, y: mid1.y + dy * 0.1),
+                control2: CGPoint(x: e.x - sz.width * 0.05, y: e.y - dy * 0.2)
+            )
+        }
+    }
+
+    // Sine-wave wiggle from center down to the target
+    private func wavePath(from s: CGPoint, to e: CGPoint, in sz: CGSize) -> Path {
+        let dy = e.y - s.y
+        let dx = e.x - s.x
+        let segments = 3
+        let segH = dy / CGFloat(segments)
+        let amplitude = sz.width * 0.12
+
+        return Path { p in
+            p.move(to: s)
+            for i in 0..<segments {
+                let frac0 = CGFloat(i) / CGFloat(segments)
+                let frac1 = CGFloat(i + 1) / CGFloat(segments)
+                let y0 = s.y + dy * frac0
+                let y1 = s.y + dy * frac1
+                let x0 = s.x + dx * frac0
+                let x1 = s.x + dx * frac1
+                let dir: CGFloat = i.isMultiple(of: 2) ? 1 : -1
+                p.addCurve(
+                    to: CGPoint(x: x1, y: y1),
+                    control1: CGPoint(x: x0 + amplitude * dir, y: y0 + segH * 0.33),
+                    control2: CGPoint(x: x1 + amplitude * dir, y: y1 - segH * 0.33)
+                )
+            }
+        }
+    }
+
+    // Wide sweeping arc that goes way out to one side
+    private func wideArcPath(from s: CGPoint, to e: CGPoint, in sz: CGSize) -> Path {
+        Path { p in
+            p.move(to: s)
+            p.addCurve(
+                to: e,
+                control1: CGPoint(x: s.x + sz.width * 0.4, y: s.y + (e.y - s.y) * 0.15),
+                control2: CGPoint(x: e.x - sz.width * 0.3, y: e.y - (e.y - s.y) * 0.1)
+            )
+        }
+    }
+
+    // Simple gentle arc (default/fallback)
+    private func gentleArcPath(from s: CGPoint, to e: CGPoint, in sz: CGSize) -> Path {
+        Path { p in
+            p.move(to: s)
+            p.addQuadCurve(
+                to: e,
+                control: CGPoint(x: (s.x + e.x) / 2 + 30, y: (s.y + e.y) / 2)
+            )
+        }
+    }
+}
+
+private struct Triangle: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        p.move(to: CGPoint(x: rect.midX, y: rect.maxY))
+        p.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
+        p.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+        p.closeSubpath()
+        return p
     }
 }

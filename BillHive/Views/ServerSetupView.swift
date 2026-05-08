@@ -127,11 +127,13 @@ struct ServerSetupView: View {
                             Button {
                                 Task { await testPrimary() }
                             } label: {
-                                HStack {
+                                HStack(spacing: 6) {
                                     if isTesting {
                                         ProgressView().tint(.bhText).scaleEffect(0.7)
                                     }
                                     Text(isTesting ? "Testing..." : "Test Connection")
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.8)
                                 }
                                 .frame(maxWidth: .infinity)
                             }
