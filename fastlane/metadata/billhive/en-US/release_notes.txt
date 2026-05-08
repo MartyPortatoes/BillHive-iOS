@@ -1,6 +1,6 @@
-What's new in 1.7.1:
+What's new in 1.8.0:
 
-• Face ID now required — App Lock uses actual biometrics instead of allowing passcode bypass
-• Paywall dismissible — you can now close the Unlock screen at any time
-• Collapsible Pay URLs — bill payment links slide open on tap, keeping the Pay section clean
-• Monthly Checklist syncs with web — same items, same labels, same checked states across platforms
+• First-launch onboarding — a guided walkthrough introduces each tab so new users know where everything lives
+• Currency support — auto-detects your region's currency, or pick any currency manually in Settings
+• Trends upgrades — tap any chart point for details, explore 6M/12M/24M/All ranges, and view per-person stats
+• Bug fixes and UI polish
