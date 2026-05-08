@@ -11,9 +11,25 @@ struct ContentView: View {
     @EnvironmentObject var vm: AppViewModel
     @StateObject private var lock = AppLockManager.shared
     @State private var selectedTab = 0
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
+        Group {
+            if !hasCompletedOnboarding {
+                OnboardingView(hasCompletedOnboarding: $hasCompletedOnboarding)
+                    .transition(.opacity)
+            } else {
+                mainContent
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.4), value: hasCompletedOnboarding)
+        .bhColorScheme()
+    }
+
+    /// Main app shell shown after onboarding is complete.
+    private var mainContent: some View {
         ZStack(alignment: .bottom) {
             VStack(spacing: 0) {
                 // Error banner — shown when load() fails
@@ -91,7 +107,6 @@ struct ContentView: View {
         .animation(.easeInOut(duration: 0.25), value: vm.error)
         .animation(.easeInOut(duration: 0.15), value: scenePhase)
         .animation(.easeInOut(duration: 0.2), value: lock.isLocked)
-        .bhColorScheme()
         .onChange(of: scenePhase) { phase in
             lock.handleScenePhase(phase)
             // Don't refresh from server while we're behind the lock — would
@@ -115,9 +130,15 @@ struct PrivacyOverlayView: View {
                 .ignoresSafeArea()
             VStack(spacing: 14) {
                 TriHexLogoMark(size: 56)
+                #if BILLHIVE_LOCAL
                 Text("BillHive")
                     .font(.title2.weight(.heavy))
                     .foregroundColor(.bhText)
+                #else
+                Text("SelfHive")
+                    .font(.title2.weight(.heavy))
+                    .foregroundColor(.bhText)
+                #endif
             }
         }
     }

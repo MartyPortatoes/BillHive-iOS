@@ -48,15 +48,17 @@
 		C6A798081B45D80F3D1C46CC /* AppLockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F36082B3E5E2218E0EDF5A9 /* AppLockView.swift */; };
 		D101 /* PurchaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D001 /* PurchaseManager.swift */; };
 		D102 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D002 /* PaywallView.swift */; };
+		DDF14A89B0E5DEA72B80B449 /* AppLockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F36082B3E5E2218E0EDF5A9 /* AppLockView.swift */; };
 		E101 /* PurchaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D001 /* PurchaseManager.swift */; };
 		E102 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D002 /* PaywallView.swift */; };
-		DDF14A89B0E5DEA72B80B449 /* AppLockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F36082B3E5E2218E0EDF5A9 /* AppLockView.swift */; };
+		E4E5FDBD2FAD787300AD1C12 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4E5FDBC2FAD787300AD1C12 /* OnboardingView.swift */; };
+		E4E5FDBE2FAD787300AD1C12 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4E5FDBC2FAD787300AD1C12 /* OnboardingView.swift */; };
 		FB71FE2A90774EEE23B6BD99 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 2C173FDBDA342DADD6A519C6 /* PrivacyInfo.xcprivacy */; };
 		FE179B858657045051BE8BA3 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 2C173FDBDA342DADD6A519C6 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		2C173FDBDA342DADD6A519C6 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		2C173FDBDA342DADD6A519C6 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		2FFCF577EF4B0DEF9E50F1E2 /* KeychainHelper.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = KeychainHelper.swift; sourceTree = "<group>"; };
 		6F36082B3E5E2218E0EDF5A9 /* AppLockView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppLockView.swift; sourceTree = "<group>"; };
 		A001 /* SelfHiveApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelfHiveApp.swift; sourceTree = "<group>"; };
@@ -87,6 +89,7 @@
 		D002 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		D003 /* Products.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Products.storekit; sourceTree = "<group>"; };
 		E001 /* SelfHive.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SelfHive.entitlements; sourceTree = "<group>"; };
+		E4E5FDBC2FAD787300AD1C12 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -149,6 +152,7 @@
 		A214 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				E4E5FDBC2FAD787300AD1C12 /* OnboardingView.swift */,
 				A002 /* ContentView.swift */,
 				A003 /* BillsView.swift */,
 				A004 /* SummaryView.swift */,
@@ -287,6 +291,7 @@
 				A104 /* SummaryView.swift in Sources */,
 				A105 /* SendReceiveView.swift in Sources */,
 				A106 /* TrendsView.swift in Sources */,
+				E4E5FDBD2FAD787300AD1C12 /* OnboardingView.swift in Sources */,
 				A107 /* SettingsView.swift in Sources */,
 				A108 /* ServerSetupView.swift in Sources */,
 				A120 /* HexagonBackground.swift in Sources */,
@@ -329,6 +334,7 @@
 				D101 /* PurchaseManager.swift in Sources */,
 				D102 /* PaywallView.swift in Sources */,
 				DDF14A89B0E5DEA72B80B449 /* AppLockView.swift in Sources */,
+				E4E5FDBE2FAD787300AD1C12 /* OnboardingView.swift in Sources */,
 				A03273CF00AE2E3255BAE2E5 /* KeychainHelper.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
