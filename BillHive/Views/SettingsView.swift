@@ -984,7 +984,7 @@ struct PurchaseSettingsSection: View {
                     HStack(spacing: 6) {
                         Image(systemName: "lock.open.fill")
                             .font(.caption)
-                        Text("Unlock \(PurchaseManager.brandName) — \(pm.priceText)")
+                        Text(pm.unlockButtonLabel)
                     }
                     .frame(maxWidth: .infinity)
                 }

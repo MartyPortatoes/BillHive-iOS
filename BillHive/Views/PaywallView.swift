@@ -91,7 +91,7 @@ struct PaywallView: View {
                                     ProgressView()
                                         .tint(.black)
                                 } else {
-                                    Text("Unlock \(PurchaseManager.brandName) — \(purchaseManager.priceText)")
+                                    Text(purchaseManager.unlockButtonLabel)
                                         .font(.bhBody)
                                 }
                             }

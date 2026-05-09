@@ -291,8 +291,19 @@ class PurchaseManager: ObservableObject {
         return "Free trial expired"
     }
 
-    /// Formatted price string from StoreKit (e.g. "$2.99").
+    /// Formatted price string from StoreKit, or empty if the product hasn't
+    /// loaded yet. Never hardcode a price — let the App Store be the source
+    /// of truth so price changes in ASC take effect automatically.
     var priceText: String {
-        product?.displayPrice ?? "$2.99"
+        product?.displayPrice ?? ""
+    }
+
+    /// Button label that includes the price when available, or just the
+    /// brand name while the product is still loading.
+    var unlockButtonLabel: String {
+        if let price = product?.displayPrice {
+            return "Unlock \(Self.brandName) — \(price)"
+        }
+        return "Unlock \(Self.brandName)"
     }
 }
