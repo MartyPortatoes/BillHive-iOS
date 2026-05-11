@@ -131,9 +131,10 @@ struct BillTrendsView: View {
                         RuleMark(x: .value("Selected", sel.month))
                             .foregroundStyle(Color.bhMuted2)
                             .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
-                            .annotation(position: .top, alignment: .center) {
+                            .annotation(position: .overlay, alignment: .top) {
                                 ChartAnnotationBubble(title: sel.billName, month: sel.month,
                                                       amount: sel.amount, color: sel.color)
+                                    .padding(.top, 4)
                             }
                         PointMark(x: .value("Month", sel.month), y: .value("Amount", sel.amount))
                             .foregroundStyle(sel.color)
@@ -198,9 +199,10 @@ struct BillTrendsView: View {
                         RuleMark(x: .value("Selected", sel))
                             .foregroundStyle(Color.bhMuted2)
                             .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
-                            .annotation(position: .top, alignment: .center) {
+                            .annotation(position: .overlay, alignment: .top) {
                                 ChartAnnotationBubble(title: "Total", month: sel,
                                                       amount: total, color: .bhAmber)
+                                    .padding(.top, 4)
                             }
                     }
                 }

@@ -6,6 +6,7 @@ import SwiftUI
 /// a full per-bill breakdown with the primary user's total outlay.
 struct SummaryView: View {
     @EnvironmentObject var vm: AppViewModel
+    @State private var showFullBreakdown = false
 
     /// Per-person owed amounts for the current month, keyed by person ID.
     var owes: [String: PersonOwes] { vm.computePersonOwes() }
@@ -112,14 +113,29 @@ struct SummaryView: View {
         .padding(16)
         .bhCard()
 
-        // Full breakdown
+        // Full breakdown — collapsible
         VStack(alignment: .leading, spacing: 0) {
-            Text("Full Bill Breakdown")
-                .bhSectionTitle()
-                .padding(.bottom, 12)
+            Button {
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    showFullBreakdown.toggle()
+                }
+            } label: {
+                HStack {
+                    Text("Full Bill Breakdown")
+                        .bhSectionTitle()
+                    Spacer()
+                    Image(systemName: showFullBreakdown ? "chevron.up" : "chevron.down")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundColor(.bhMuted2)
+                }
+            }
+            .buttonStyle(.plain)
 
-            ForEach(vm.state.bills) { bill in
-                FullBreakdownRow(bill: bill)
+            if showFullBreakdown {
+                ForEach(vm.state.bills) { bill in
+                    FullBreakdownRow(bill: bill)
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
         .padding(16)

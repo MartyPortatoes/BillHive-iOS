@@ -106,9 +106,10 @@ struct PersonTrendsView: View {
                         RuleMark(x: .value("Selected", sel.label))
                             .foregroundStyle(Color.bhMuted2)
                             .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
-                            .annotation(position: .top, alignment: .center) {
+                            .annotation(position: .overlay, alignment: .top) {
                                 ChartAnnotationBubble(title: sel.personName, month: sel.label,
                                                       amount: sel.amount, color: sel.color)
+                                    .padding(.top, 4)
                             }
                         PointMark(x: .value("Month", sel.label), y: .value("Amount", sel.amount))
                             .foregroundStyle(sel.color)
