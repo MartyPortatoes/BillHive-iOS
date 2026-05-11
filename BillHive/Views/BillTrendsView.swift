@@ -303,6 +303,7 @@ struct ChartAnnotationBubble: View {
                 .font(.bhBodySecondary.weight(.bold))
                 .foregroundColor(.bhAmber)
         }
+        .fixedSize()
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .background(Color.bhSurface2)
