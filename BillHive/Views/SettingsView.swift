@@ -257,6 +257,8 @@ struct PersonCardView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("\(person.name.isEmpty ? "New Person" : person.name), \(person.isMe ? "You" : person.payMethod.displayName)")
+            .accessibilityHint(isExpanded ? "Collapse" : "Expand to edit")
 
             if isExpanded {
                 Divider().background(Color.bhBorder)
@@ -679,7 +681,7 @@ struct ServerRow: View {
                     .foregroundColor(.bhText)
                 if isActive {
                     Text("ACTIVE")
-                        .font(.system(size: 9, weight: .bold))
+                        .font(.caption2.weight(.bold))
                         .foregroundColor(.bhAmber)
                         .padding(.horizontal, 5)
                         .padding(.vertical, 1)
@@ -956,8 +958,8 @@ struct PurchaseSettingsSection: View {
             // Full card when not purchased
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 8) {
-                    Image(systemName: "clock")
-                        .foregroundColor(.bhMuted)
+                    Image(systemName: trialStatusIcon)
+                        .foregroundColor(trialBarColor)
                         .font(.subheadline)
                     Text(pm.trialStatusText)
                         .font(.bhBodySecondary)
@@ -1007,6 +1009,14 @@ struct PurchaseSettingsSection: View {
             .padding(14)
             .bhCard()
         }
+    }
+
+    /// Trial status icon — clock when healthy, warning when low.
+    private var trialStatusIcon: String {
+        let fraction = Double(pm.trialDaysRemaining) / Double(PurchaseManager.trialDays)
+        if fraction > 0.5 { return "clock" }
+        if fraction > 0.25 { return "exclamationmark.circle" }
+        return "exclamationmark.triangle.fill"
     }
 
     /// Trial bar color — green when full, amber midway, red when almost expired.

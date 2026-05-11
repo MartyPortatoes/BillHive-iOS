@@ -79,7 +79,7 @@ struct BillsView: View {
                 }
                 .refreshable { await vm.refresh() }
             }
-            .navigationBarHidden(true)
+            .toolbar(.hidden, for: .navigationBar)
             .toolbar {
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()

@@ -295,7 +295,7 @@ private struct BillMockRow: View {
                     .fill(Color.bhAmber.opacity(0.18))
                     .frame(width: 40, height: 40)
                 Image(systemName: icon)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.callout.weight(.semibold))
                     .foregroundColor(.bhAmber)
             }
             Text(name)
@@ -435,7 +435,7 @@ private struct CollectMockRow: View {
 
             // Method pill — matches the colored tag used in the real Collect view
             Text(method)
-                .font(.system(size: 11, weight: .bold))
+                .font(.caption2.weight(.bold))
                 .foregroundColor(accent)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
@@ -491,10 +491,10 @@ private struct MenuMock: View {
                 let selected = selectedTab == i
                 VStack(spacing: 2) {
                     Image(systemName: selected ? tab.selectedIcon : tab.icon)
-                        .font(.system(size: 22, weight: .regular))
+                        .font(.title3)
                         .frame(height: 28)
                     Text(tab.label)
-                        .font(.system(size: 10, weight: .medium))
+                        .font(.caption2.weight(.medium))
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                 }

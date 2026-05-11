@@ -47,7 +47,7 @@ struct SummaryView: View {
                 }
                 .refreshable { await vm.refresh() }
             }
-            .navigationBarHidden(true)
+            .toolbar(.hidden, for: .navigationBar)
         }
     }
 
@@ -186,6 +186,8 @@ struct PersonSummaryCard: View {
         .background(Color.bhSurface2)
         .cornerRadius(10)
         .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.bhBorder, lineWidth: 1))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(person.name) owes \((personOwes?.total ?? 0).asCurrency)")
     }
 }
 

@@ -164,7 +164,7 @@ struct SendReceiveView: View {
                 }
                 .refreshable { await vm.refresh() }
             }
-            .navigationBarHidden(true)
+            .toolbar(.hidden, for: .navigationBar)
         }
     }
 }
@@ -264,6 +264,7 @@ struct ReceiveCard: View {
                                     .background(Color(hex: person.color) ?? .bhAmber)
                                     .cornerRadius(6)
                             }
+                            .accessibilityLabel("Open \(payLabel) to collect \((personOwes?.total ?? 0).asCurrency) from \(person.name)")
                         }
 
                         Button(action: onToggle) {
@@ -282,6 +283,8 @@ struct ReceiveCard: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("\(person.name), owes \((personOwes?.total ?? 0).asCurrency) via \(payLabel)")
+            .accessibilityHint(isExpanded ? "Collapse" : "Expand for details")
 
             if isExpanded {
                 // MARK: Expanded Content
@@ -503,5 +506,8 @@ struct ChecklistItemRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(item.label)
+        .accessibilityValue(item.done ? "Checked" : "Unchecked")
+        .accessibilityHint("Double-tap to toggle")
     }
 }

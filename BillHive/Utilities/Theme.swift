@@ -60,18 +60,18 @@ extension Font {
     /// Subtitle under view headers — short description line.
     static let bhSubtitle = Font.footnote
     /// Uppercase section title inside cards.
-    static let bhSectionTitle = Font.caption2.weight(.medium).monospaced()
-    /// Primary body text — used for tabular/code-like content. Monospaced.
-    static let bhBody = Font.subheadline.weight(.semibold).monospaced()
-    /// Secondary body text — row content, inputs. Monospaced.
-    static let bhBodySecondary = Font.footnote.monospaced()
+    static let bhSectionTitle = Font.caption2.weight(.medium).monospacedDigit()
+    /// Primary body text — used for tabular content. Digits align, letters stay proportional.
+    static let bhBody = Font.subheadline.weight(.semibold).monospacedDigit()
+    /// Secondary body text — row content, inputs. Digits align, letters stay proportional.
+    static let bhBodySecondary = Font.footnote.monospacedDigit()
     /// Proportional name text — bill names, person names, prose labels.
     /// Use this instead of `bhBody` whenever the text is a proper noun or sentence.
     static let bhBodyName = Font.subheadline.weight(.semibold)
     /// Proportional secondary name text — sub-labels, hint copy under titles.
     static let bhBodyNameSecondary = Font.footnote
     /// Small caption / hint text.
-    static let bhCaption = Font.caption2.monospaced()
+    static let bhCaption = Font.caption2.monospacedDigit()
     /// Large monetary amount — hero totals.
     static let bhMoneyLarge = Font.title2.weight(.bold).monospacedDigit()
     /// Medium monetary amount — bill totals.
