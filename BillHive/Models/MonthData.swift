@@ -136,6 +136,20 @@ struct BillOwed {
 
 /// Utility for creating and manipulating month keys in "YYYY-MM" format.
 struct MonthKey {
+
+    // MARK: - Cached Formatters
+
+    /// Cached formatter for `label()` — avoids allocating a new `DateFormatter`
+    /// on every call. Thread-safe because `DateFormatter` is a class, and this
+    /// static is initialized once lazily by the runtime.
+    private static let monthYearFormatter: DateFormatter = {
+        let df = DateFormatter()
+        df.dateFormat = "MMMM yyyy"
+        return df
+    }()
+
+    // MARK: - Factory Methods
+
     /// Returns the current month key (e.g. "2026-03").
     static func current() -> String {
         let now = Date()
@@ -150,21 +164,23 @@ struct MonthKey {
         String(format: "%04d-%02d", year, month)
     }
 
+    // MARK: - Display
+
     /// Converts a month key into a human-readable label (e.g. "March 2026").
     static func label(_ key: String) -> String {
         let parts = key.split(separator: "-")
         guard parts.count == 2,
               let m = Int(parts[1]),
               let y = Int(parts[0]) else { return key }
-        let df = DateFormatter()
-        df.dateFormat = "MMMM yyyy"
         var comps = DateComponents()
         comps.year = y; comps.month = m; comps.day = 1
         if let date = Calendar.current.date(from: comps) {
-            return df.string(from: date)
+            return monthYearFormatter.string(from: date)
         }
         return key
     }
+
+    // MARK: - Navigation
 
     /// Returns the month key for the month before `key`.
     ///

@@ -158,29 +158,34 @@ final class AppLockManager: ObservableObject {
     }
 }
 
-// MARK: - Biometry helpers
+// MARK: - Biometry Helpers
 
-private func currentBiometryType() -> LABiometryType {
-    let ctx = LAContext()
-    _ = ctx.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil)
-    return ctx.biometryType
-}
-
-private func biometryDisplayName() -> String {
-    switch currentBiometryType() {
-    case .faceID: return "Face ID"
-    case .touchID: return "Touch ID"
-    case .opticID: return "Optic ID"
-    default: return "Device Passcode"
+extension AppLockManager {
+    /// The biometry type available on this device.
+    nonisolated static var currentBiometryType: LABiometryType {
+        let ctx = LAContext()
+        _ = ctx.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil)
+        return ctx.biometryType
     }
-}
 
-private func biometrySymbolName() -> String {
-    switch currentBiometryType() {
-    case .faceID: return "faceid"
-    case .touchID: return "touchid"
-    case .opticID: return "opticid"
-    default: return "lock.fill"
+    /// Human-readable name for the device's biometry type.
+    nonisolated static var biometryDisplayName: String {
+        switch currentBiometryType {
+        case .faceID: return "Face ID"
+        case .touchID: return "Touch ID"
+        case .opticID: return "Optic ID"
+        default: return "Device Passcode"
+        }
+    }
+
+    /// SF Symbol name for the device's biometry type.
+    nonisolated static var biometrySymbolName: String {
+        switch currentBiometryType {
+        case .faceID: return "faceid"
+        case .touchID: return "touchid"
+        case .opticID: return "opticid"
+        default: return "lock.fill"
+        }
     }
 }
 
@@ -207,7 +212,7 @@ struct AppLockView: View {
                     Task { await tryUnlock() }
                 } label: {
                     HStack(spacing: 10) {
-                        Image(systemName: biometrySymbolName())
+                        Image(systemName: AppLockManager.biometrySymbolName)
                         Text("Unlock")
                     }
                     .frame(maxWidth: 220)
@@ -256,9 +261,9 @@ struct PrivacySecuritySheet: View {
                                 set: { newValue in handleToggle(newValue) }
                             )) {
                                 HStack(spacing: 8) {
-                                    Image(systemName: biometrySymbolName())
+                                    Image(systemName: AppLockManager.biometrySymbolName)
                                         .foregroundColor(.bhAmber)
-                                    Text("Require \(biometryDisplayName())")
+                                    Text("Require \(AppLockManager.biometryDisplayName)")
                                         .foregroundColor(.bhText)
                                 }
                             }
@@ -295,7 +300,7 @@ struct PrivacySecuritySheet: View {
                         }
                         .padding(.horizontal, 16)
 
-                        Text("When enabled, BillHive requires \(biometryDisplayName()) to open the app on cold start and after returning from the background.")
+                        Text("When enabled, BillHive requires \(AppLockManager.biometryDisplayName) to open the app on cold start and after returning from the background.")
                             .font(.bhCaption)
                             .foregroundColor(.bhMuted)
                             .multilineTextAlignment(.leading)
@@ -327,7 +332,7 @@ struct PrivacySecuritySheet: View {
             Task {
                 let ok = await lock.tryEnable()
                 if !ok {
-                    enableError = "Couldn't authenticate. Make sure \(biometryDisplayName()) is enabled in iOS Settings, and that you have a device passcode set."
+                    enableError = "Couldn't authenticate. Make sure \(AppLockManager.biometryDisplayName) is enabled in iOS Settings, and that you have a device passcode set."
                 }
                 isAuthenticating = false
             }

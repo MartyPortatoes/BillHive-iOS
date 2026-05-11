@@ -136,4 +136,15 @@ extension Color {
             opacity: Double(a) / 255
         )
     }
+
+    /// Converts a SwiftUI `Color` to a hex string (e.g. "#FF8800").
+    ///
+    /// Uses `UIColor` for component extraction. Returns `nil` if the color
+    /// space conversion fails.
+    func toHex() -> String? {
+        let uic = UIColor(self)
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        guard uic.getRed(&r, green: &g, blue: &b, alpha: &a) else { return nil }
+        return String(format: "#%02X%02X%02X", Int(r * 255), Int(g * 255), Int(b * 255))
+    }
 }

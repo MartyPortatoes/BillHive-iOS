@@ -55,6 +55,20 @@
 		E4E5FDBE2FAD787300AD1C12 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4E5FDBC2FAD787300AD1C12 /* OnboardingView.swift */; };
 		FB71FE2A90774EEE23B6BD99 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 2C173FDBDA342DADD6A519C6 /* PrivacyInfo.xcprivacy */; };
 		FE179B858657045051BE8BA3 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 2C173FDBDA342DADD6A519C6 /* PrivacyInfo.xcprivacy */; };
+		F101 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F001 /* Theme.swift */; };
+		F102 /* BrandComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = F002 /* BrandComponents.swift */; };
+		F103 /* BillEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F003 /* BillEditorSheet.swift */; };
+		F104 /* SettingsSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = F004 /* SettingsSheets.swift */; };
+		F105 /* PersonTrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F005 /* PersonTrendsView.swift */; };
+		F106 /* BillTrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F006 /* BillTrendsView.swift */; };
+		F107 /* URLHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = F007 /* URLHelpers.swift */; };
+		F201 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F001 /* Theme.swift */; };
+		F202 /* BrandComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = F002 /* BrandComponents.swift */; };
+		F203 /* BillEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F003 /* BillEditorSheet.swift */; };
+		F204 /* SettingsSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = F004 /* SettingsSheets.swift */; };
+		F205 /* PersonTrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F005 /* PersonTrendsView.swift */; };
+		F206 /* BillTrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F006 /* BillTrendsView.swift */; };
+		F207 /* URLHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = F007 /* URLHelpers.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -90,6 +104,13 @@
 		D003 /* Products.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Products.storekit; sourceTree = "<group>"; };
 		E001 /* SelfHive.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SelfHive.entitlements; sourceTree = "<group>"; };
 		E4E5FDBC2FAD787300AD1C12 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		F001 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		F002 /* BrandComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrandComponents.swift; sourceTree = "<group>"; };
+		F003 /* BillEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BillEditorSheet.swift; sourceTree = "<group>"; };
+		F004 /* SettingsSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSheets.swift; sourceTree = "<group>"; };
+		F005 /* PersonTrendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonTrendsView.swift; sourceTree = "<group>"; };
+		F006 /* BillTrendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BillTrendsView.swift; sourceTree = "<group>"; };
+		F007 /* URLHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLHelpers.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -117,6 +138,7 @@
 				A213 /* ViewModels */,
 				A214 /* Views */,
 				B200 /* Storage */,
+				F300 /* Utilities */,
 				2C173FDBDA342DADD6A519C6 /* PrivacyInfo.xcprivacy */,
 			);
 			path = BillHive;
@@ -155,10 +177,14 @@
 				E4E5FDBC2FAD787300AD1C12 /* OnboardingView.swift */,
 				A002 /* ContentView.swift */,
 				A003 /* BillsView.swift */,
+				F003 /* BillEditorSheet.swift */,
 				A004 /* SummaryView.swift */,
 				A005 /* SendReceiveView.swift */,
 				A006 /* TrendsView.swift */,
+				F005 /* PersonTrendsView.swift */,
+				F006 /* BillTrendsView.swift */,
 				A007 /* SettingsView.swift */,
+				F004 /* SettingsSheets.swift */,
 				A008 /* ServerSetupView.swift */,
 				A020 /* HexagonBackground.swift */,
 				B003 /* MailComposeView.swift */,
@@ -185,6 +211,16 @@
 				2FFCF577EF4B0DEF9E50F1E2 /* KeychainHelper.swift */,
 			);
 			path = Storage;
+			sourceTree = "<group>";
+		};
+		F300 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				F001 /* Theme.swift */,
+				F002 /* BrandComponents.swift */,
+				F007 /* URLHelpers.swift */,
+			);
+			path = Utilities;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -306,6 +342,13 @@
 				E102 /* PaywallView.swift in Sources */,
 				C6A798081B45D80F3D1C46CC /* AppLockView.swift in Sources */,
 				7F8D18298D4086DB92D1D198 /* KeychainHelper.swift in Sources */,
+				F101 /* Theme.swift in Sources */,
+				F102 /* BrandComponents.swift in Sources */,
+				F103 /* BillEditorSheet.swift in Sources */,
+				F104 /* SettingsSheets.swift in Sources */,
+				F105 /* PersonTrendsView.swift in Sources */,
+				F106 /* BillTrendsView.swift in Sources */,
+				F107 /* URLHelpers.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -336,6 +379,13 @@
 				DDF14A89B0E5DEA72B80B449 /* AppLockView.swift in Sources */,
 				E4E5FDBE2FAD787300AD1C12 /* OnboardingView.swift in Sources */,
 				A03273CF00AE2E3255BAE2E5 /* KeychainHelper.swift in Sources */,
+				F201 /* Theme.swift in Sources */,
+				F202 /* BrandComponents.swift in Sources */,
+				F203 /* BillEditorSheet.swift in Sources */,
+				F204 /* SettingsSheets.swift in Sources */,
+				F205 /* PersonTrendsView.swift in Sources */,
+				F206 /* BillTrendsView.swift in Sources */,
+				F207 /* URLHelpers.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -469,13 +519,13 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = BillHive/SelfHive.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				INFOPLIST_FILE = "BillHive/SelfHive-Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.8.0;
+				MARKETING_VERSION = 1.8.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.billhive.selfhive;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -491,13 +541,13 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = BillHive/SelfHive.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				INFOPLIST_FILE = "BillHive/SelfHive-Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.8.0;
+				MARKETING_VERSION = 1.8.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.billhive.selfhive;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -513,7 +563,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = BillHive/BillHive.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "BillHive uses Face ID to protect your financial data.";
@@ -526,7 +576,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.8.0;
+				MARKETING_VERSION = 1.8.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.billhive.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) BILLHIVE_LOCAL";
@@ -543,7 +593,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = BillHive/BillHive.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "BillHive uses Face ID to protect your financial data.";
@@ -556,7 +606,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.8.0;
+				MARKETING_VERSION = 1.8.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.billhive.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) BILLHIVE_LOCAL";

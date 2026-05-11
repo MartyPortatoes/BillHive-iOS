@@ -26,6 +26,11 @@ class PurchaseManager: ObservableObject {
     /// Users whose original App Store purchase was an earlier version are
     /// automatically grandfathered as purchased (they already paid upfront).
     nonisolated static let iapTransitionVersion = "1.8.0"
+    /// The CFBundleVersion (build number) for iapTransitionVersion.
+    /// On iOS, AppTransaction.originalAppVersion returns the build number,
+    /// not the marketing version string, so we compare against this value
+    /// when originalAppVersion parses as a plain integer.
+    nonisolated static let iapTransitionBuild = 11
     #endif
 
     /// Number of days for the free trial.
@@ -133,8 +138,16 @@ class PurchaseManager: ObservableObject {
         do {
             let result = try await AppTransaction.shared
             if case .verified(let appTransaction) = result {
-                if Self.isVersion(appTransaction.originalAppVersion,
-                                  earlierThan: Self.iapTransitionVersion) {
+                let original = appTransaction.originalAppVersion
+                // On iOS, originalAppVersion is CFBundleVersion (a plain integer like "10").
+                // Fall back to marketing-version string comparison only when it contains dots.
+                let isEarlier: Bool
+                if let buildNum = Int(original) {
+                    isEarlier = buildNum < Self.iapTransitionBuild
+                } else {
+                    isEarlier = Self.isVersion(original, earlierThan: Self.iapTransitionVersion)
+                }
+                if isEarlier {
                     isPurchased = true
                     UserDefaults.standard.set(true, forKey: grandfatheredKey)
                 }
@@ -248,13 +261,23 @@ class PurchaseManager: ObservableObject {
     /// Restores previous purchases (required by App Store guidelines).
     /// Also re-checks grandfathering for users who paid before the IAP transition.
     func restore() async {
+        errorMessage = nil
+
+        // Sync is best-effort: a failure (cancelled auth, offline, etc.) must not
+        // prevent the grandfathering check, which can succeed independently via
+        // AppTransaction even without a receipt refresh.
         do {
             try await AppStore.sync()
-            await checkEntitlements()
-            await checkGrandfathered()
-            refreshUnlockState()
         } catch {
-            errorMessage = "Restore failed: \(error.localizedDescription)"
+            // Non-fatal — fall through to entitlement + grandfathering checks.
+        }
+
+        await checkEntitlements()
+        await checkGrandfathered()
+        refreshUnlockState()
+
+        if !isPurchased {
+            errorMessage = "No previous purchase found for this Apple ID."
         }
     }
 
