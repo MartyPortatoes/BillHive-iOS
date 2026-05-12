@@ -82,11 +82,13 @@ struct Bill: Identifiable, Codable, Equatable, Sendable {
     var preserve: Bool
     /// When true, this bill is paid automatically — skips the "paid" checklist task.
     var autoPay: Bool
+    /// Day of the month (1–31) when this bill is due. `nil` means no due date set.
+    var dueDay: Int?
     /// The individual share lines for this bill.
     var lines: [BillLine]
 
     enum CodingKeys: String, CodingKey {
-        case id, name, icon, color, splitType, remainderLineId, payUrl, preserve, autoPay, lines
+        case id, name, icon, color, splitType, remainderLineId, payUrl, preserve, autoPay, dueDay, lines
     }
 
     init(from decoder: Decoder) throws {
@@ -100,6 +102,7 @@ struct Bill: Identifiable, Codable, Equatable, Sendable {
         payUrl = try c.decodeIfPresent(String.self, forKey: .payUrl) ?? ""
         preserve = try c.decodeIfPresent(Bool.self, forKey: .preserve) ?? false
         autoPay = try c.decodeIfPresent(Bool.self, forKey: .autoPay) ?? false
+        dueDay = try c.decodeIfPresent(Int.self, forKey: .dueDay)
         lines = try c.decode([BillLine].self, forKey: .lines)
     }
 
@@ -117,6 +120,7 @@ struct Bill: Identifiable, Codable, Equatable, Sendable {
         payUrl: String = "",
         preserve: Bool = false,
         autoPay: Bool = false,
+        dueDay: Int? = nil,
         lines: [BillLine] = []
     ) {
         self.id = id
@@ -128,6 +132,7 @@ struct Bill: Identifiable, Codable, Equatable, Sendable {
         self.payUrl = payUrl
         self.preserve = preserve
         self.autoPay = autoPay
+        self.dueDay = dueDay
         if lines.isEmpty {
             let lineId = "l\(Int(Date().timeIntervalSince1970 * 1000))"
             self.lines = [BillLine(id: lineId, desc: "My share", personId: "me", value: 100)]
@@ -135,5 +140,47 @@ struct Bill: Identifiable, Codable, Equatable, Sendable {
         } else {
             self.lines = lines
         }
+    }
+
+    // MARK: - Due Date Helpers
+
+    /// Ordinal suffix for the due day (e.g. "1st", "2nd", "15th").
+    var dueDayLabel: String? {
+        guard let day = dueDay else { return nil }
+        let suffix: String
+        switch day {
+        case 1, 21, 31: suffix = "st"
+        case 2, 22: suffix = "nd"
+        case 3, 23: suffix = "rd"
+        default: suffix = "th"
+        }
+        return "\(day)\(suffix)"
+    }
+
+    /// Urgency level for the due date relative to today within the given
+    /// month/year context. Returns `nil` when no `dueDay` is set.
+    enum DueUrgency {
+        case overdue
+        case soon      // within 3 days
+        case upcoming  // more than 3 days away
+    }
+
+    func dueUrgency(month: Int, year: Int) -> DueUrgency? {
+        guard let day = dueDay else { return nil }
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        let todayComps = cal.dateComponents([.month, .year, .day], from: today)
+        guard let todayMonth = todayComps.month,
+              let todayYear = todayComps.year,
+              let todayDay = todayComps.day else { return nil }
+
+        // Only compute urgency for the current calendar month
+        guard month == todayMonth && year == todayYear else { return .upcoming }
+
+        let daysUntil = day - todayDay
+
+        if daysUntil < 0 { return .overdue }
+        if daysUntil <= 3 { return .soon }
+        return .upcoming
     }
 }

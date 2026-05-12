@@ -6,11 +6,10 @@ import SwiftUI
 
 /// Central hub for paying bills and collecting from household members.
 ///
-/// Three sections:
+/// Two sections:
 /// - **Collect** — shows each person who owes money with expandable details and
 ///   email/payment-app actions.
 /// - **Pay** — lists every bill with an optional payment URL and a "Pay" button.
-/// - **Checklist** — per-month task checklist for tracking what's been done.
 struct SendReceiveView: View {
     @EnvironmentObject var vm: AppViewModel
     @State private var expandedPersonId: String? = nil
@@ -69,6 +68,7 @@ struct SendReceiveView: View {
                                     personOwes: owes[person.id],
                                     isExpanded: expandedPersonId == person.id,
                                     isSendingEmail: sendingEmailFor == person.id,
+                                    isPaymentReceived: vm.isPaymentReceived(person.id, for: vm.monthKey),
                                     onToggle: {
                                         withAnimation(.easeInOut(duration: 0.2)) {
                                             expandedPersonId = expandedPersonId == person.id ? nil : person.id
@@ -79,6 +79,11 @@ struct SendReceiveView: View {
                                             sendingEmailFor = person.id
                                             await vm.sendPersonEmail(personId: person.id)
                                             sendingEmailFor = nil
+                                        }
+                                    },
+                                    onTogglePayment: {
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            vm.togglePaymentReceived(person.id, for: vm.monthKey)
                                         }
                                     }
                                 )
@@ -108,7 +113,15 @@ struct SendReceiveView: View {
                                 }
                             }
 
-                            ForEach(vm.state.bills) { bill in
+                            ForEach(vm.state.bills.sorted { a, b in
+                                // Bills with due dates first, sorted by day; no due date last
+                                switch (a.dueDay, b.dueDay) {
+                                case let (ad?, bd?): return ad < bd
+                                case (_?, nil): return true
+                                case (nil, _?): return false
+                                case (nil, nil): return false
+                                }
+                            }) { bill in
                                 SendCard(
                                     bill: bill,
                                     isExpanded: expandedSendId == bill.id,
@@ -119,43 +132,6 @@ struct SendReceiveView: View {
                                     }
                                 )
                             }
-                        }
-
-                        // MARK: Checklist Section
-
-                        VStack(alignment: .leading, spacing: 10) {
-                            HStack(spacing: 10) {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color.bhSurface3)
-                                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.bhBorder, lineWidth: 1))
-                                        .frame(width: 32, height: 32)
-                                    Image(systemName: "checkmark")
-                                        .font(.subheadline.weight(.bold))
-                                        .foregroundColor(.bhMuted)
-                                }
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Monthly Checklist")
-                                        .font(.headline)
-                                        .foregroundColor(.bhText)
-                                    Text("Track what's been done this month")
-                                        .font(.bhCaption)
-                                        .foregroundColor(.bhMuted)
-                                }
-                            }
-
-                            VStack(spacing: 0) {
-                                let items = vm.checklistItems(for: vm.monthKey)
-                                ForEach(items, id: \.id) { item in
-                                    ChecklistItemRow(item: item) {
-                                        vm.toggleChecklistItem(item.id, for: vm.monthKey)
-                                    }
-                                    if item.id != items.last?.id {
-                                        Divider().background(Color.bhBorder)
-                                    }
-                                }
-                            }
-                            .bhCard()
                         }
 
                         Spacer(minLength: 24)
@@ -180,8 +156,10 @@ struct ReceiveCard: View {
     let personOwes: PersonOwes?
     let isExpanded: Bool
     let isSendingEmail: Bool
+    let isPaymentReceived: Bool
     let onToggle: () -> Void
     let onSendEmail: () -> Void
+    let onTogglePayment: () -> Void
 
     /// Constructs a Zelle payment URL from the person's pay ID or custom Zelle URL.
     /// Custom URLs are filtered through `bhSafeWebURL` so a malicious imported
@@ -238,9 +216,28 @@ struct ReceiveCard: View {
                         .frame(width: 10, height: 10)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(person.name)
-                            .font(.bhBody)
-                            .foregroundColor(.bhText)
+                        HStack(spacing: 6) {
+                            Text(person.name)
+                                .font(.bhBody)
+                                .foregroundColor(.bhText)
+                            if isPaymentReceived {
+                                Text("Paid")
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .foregroundColor(.green)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Color.green.opacity(0.15))
+                                    .cornerRadius(4)
+                            } else {
+                                Text("Awaiting")
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .foregroundColor(.bhAmber)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Color.bhAmber.opacity(0.15))
+                                    .cornerRadius(4)
+                            }
+                        }
                         Text(person.payMethod.displayName)
                             .font(.bhCaption)
                             .foregroundColor(.bhMuted)
@@ -250,7 +247,8 @@ struct ReceiveCard: View {
 
                     Text((personOwes?.total ?? 0).asCurrency)
                         .font(.bhMoneyMedium)
-                        .foregroundColor(Color(hex: person.color) ?? .bhAmber)
+                        .foregroundColor(isPaymentReceived ? .bhMuted : (Color(hex: person.color) ?? .bhAmber))
+                        .strikethrough(isPaymentReceived, color: .bhMuted)
 
                     HStack(spacing: 6) {
                         // Payment button
@@ -307,8 +305,8 @@ struct ReceiveCard: View {
 
                     Divider().background(Color.bhBorder)
 
-                    // Actions — email and payment request
-                    HStack(spacing: 10) {
+                    // Actions — email & mark paid (equal width), request payment below
+                    HStack(spacing: 8) {
                         Button(action: onSendEmail) {
                             HStack(spacing: 5) {
                                 if isSendingEmail {
@@ -320,25 +318,36 @@ struct ReceiveCard: View {
                                 Text(isSendingEmail ? "Sending..." : "Send Email")
                             }
                             .font(.bhCaption.weight(.medium))
+                            .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(BHSecondaryButtonStyle())
                         .disabled(person.email.isEmpty || isSendingEmail)
 
-                        if let url = payURL {
-                            Link(destination: url) {
-                                HStack(spacing: 5) {
-                                    Image(systemName: "arrow.up.right.square")
-                                        .font(.caption)
-                                    Text("Request via \(payLabel)")
-                                }
-                                .font(.bhCaption.weight(.medium))
-                                .foregroundColor(.bhText)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 9)
-                                .background(Color.bhSurface2)
-                                .cornerRadius(7)
-                                .overlay(RoundedRectangle(cornerRadius: 7).stroke(Color.bhBorder, lineWidth: 1))
+                        Button(action: onTogglePayment) {
+                            HStack(spacing: 5) {
+                                Image(systemName: isPaymentReceived ? "arrow.uturn.backward" : "checkmark.circle")
+                                    .font(.caption)
+                                Text(isPaymentReceived ? "Mark Unpaid" : "Mark as Paid")
                             }
+                            .font(.bhCaption.weight(.medium))
+                            .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(BHSecondaryButtonStyle())
+                    }
+
+                    if let url = payURL {
+                        Link(destination: url) {
+                            HStack(spacing: 5) {
+                                Image(systemName: "arrow.up.right.square")
+                                    .font(.caption)
+                                Text("Request via \(payLabel)")
+                            }
+                            .font(.bhCaption.weight(.medium))
+                            .foregroundColor(Color(hex: "#0c0d0f"))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 9)
+                            .background(Color.bhAmber)
+                            .cornerRadius(7)
                         }
                     }
                 }
@@ -386,9 +395,22 @@ struct SendCard: View {
                         Text(bill.name)
                             .font(.bhBody)
                             .foregroundColor(.bhText)
-                        Text(vm.getBillTotal(bill.id).asCurrency)
-                            .font(.bhCaption)
-                            .foregroundColor(.bhMuted)
+                        HStack(spacing: 6) {
+                            Text(vm.getBillTotal(bill.id).asCurrency)
+                                .font(.bhCaption)
+                                .foregroundColor(.bhMuted)
+                            if let label = bill.dueDayLabel {
+                                let urgency = bill.dueUrgency(month: vm.selectedMonth, year: vm.selectedYear)
+                                let color: Color = urgency == .overdue ? .bhRed : urgency == .soon ? .bhAmber : .bhMuted
+                                Text(urgency == .overdue ? "Overdue" : "Due \(label)")
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .foregroundColor(color)
+                                    .padding(.horizontal, 5)
+                                    .padding(.vertical, 1)
+                                    .background(color.opacity(0.15))
+                                    .cornerRadius(3)
+                            }
+                        }
                     }
 
                     Spacer(minLength: 8)

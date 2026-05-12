@@ -211,6 +211,36 @@ struct BillEditorSheet: View {
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
 
+                        // Due day picker
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Due Day")
+                                    .font(.bhBodyName)
+                                    .foregroundColor(.bhText)
+                                Text("Day of the month this bill is due")
+                                    .font(.bhCaption)
+                                    .foregroundColor(.bhMuted)
+                            }
+                            Spacer()
+                            Picker("", selection: Binding(
+                                get: { bill.dueDay ?? 0 },
+                                set: { val in
+                                    guard let idx = billIndex else { return }
+                                    vm.state.bills[idx].dueDay = val == 0 ? nil : val
+                                    vm.save()
+                                }
+                            )) {
+                                Text("None").tag(0)
+                                ForEach(1...31, id: \.self) { day in
+                                    Text("\(day)").tag(day)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .tint(.bhAmber)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+
                         Divider().background(Color.bhBorder).padding(.horizontal, 16)
 
                         Button(role: .destructive) {

@@ -279,6 +279,9 @@ class AppViewModel: ObservableObject {
     }
 
     func save() {
+        // Reschedule due date notifications when bills change
+        NotificationManager.shared.reschedule(bills: state.bills)
+
         if isLocal {
             #if BILLHIVE_LOCAL
             CloudStorageManager.shared.saveState(state)
@@ -704,6 +707,37 @@ class AppViewModel: ObservableObject {
         let current = state.checklist[key]?[itemId] ?? false
         state.checklist[key]?[itemId] = !current
         save()
+    }
+
+    // MARK: - Payment Tracking
+
+    /// Whether a person's payment has been marked as received for the given month.
+    func isPaymentReceived(_ personId: String, for key: String) -> Bool {
+        state.checklist[key]?["received_\(personId)"] ?? false
+    }
+
+    /// Toggles the payment-received flag for a person in the given month.
+    func togglePaymentReceived(_ personId: String, for key: String) {
+        if state.checklist[key] == nil { state.checklist[key] = [:] }
+        let current = state.checklist[key]?["received_\(personId)"] ?? false
+        state.checklist[key]?["received_\(personId)"] = !current
+        save()
+    }
+
+    /// Payment status for a person in the current month.
+    enum PaymentStatus {
+        case nothingOwed
+        case awaitingPayment
+        case received
+    }
+
+    /// Determines payment status for a person based on whether they owe
+    /// money and whether the received flag is set.
+    func paymentStatus(for personId: String) -> PaymentStatus {
+        let owes = computePersonOwes()
+        let total = owes[personId]?.total ?? 0
+        guard total > 0 else { return .nothingOwed }
+        return isPaymentReceived(personId, for: monthKey) ? .received : .awaitingPayment
     }
 
     // MARK: - Purchase Gating

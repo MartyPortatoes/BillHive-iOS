@@ -62,6 +62,7 @@
 		F105 /* PersonTrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F005 /* PersonTrendsView.swift */; };
 		F106 /* BillTrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F006 /* BillTrendsView.swift */; };
 		F107 /* URLHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = F007 /* URLHelpers.swift */; };
+		F108 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F008 /* NotificationManager.swift */; };
 		F201 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F001 /* Theme.swift */; };
 		F202 /* BrandComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = F002 /* BrandComponents.swift */; };
 		F203 /* BillEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F003 /* BillEditorSheet.swift */; };
@@ -69,6 +70,7 @@
 		F205 /* PersonTrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F005 /* PersonTrendsView.swift */; };
 		F206 /* BillTrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F006 /* BillTrendsView.swift */; };
 		F207 /* URLHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = F007 /* URLHelpers.swift */; };
+		F208 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F008 /* NotificationManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -111,6 +113,7 @@
 		F005 /* PersonTrendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonTrendsView.swift; sourceTree = "<group>"; };
 		F006 /* BillTrendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BillTrendsView.swift; sourceTree = "<group>"; };
 		F007 /* URLHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLHelpers.swift; sourceTree = "<group>"; };
+		F008 /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -219,6 +222,7 @@
 				F001 /* Theme.swift */,
 				F002 /* BrandComponents.swift */,
 				F007 /* URLHelpers.swift */,
+				F008 /* NotificationManager.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -349,6 +353,7 @@
 				F105 /* PersonTrendsView.swift in Sources */,
 				F106 /* BillTrendsView.swift in Sources */,
 				F107 /* URLHelpers.swift in Sources */,
+				F108 /* NotificationManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -386,6 +391,7 @@
 				F205 /* PersonTrendsView.swift in Sources */,
 				F206 /* BillTrendsView.swift in Sources */,
 				F207 /* URLHelpers.swift in Sources */,
+				F208 /* NotificationManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

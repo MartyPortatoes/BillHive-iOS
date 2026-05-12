@@ -175,6 +175,15 @@ struct BillCardView: View {
         bill.splitType == .pct ? "Splits by percent" : "Splits by amount"
     }
 
+    /// Color for the due-day badge based on urgency.
+    private var dueBadgeColor: Color {
+        switch bill.dueUrgency(month: vm.selectedMonth, year: vm.selectedYear) {
+        case .overdue: return .bhRed
+        case .soon: return .bhAmber
+        default: return .bhMuted
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Header row — always visible, tap toggles the read-only preview
@@ -189,10 +198,22 @@ struct BillCardView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(bill.name.isEmpty ? "Untitled bill" : bill.name)
-                            .font(.bhBodyName)
-                            .foregroundColor(.bhText)
-                            .lineLimit(1)
+                        HStack(spacing: 6) {
+                            Text(bill.name.isEmpty ? "Untitled bill" : bill.name)
+                                .font(.bhBodyName)
+                                .foregroundColor(.bhText)
+                                .lineLimit(1)
+
+                            if let label = bill.dueDayLabel {
+                                Text("Due \(label)")
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .foregroundColor(dueBadgeColor)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(dueBadgeColor.opacity(0.15))
+                                    .cornerRadius(4)
+                            }
+                        }
                         Text(splitDescription)
                             .font(.bhBodyNameSecondary)
                             .foregroundColor(.bhMuted)

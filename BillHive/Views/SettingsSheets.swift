@@ -171,8 +171,8 @@ struct CurrencySettingsSheet: View {
 
 // MARK: - Household Settings Sheet
 
-/// Combined people management + email greetings, presented as a full-screen
-/// sheet from the Settings -> Household row.
+/// People management — names, colors, payment methods, and emails.
+/// Greetings have been moved to the Email & Greetings sheet.
 struct HouseholdSettingsSheet: View {
     @EnvironmentObject var vm: AppViewModel
     @Environment(\.dismiss) private var dismiss
@@ -184,7 +184,6 @@ struct HouseholdSettingsSheet: View {
                 Color.bhBackground.ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
-                        // People
                         VStack(alignment: .leading, spacing: 8) {
                             Text("People")
                                 .bhSectionTitle()
@@ -223,46 +222,6 @@ struct HouseholdSettingsSheet: View {
                             .buttonStyle(BHSecondaryButtonStyle())
                         }
 
-                        // Greetings
-                        SettingsSection(title: "Email Greetings") {
-                            Text("Custom opening line for each person's bill email.")
-                                .font(.bhCaption)
-                                .foregroundColor(.bhMuted)
-                                .padding(.bottom, 8)
-
-                            ForEach(vm.state.people.filter { $0.id != "me" }) { person in
-                                HStack(spacing: 8) {
-                                    Circle().fill(Color(hex: person.color) ?? .bhAmber).frame(width: 8, height: 8)
-                                    Text(person.name)
-                                        .font(.bhCaption)
-                                        .foregroundColor(.bhText)
-                                        .frame(width: 80, alignment: .leading)
-                                    TextField("Hey \(person.name),", text: Binding(
-                                        get: {
-                                            if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
-                                                return vm.state.people[idx].greeting
-                                            }
-                                            return ""
-                                        },
-                                        set: { newValue in
-                                            if let idx = vm.state.people.firstIndex(where: { $0.id == person.id }) {
-                                                vm.state.people[idx].greeting = newValue
-                                                vm.save()
-                                            }
-                                        }
-                                    ))
-                                    .font(.bhCaption)
-                                    .foregroundColor(.bhText)
-                                    .textFieldStyle(.plain)
-                                    .padding(7)
-                                    .background(Color.bhSurface2)
-                                    .cornerRadius(6)
-                                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.bhBorder, lineWidth: 1))
-                                }
-                                .padding(.vertical, 4)
-                            }
-                        }
-
                         Spacer(minLength: 24)
                     }
                     .padding(.horizontal, 16)
@@ -291,61 +250,17 @@ struct HouseholdSettingsSheet: View {
     }
 }
 
-// MARK: - Email Relay Settings Sheet
+// MARK: - Privacy & Data Sheet
 
-/// Wraps the existing `EmailConfigSection` in a full-screen sheet from
-/// Settings -> Email Relay (SelfHive only).
-struct EmailRelaySettingsSheet: View {
+/// Merged sheet combining App Lock (formerly Privacy & Security) with
+/// backup/export and the danger zone (formerly Data & Backup).
+struct PrivacyDataSheet: View {
     @EnvironmentObject var vm: AppViewModel
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject var lock = AppLockManager.shared
 
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                Color.bhBackground.ignoresSafeArea()
-                ScrollView {
-                    EmailConfigSection()
-                        .padding(.horizontal, 16)
-                        .padding(.top, 12)
-                        .padding(.bottom, 24)
-                }
-            }
-            .navigationTitle("Email Relay")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(.bhAmber)
-                }
-                ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button("Done") {
-                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                    }
-                    .font(.subheadline.weight(.medium))
-                    .foregroundColor(.bhAmber)
-                }
-            }
-        }
-        .bhColorScheme()
-    }
-}
-
-// MARK: - Data & Backup Settings Sheet
-
-/// Export and clear-all in a focused full-screen sheet. Behavior adapts
-/// to the target:
-///
-/// - **BillHive (local / iCloud):** Builds a JSON snapshot from in-memory
-///   state + monthly data and shares it via `ShareLink`, letting the user
-///   save to Files, send via Mail, etc. iCloud sync is the primary backup
-///   for this target — the export is an offline insurance copy.
-/// - **SelfHive (remote server):** Links directly to the server's
-///   `/api/export` endpoint, which streams a JSON download.
-struct DataBackupSettingsSheet: View {
-    @EnvironmentObject var vm: AppViewModel
-    @Environment(\.dismiss) private var dismiss
+    @State private var enableError: String?
+    @State private var isAuthenticating = false
     @State private var showClearConfirm = false
     @State private var backupFileURL: URL? = nil
     @State private var backupBuildError: String? = nil
@@ -356,15 +271,71 @@ struct DataBackupSettingsSheet: View {
                 Color.bhBackground.ignoresSafeArea()
                 ScrollView {
                     VStack(spacing: 16) {
+                        // App Lock
+                        SettingsSection(title: "App Lock") {
+                            Toggle(isOn: Binding(
+                                get: { lock.isEnabled },
+                                set: { newValue in handleLockToggle(newValue) }
+                            )) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: AppLockManager.biometrySymbolName)
+                                        .foregroundColor(.bhAmber)
+                                    Text("Require \(AppLockManager.biometryDisplayName)")
+                                        .foregroundColor(.bhText)
+                                }
+                            }
+                            .tint(.bhAmber)
+                            .disabled(isAuthenticating)
+
+                            if lock.isEnabled {
+                                Divider().background(Color.bhBorder)
+                                HStack {
+                                    Text("Auto-lock after")
+                                        .font(.bhBodySecondary)
+                                        .foregroundColor(.bhMuted)
+                                    Spacer()
+                                    Picker("", selection: Binding(
+                                        get: { lock.timeoutSeconds },
+                                        set: { lock.timeoutSeconds = $0 }
+                                    )) {
+                                        Text("Immediately").tag(0)
+                                        Text("1 minute").tag(60)
+                                        Text("5 minutes").tag(300)
+                                        Text("15 minutes").tag(900)
+                                    }
+                                    .pickerStyle(.menu)
+                                    .tint(.bhAmber)
+                                }
+                            }
+
+                            if let err = enableError {
+                                Text(err)
+                                    .font(.bhCaption)
+                                    .foregroundColor(.bhRed)
+                                    .padding(.top, 4)
+                            }
+                        }
+
+                        Text("When enabled, the app requires \(AppLockManager.biometryDisplayName) to open on cold start and after returning from the background.")
+                            .font(.bhCaption)
+                            .foregroundColor(.bhMuted)
+                            .multilineTextAlignment(.leading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 8)
+
+                        // Backup
                         backupSection
+
+                        // Danger Zone
                         dangerSection
+
                         Spacer(minLength: 24)
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
                 }
             }
-            .navigationTitle("Data & Backup")
+            .navigationTitle("Data & Privacy")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -390,6 +361,24 @@ struct DataBackupSettingsSheet: View {
             }
         }
         .bhColorScheme()
+    }
+
+    // MARK: - App Lock Toggle
+
+    private func handleLockToggle(_ newValue: Bool) {
+        enableError = nil
+        if newValue {
+            isAuthenticating = true
+            Task {
+                let ok = await lock.tryEnable()
+                if !ok {
+                    enableError = "Couldn't authenticate. Make sure \(AppLockManager.biometryDisplayName) is enabled in iOS Settings, and that you have a device passcode set."
+                }
+                isAuthenticating = false
+            }
+        } else {
+            lock.disable()
+        }
     }
 
     // MARK: - Backup Section
@@ -470,8 +459,6 @@ struct DataBackupSettingsSheet: View {
 
     // MARK: - Local backup file builder
 
-    /// Encodes current state + monthly data and writes it to a uniquely
-    /// named JSON file in the temp directory. ShareLink reads the URL.
     private func rebuildBackupFile() {
         do {
             let data = try vm.buildBackupJSON()
@@ -489,10 +476,12 @@ struct DataBackupSettingsSheet: View {
     }
 }
 
-// MARK: - Subscription Settings Sheet
+// MARK: - About & Upgrade Sheet
 
-/// Trial / purchase / restore controls in a focused sheet.
-struct SubscriptionSettingsSheet: View {
+/// Merged sheet combining the About info (logo, version, links) with
+/// subscription/purchase controls.
+struct AboutUpgradeSheet: View {
+    let version: String
     @EnvironmentObject var vm: AppViewModel
     @Environment(\.dismiss) private var dismiss
 
@@ -501,42 +490,11 @@ struct SubscriptionSettingsSheet: View {
             ZStack {
                 Color.bhBackground.ignoresSafeArea()
                 ScrollView {
-                    PurchaseSettingsSection()
-                        .padding(.horizontal, 16)
-                        .padding(.top, 12)
-                        .padding(.bottom, 24)
-                }
-            }
-            .navigationTitle("Subscription")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(.bhAmber)
-                }
-            }
-        }
-        .bhColorScheme()
-    }
-}
-
-// MARK: - About Settings Sheet
-
-/// Version, credits, and a link out to the project site.
-struct AboutSettingsSheet: View {
-    let version: String
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                Color.bhBackground.ignoresSafeArea()
-                ScrollView {
                     VStack(spacing: 20) {
+                        // Logo + version
                         VStack(spacing: 12) {
                             TriHexLogoMark(size: 64)
-                            Text("BillHive")
+                            Text(PurchaseManager.brandName)
                                 .font(.title2.weight(.bold))
                                 .foregroundColor(.bhText)
                             Text("Version \(version)")
@@ -545,15 +503,17 @@ struct AboutSettingsSheet: View {
                         }
                         .padding(.top, 32)
 
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("BillHive helps a household track recurring bills, split them between people, and collect what's owed.")
-                                .font(.bhCaption)
-                                .foregroundColor(.bhMuted)
-                                .multilineTextAlignment(.center)
-                                .frame(maxWidth: .infinity)
-                        }
-                        .padding(.horizontal, 24)
+                        Text("\(PurchaseManager.brandName) helps a household track recurring bills, split them between people, and collect what's owed.")
+                            .font(.bhCaption)
+                            .foregroundColor(.bhMuted)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 24)
 
+                        // Subscription
+                        PurchaseSettingsSection()
+                            .padding(.horizontal, 16)
+
+                        // Links
                         VStack(spacing: 10) {
                             if let url = URL(string: "https://billhiveapp.com") {
                                 Link(destination: url) {

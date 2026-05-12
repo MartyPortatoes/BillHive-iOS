@@ -324,9 +324,6 @@ class PurchaseManager: ObservableObject {
     /// Button label that includes the price when available, or just the
     /// brand name while the product is still loading.
     var unlockButtonLabel: String {
-        if let price = product?.displayPrice {
-            return "Unlock \(Self.brandName) — \(price)"
-        }
-        return "Unlock \(Self.brandName)"
+        "Unlock \(Self.brandName)"
     }
 }

@@ -10,6 +10,7 @@ struct PersonTrendsView: View {
     let monthKeys: [String]
     @State private var selectedPoint: DataPoint?
     @State private var expandedLogEntry: String?
+    @State private var showHistoricalLog = false
 
     /// A single data point for the per-person line chart.
     struct DataPoint: Identifiable {
@@ -203,9 +204,22 @@ struct PersonTrendsView: View {
             // MARK: Historical Log
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("Historical Log")
-                    .bhSectionTitle()
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        showHistoricalLog.toggle()
+                    }
+                } label: {
+                    HStack {
+                        Text("Historical Log")
+                            .bhSectionTitle()
+                        Spacer()
+                        Image(systemName: showHistoricalLog ? "chevron.up" : "chevron.down")
+                            .font(.caption)
+                            .foregroundColor(.bhMuted)
+                    }
+                }
 
+                if showHistoricalLog {
                 ForEach(monthKeys.reversed(), id: \.self) { key in
                     if let md = vm.monthly[key] {
                         VStack(alignment: .leading, spacing: 2) {
@@ -290,6 +304,7 @@ struct PersonTrendsView: View {
                         Divider().background(Color.bhBorder)
                     }
                 }
+                } // end if showHistoricalLog
             }
             .padding(16)
             .bhCard()

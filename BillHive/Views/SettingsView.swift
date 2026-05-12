@@ -17,11 +17,9 @@ struct SettingsView: View {
     // Category sheets
     @State private var showCurrency = false
     @State private var showHousehold = false
-    @State private var showEmailRelay = false
     @State private var showServerEdit = false
-    @State private var showPrivacySecurity = false
-    @State private var showDataBackup = false
-    @State private var showSubscription = false
+    @State private var showNotifications = false
+    @State private var showPrivacyData = false
     @State private var showAbout = false
 
     // Drafts for server edit sheet (kept here so they survive reopen)
@@ -49,11 +47,27 @@ struct SettingsView: View {
         return "Primary + backup configured"
     }
 
-    private var subscriptionSubtitle: String {
+    /// Subtitle for the Notifications row.
+    private var notificationsSubtitle: String {
+        let nm = NotificationManager.shared
+        if !nm.dueDateRemindersEnabled { return "Off" }
+        let count = vm.state.bills.filter { $0.dueDay != nil }.count
+        if count == 0 { return "On · no bills have due dates set" }
+        return "On · \(count) bill\(count == 1 ? "" : "s") tracked"
+    }
+
+    /// Subtitle for the merged Privacy & Data row.
+    private var privacyDataSubtitle: String {
+        let lockStatus = AppLockManager.shared.isEnabled ? "App Lock on" : "App Lock off"
+        return "\(lockStatus) · Export & backup"
+    }
+
+    /// Subtitle for the merged About & Upgrade row.
+    private var aboutSubtitle: String {
         let pm = PurchaseManager.shared
-        if pm.isPurchased { return "\(PurchaseManager.brandName) Pro · Unlocked" }
-        if pm.isTrialActive { return "Trial · \(pm.trialDaysRemaining) day\(pm.trialDaysRemaining == 1 ? "" : "s") left" }
-        return "Trial expired · Upgrade to unlock"
+        if pm.isPurchased { return "Version \(appVersion) · Pro" }
+        if pm.isTrialActive { return "Version \(appVersion) · Trial (\(pm.trialDaysRemaining)d left)" }
+        return "Version \(appVersion) · Upgrade"
     }
 
     var body: some View {
@@ -62,9 +76,15 @@ struct SettingsView: View {
                 HexBGView().ignoresSafeArea()
                 ScrollView {
                     VStack(spacing: 10) {
-                        // Inline Appearance picker — single control, no
-                        // need for a drilldown sheet
+                        // Inline Appearance picker — single control, no sheet
                         AppearancePickerCard(selection: $colorSchemePref)
+
+                        SettingsCategoryRow(
+                            icon: "person.2.fill",
+                            title: "Household",
+                            subtitle: "People and pay info",
+                            action: { showHousehold = true }
+                        )
 
                         SettingsCategoryRow(
                             icon: "banknote.fill",
@@ -74,20 +94,11 @@ struct SettingsView: View {
                         )
 
                         SettingsCategoryRow(
-                            icon: "person.2.fill",
-                            title: "Household",
-                            subtitle: "People, greetings, and pay info",
-                            action: { showHousehold = true }
+                            icon: "bell.fill",
+                            title: "Notifications",
+                            subtitle: notificationsSubtitle,
+                            action: { showNotifications = true }
                         )
-
-                        if !vm.isLocal {
-                            SettingsCategoryRow(
-                                icon: "envelope.fill",
-                                title: "Email Relay",
-                                subtitle: "SMTP, Mailgun, SendGrid, Resend",
-                                action: { showEmailRelay = true }
-                            )
-                        }
 
                         if !vm.isLocal {
                             SettingsCategoryRow(
@@ -103,30 +114,16 @@ struct SettingsView: View {
                         }
 
                         SettingsCategoryRow(
-                            icon: "externaldrive.fill",
-                            title: "Data & Backup",
-                            subtitle: "Export, import, or clear your data",
-                            action: { showDataBackup = true }
-                        )
-
-                        SettingsCategoryRow(
                             icon: "lock.shield.fill",
-                            title: "Privacy & Security",
-                            subtitle: AppLockManager.shared.isEnabled ? "App Lock on" : "App Lock off",
-                            action: { showPrivacySecurity = true }
-                        )
-
-                        SettingsCategoryRow(
-                            icon: "lock.open.fill",
-                            title: "Subscription",
-                            subtitle: subscriptionSubtitle,
-                            action: { showSubscription = true }
+                            title: "Data & Privacy",
+                            subtitle: privacyDataSubtitle,
+                            action: { showPrivacyData = true }
                         )
 
                         SettingsCategoryRow(
                             icon: "info.circle.fill",
                             title: "About",
-                            subtitle: "Version \(appVersion)",
+                            subtitle: aboutSubtitle,
                             action: { showAbout = true }
                         )
 
@@ -145,8 +142,8 @@ struct SettingsView: View {
             .sheet(isPresented: $showHousehold) {
                 HouseholdSettingsSheet().environmentObject(vm)
             }
-            .sheet(isPresented: $showEmailRelay) {
-                EmailRelaySettingsSheet().environmentObject(vm)
+            .sheet(isPresented: $showNotifications) {
+                NotificationsSheet(bills: vm.state.bills)
             }
             .sheet(isPresented: $showServerEdit) {
                 ServerEditSheet(
@@ -167,17 +164,11 @@ struct SettingsView: View {
                     }
                 )
             }
-            .sheet(isPresented: $showDataBackup) {
-                DataBackupSettingsSheet().environmentObject(vm)
-            }
-            .sheet(isPresented: $showPrivacySecurity) {
-                PrivacySecuritySheet()
-            }
-            .sheet(isPresented: $showSubscription) {
-                SubscriptionSettingsSheet().environmentObject(vm)
+            .sheet(isPresented: $showPrivacyData) {
+                PrivacyDataSheet().environmentObject(vm)
             }
             .sheet(isPresented: $showAbout) {
-                AboutSettingsSheet(version: appVersion)
+                AboutUpgradeSheet(version: appVersion).environmentObject(vm)
             }
         }
     }
@@ -452,6 +443,30 @@ struct PersonBodyView: View {
                 .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.bhBorder, lineWidth: 1))
             }
 
+            // Email greeting (non-"me" only)
+            if !person.isMe {
+                PersonFieldRow("Greeting") {
+                    TextField("Hey \(person.name),", text: Binding(
+                        get: {
+                            guard let idx = currentIdx else { return "" }
+                            return vm.state.people[idx].greeting
+                        },
+                        set: { newValue in
+                            guard let idx = currentIdx else { return }
+                            vm.state.people[idx].greeting = newValue
+                            vm.save()
+                        }
+                    ))
+                    .font(.bhBodySecondary)
+                    .foregroundColor(.bhText)
+                    .textFieldStyle(.plain)
+                    .padding(8)
+                    .background(Color.bhSurface2)
+                    .cornerRadius(6)
+                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.bhBorder, lineWidth: 1))
+                }
+            }
+
             // Remove button (non-"me" only)
             if !person.isMe {
                 Button {
@@ -511,7 +526,13 @@ struct EmailConfigSection: View {
     @State private var statusOK = false
 
     var body: some View {
-        SettingsSection(title: "Email Relay") {
+        emailRelayContent
+            .task { await loadConfig() }
+    }
+
+    @ViewBuilder
+    var emailRelayContent: some View {
+        VStack(alignment: .leading, spacing: 12) {
             Text("Configure a mail provider so BillHive can send HTML bill summaries. API keys are stored server-side.")
                 .font(.bhCaption)
                 .foregroundColor(.bhMuted)
@@ -579,7 +600,6 @@ struct EmailConfigSection: View {
                 .disabled(isTesting)
             }
         }
-        .task { await loadConfig() }
     }
 
     // MARK: - Email Config Actions
@@ -610,6 +630,39 @@ struct EmailConfigSection: View {
             statusOK = false; statusMsg = error.localizedDescription
         }
         isTesting = false
+    }
+}
+
+// MARK: - Collapsible Email Relay
+
+/// Wraps `EmailConfigSection` in a collapsible card for the Server sheet.
+struct CollapsibleEmailRelay: View {
+    @Binding var isExpanded: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.25)) { isExpanded.toggle() }
+            } label: {
+                HStack {
+                    Text("Email Relay")
+                        .bhSectionTitle()
+                    Spacer()
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundColor(.bhMuted2)
+                }
+            }
+            .buttonStyle(.plain)
+
+            if isExpanded {
+                EmailConfigSection()
+                    .padding(.top, 12)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .padding(16)
+        .bhCard()
     }
 }
 
@@ -721,47 +774,99 @@ struct ServerEditSheet: View {
     // API key — pre-populated from Keychain so the user can see/edit/clear it.
     @State private var apiKey: String = APIClient.shared.apiKey
 
+    @State private var showConnection = true
+    @State private var showApiKey = false
+    @State private var showEmailRelay = false
+
     var body: some View {
         NavigationStack {
             ZStack {
                 Color.bhBackground.ignoresSafeArea()
                 ScrollView {
                     VStack(spacing: 16) {
-                        // MARK: Connection Section
-                        SettingsSection(title: "Connection") {
-                            urlField(
-                                title: "Primary Server URL",
-                                placeholder: "http://192.168.1.100:8080",
-                                text: $primaryURL,
-                                result: primaryResult,
-                                success: primarySuccess,
-                                isTesting: isTestingPrimary,
-                                onTest: { Task { await test(primary: true) } }
-                            )
+                        // MARK: Connection Section — collapsible
+                        VStack(alignment: .leading, spacing: 0) {
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.25)) { showConnection.toggle() }
+                            } label: {
+                                HStack {
+                                    Text("Connection")
+                                        .bhSectionTitle()
+                                    Spacer()
+                                    Image(systemName: showConnection ? "chevron.up" : "chevron.down")
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundColor(.bhMuted2)
+                                }
+                            }
+                            .buttonStyle(.plain)
 
-                            Divider().background(Color.bhBorder)
+                            if showConnection {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    urlField(
+                                        title: "Primary Server URL",
+                                        placeholder: "http://192.168.1.100:8080",
+                                        text: $primaryURL,
+                                        result: primaryResult,
+                                        success: primarySuccess,
+                                        isTesting: isTestingPrimary,
+                                        onTest: { Task { await test(primary: true) } }
+                                    )
 
-                            urlField(
-                                title: "Backup Server URL (optional)",
-                                placeholder: "http://100.x.y.z:8080",
-                                text: $backupURL,
-                                result: backupResult,
-                                success: backupSuccess,
-                                isTesting: isTestingBackup,
-                                onTest: { Task { await test(primary: false) } }
-                            )
+                                    Divider().background(Color.bhBorder)
 
-                            Text("The app will use the primary server when reachable and automatically fall back to the backup otherwise.")
-                                .font(.bhCaption)
-                                .foregroundColor(.bhMuted)
-                                .multilineTextAlignment(.leading)
-                                .padding(.top, 4)
+                                    urlField(
+                                        title: "Backup Server URL (optional)",
+                                        placeholder: "http://100.x.y.z:8080",
+                                        text: $backupURL,
+                                        result: backupResult,
+                                        success: backupSuccess,
+                                        isTesting: isTestingBackup,
+                                        onTest: { Task { await test(primary: false) } }
+                                    )
+
+                                    Text("The app will use the primary server when reachable and automatically fall back to the backup otherwise.")
+                                        .font(.bhCaption)
+                                        .foregroundColor(.bhMuted)
+                                        .multilineTextAlignment(.leading)
+                                }
+                                .padding(.top, 12)
+                                .transition(.opacity.combined(with: .move(edge: .top)))
+                            }
                         }
+                        .padding(16)
+                        .bhCard()
 
-                        // MARK: API Key Section
-                        SettingsSection(title: "API Key") {
-                            apiKeyContent
+                        // MARK: API Key Section — collapsible
+                        VStack(alignment: .leading, spacing: 0) {
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.25)) { showApiKey.toggle() }
+                            } label: {
+                                HStack {
+                                    Text("API Key")
+                                        .bhSectionTitle()
+                                    Spacer()
+                                    Text(apiKey.isEmpty ? "None" : "Set")
+                                        .font(.bhCaption)
+                                        .foregroundColor(apiKey.isEmpty ? .bhMuted : .bhAmber)
+                                        .padding(.trailing, 6)
+                                    Image(systemName: showApiKey ? "chevron.up" : "chevron.down")
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundColor(.bhMuted2)
+                                }
+                            }
+                            .buttonStyle(.plain)
+
+                            if showApiKey {
+                                apiKeyContent
+                                    .padding(.top, 12)
+                                    .transition(.opacity.combined(with: .move(edge: .top)))
+                            }
                         }
+                        .padding(16)
+                        .bhCard()
+
+                        // MARK: Email Relay — collapsible
+                        CollapsibleEmailRelay(isExpanded: $showEmailRelay)
 
                         // MARK: Actions
                         Button {
@@ -1083,6 +1188,156 @@ struct SettingsCategoryRow: View {
     }
 }
 
+
+// MARK: - Settings Section Header
+
+/// A thin section label used to visually group rows on the Settings root screen.
+struct SettingsSectionHeader: View {
+    let title: String
+
+    init(_ title: String) {
+        self.title = title
+    }
+
+    var body: some View {
+        Text(title)
+            .font(.caption2.weight(.medium).monospaced())
+            .tracking(1.2)
+            .foregroundColor(.bhMuted2)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 8)
+            .padding(.bottom, 2)
+            .padding(.leading, 4)
+    }
+}
+
+// MARK: - Notification Toggle Row
+
+/// Inline settings row with a toggle for due date reminders.
+/// Matches the visual style of `SettingsCategoryRow` but replaces the
+/// chevron with a toggle control.
+// MARK: - Notifications Sheet
+
+/// Settings sheet for notification preferences — currently just Due Date Reminders.
+struct NotificationsSheet: View {
+    @StateObject private var notifManager = NotificationManager.shared
+    @Environment(\.dismiss) private var dismiss
+    let bills: [Bill]
+
+    private var billsWithDueDay: Int { bills.filter { $0.dueDay != nil }.count }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.bhBackground.ignoresSafeArea()
+                ScrollView {
+                    VStack(spacing: 16) {
+                        SettingsSection(title: "Due Date Reminders") {
+                            Toggle(isOn: Binding(
+                                get: { notifManager.dueDateRemindersEnabled },
+                                set: { _ in
+                                    Task { await notifManager.toggleReminders(bills: bills) }
+                                }
+                            )) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "bell.fill")
+                                        .foregroundColor(.bhAmber)
+                                    Text("Remind me before due dates")
+                                        .foregroundColor(.bhText)
+                                }
+                            }
+                            .tint(.bhAmber)
+
+                            if notifManager.dueDateRemindersEnabled {
+                                Divider().background(Color.bhBorder)
+                                if billsWithDueDay == 0 {
+                                    Text("No bills have due dates set. Add due dates in the Bills tab to receive reminders.")
+                                        .font(.bhCaption)
+                                        .foregroundColor(.bhMuted)
+                                } else {
+                                    Text("\(billsWithDueDay) bill\(billsWithDueDay == 1 ? "" : "s") with due dates. You'll get a reminder at 9:00 AM the day before each is due.")
+                                        .font(.bhCaption)
+                                        .foregroundColor(.bhMuted)
+                                }
+                            }
+                        }
+
+                        Spacer(minLength: 24)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+                }
+            }
+            .navigationTitle("Notifications")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.bhAmber)
+                }
+            }
+        }
+        .bhColorScheme()
+    }
+}
+
+// MARK: - Notification Toggle Row (legacy inline row, kept for reference)
+
+struct NotificationToggleRow: View {
+    @StateObject private var notifManager = NotificationManager.shared
+    let bills: [Bill]
+
+    /// How many bills have a due day configured.
+    private var billsWithDueDay: Int { bills.filter { $0.dueDay != nil }.count }
+
+    private var subtitle: String {
+        if !notifManager.dueDateRemindersEnabled { return "Off" }
+        if billsWithDueDay == 0 { return "On · no bills have due dates set" }
+        return "On · \(billsWithDueDay) bill\(billsWithDueDay == 1 ? "" : "s") tracked"
+    }
+
+    var body: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(Color.bhAmber.opacity(0.15))
+                    .frame(width: 36, height: 36)
+                Image(systemName: "bell.fill")
+                    .font(.subheadline)
+                    .foregroundColor(.bhAmber)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Due Date Reminders")
+                    .font(.bhBodyName)
+                    .foregroundColor(.bhText)
+                Text(subtitle)
+                    .font(.bhCaption)
+                    .foregroundColor(.bhMuted)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            Toggle("", isOn: Binding(
+                get: { notifManager.dueDateRemindersEnabled },
+                set: { _ in
+                    Task { await notifManager.toggleReminders(bills: bills) }
+                }
+            ))
+            .tint(.bhAmber)
+            .labelsHidden()
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(minHeight: 44)
+        .background(Color.bhSurface)
+        .cornerRadius(10)
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.bhBorder, lineWidth: 1))
+        .accessibilityLabel("Due Date Reminders. \(subtitle)")
+    }
+}
 
 // Settings sheet views (CurrencySettingsSheet, HouseholdSettingsSheet, EmailRelaySettingsSheet,
 // DataBackupSettingsSheet, SubscriptionSettingsSheet, AboutSettingsSheet) are defined in SettingsSheets.swift
