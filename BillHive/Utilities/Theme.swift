@@ -34,6 +34,8 @@ extension Color {
     static let bhBlue  = Color(hex: "#5bc4f5") ?? .blue
     /// Error red — same in both schemes.
     static let bhRed   = Color(hex: "#ef5350") ?? .red
+    /// Success green — same in both schemes.
+    static let bhGreen = Color(hex: "#34c759") ?? .green
 
     /// Builds a `Color` whose value is resolved at render time based on the
     /// current `UITraitCollection.userInterfaceStyle`. Lets the same token

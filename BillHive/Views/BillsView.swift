@@ -175,8 +175,12 @@ struct BillCardView: View {
         bill.splitType == .pct ? "Splits by percent" : "Splits by amount"
     }
 
-    /// Color for the due-day badge based on urgency.
+    private var isBillPaid: Bool {
+        vm.state.checklist[vm.monthKey]?["pay_\(bill.id)"] ?? false
+    }
+
     private var dueBadgeColor: Color {
+        if isBillPaid { return .bhGreen }
         switch bill.dueUrgency(month: vm.selectedMonth, year: vm.selectedYear) {
         case .overdue: return .bhRed
         case .soon: return .bhAmber
@@ -204,8 +208,8 @@ struct BillCardView: View {
                                 .foregroundColor(.bhText)
                                 .lineLimit(1)
 
-                            if let label = bill.dueDayLabel {
-                                Text("Due \(label)")
+                            if bill.dueDayLabel != nil {
+                                Text(isBillPaid ? "✓ Paid" : "Due \(bill.dueDayLabel!)")
                                     .font(.system(size: 10, weight: .semibold))
                                     .foregroundColor(dueBadgeColor)
                                     .padding(.horizontal, 6)
