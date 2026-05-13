@@ -1246,12 +1246,37 @@ struct NotificationsSheet: View {
 
                             if notifManager.dueDateRemindersEnabled {
                                 Divider().background(Color.bhBorder)
+
+                                HStack {
+                                    Text("Remind me")
+                                        .font(.bhBody)
+                                        .foregroundColor(.bhText)
+                                    Spacer()
+                                    Picker("", selection: Binding(
+                                        get: { notifManager.reminderDaysBefore },
+                                        set: { newVal in
+                                            notifManager.reminderDaysBefore = newVal
+                                            notifManager.reschedule(bills: bills)
+                                        }
+                                    )) {
+                                        ForEach(NotificationManager.dayOptions, id: \.self) { days in
+                                            Text(days == 0 ? "Day of" : days == 1 ? "1 day before" : "\(days) days before")
+                                                .tag(days)
+                                        }
+                                    }
+                                    .pickerStyle(.menu)
+                                    .tint(.bhAmber)
+                                }
+
+                                Divider().background(Color.bhBorder)
+
                                 if billsWithDueDay == 0 {
                                     Text("No bills have due dates set. Add due dates in the Bills tab to receive reminders.")
                                         .font(.bhCaption)
                                         .foregroundColor(.bhMuted)
                                 } else {
-                                    Text("\(billsWithDueDay) bill\(billsWithDueDay == 1 ? "" : "s") with due dates. You'll get a reminder at 9:00 AM the day before each is due.")
+                                    let timeLabel = notifManager.reminderDaysBefore == 0 ? "the morning of" : notifManager.reminderDaysBefore == 1 ? "the day before" : "\(notifManager.reminderDaysBefore) days before"
+                                    Text("\(billsWithDueDay) bill\(billsWithDueDay == 1 ? "" : "s") with due dates. You'll get a reminder at 9:00 AM \(timeLabel) each is due.")
                                         .font(.bhCaption)
                                         .foregroundColor(.bhMuted)
                                 }

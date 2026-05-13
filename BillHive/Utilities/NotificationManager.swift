@@ -19,11 +19,22 @@ final class NotificationManager: ObservableObject {
         }
     }
 
+    /// How many days before the due date to send the reminder. Persisted in UserDefaults.
+    @Published var reminderDaysBefore: Int {
+        didSet {
+            UserDefaults.standard.set(reminderDaysBefore, forKey: "reminderDaysBefore")
+        }
+    }
+
+    static let dayOptions = [0, 1, 2, 3, 5, 7]
+
     /// Authorization status for notifications.
     @Published var authorizationStatus: UNAuthorizationStatus = .notDetermined
 
     private init() {
         dueDateRemindersEnabled = UserDefaults.standard.bool(forKey: "dueDateRemindersEnabled")
+        let stored = UserDefaults.standard.object(forKey: "reminderDaysBefore") as? Int
+        reminderDaysBefore = stored ?? 1
     }
 
     // MARK: - Authorization
@@ -102,23 +113,18 @@ final class NotificationManager: ObservableObject {
         }
     }
 
-    /// Schedules a single reminder notification the day before the bill is due.
     private func scheduleReminder(bill: Bill, dueDay: Int, month: Int, year: Int, idSuffix: String) {
         let cal = Calendar.current
 
-        // Compute the reminder day (day before due date)
         var dueComps = DateComponents()
         dueComps.year = year
         dueComps.month = month
         dueComps.day = dueDay
 
-        // Validate the date exists (e.g. Feb 31 doesn't exist)
         guard let dueDate = cal.date(from: dueComps) else { return }
 
-        // Reminder fires at 9:00 AM the day before
-        guard let reminderDate = cal.date(byAdding: .day, value: -1, to: dueDate) else { return }
+        guard let reminderDate = cal.date(byAdding: .day, value: -reminderDaysBefore, to: dueDate) else { return }
 
-        // Don't schedule if the reminder date is in the past
         if reminderDate < Date() { return }
 
         var triggerComps = cal.dateComponents([.year, .month, .day], from: reminderDate)
@@ -128,8 +134,17 @@ final class NotificationManager: ObservableObject {
         let trigger = UNCalendarNotificationTrigger(dateMatching: triggerComps, repeats: false)
 
         let content = UNMutableNotificationContent()
-        content.title = "\(bill.icon) \(bill.name) due tomorrow"
-        content.body = bill.dueDayLabel.map { "Your \(bill.name) bill is due on the \($0)." } ?? "Your \(bill.name) bill is due tomorrow."
+        let dayLabel = bill.dueDayLabel ?? "\(dueDay)"
+        if reminderDaysBefore == 0 {
+            content.title = "\(bill.icon) \(bill.name) due today"
+            content.body = "Your \(bill.name) bill is due today (the \(dayLabel))."
+        } else if reminderDaysBefore == 1 {
+            content.title = "\(bill.icon) \(bill.name) due tomorrow"
+            content.body = "Your \(bill.name) bill is due on the \(dayLabel)."
+        } else {
+            content.title = "\(bill.icon) \(bill.name) due in \(reminderDaysBefore) days"
+            content.body = "Your \(bill.name) bill is due on the \(dayLabel)."
+        }
         content.sound = .default
         content.categoryIdentifier = "BILL_DUE"
 
