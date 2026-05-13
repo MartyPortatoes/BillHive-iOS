@@ -176,7 +176,13 @@ struct BillCardView: View {
     }
 
     private var isBillPaid: Bool {
-        vm.state.checklist[vm.monthKey]?["pay_\(bill.id)"] ?? false
+        if vm.state.checklist[vm.monthKey]?["pay_\(bill.id)"] ?? false { return true }
+        guard bill.autoPay, let day = bill.dueDay else { return false }
+        let cal = Calendar.current
+        let now = Date()
+        return vm.selectedMonth == cal.component(.month, from: now)
+            && vm.selectedYear == cal.component(.year, from: now)
+            && cal.component(.day, from: now) >= day
     }
 
     private var dueBadgeColor: Color {

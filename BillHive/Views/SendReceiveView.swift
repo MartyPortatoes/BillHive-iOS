@@ -400,7 +400,15 @@ struct SendCard: View {
                                 .font(.bhCaption)
                                 .foregroundColor(.bhMuted)
                             if let label = bill.dueDayLabel {
-                                let paid = vm.state.checklist[vm.monthKey]?["pay_\(bill.id)"] ?? false
+                                let checkedOff = vm.state.checklist[vm.monthKey]?["pay_\(bill.id)"] ?? false
+                                let autoPayDue: Bool = {
+                                    guard bill.autoPay, let day = bill.dueDay else { return false }
+                                    let cal = Calendar.current; let now = Date()
+                                    return vm.selectedMonth == cal.component(.month, from: now)
+                                        && vm.selectedYear == cal.component(.year, from: now)
+                                        && cal.component(.day, from: now) >= day
+                                }()
+                                let paid = checkedOff || autoPayDue
                                 let urgency = bill.dueUrgency(month: vm.selectedMonth, year: vm.selectedYear)
                                 let color: Color = paid ? .bhGreen : urgency == .overdue ? .bhRed : urgency == .soon ? .bhAmber : .bhMuted
                                 Text(paid ? "✓ Paid" : urgency == .overdue ? "Overdue" : "Due \(label)")
