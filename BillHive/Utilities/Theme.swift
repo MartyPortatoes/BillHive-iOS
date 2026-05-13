@@ -107,32 +107,31 @@ extension View {
 /// and is applied via the `.bhColorScheme()` modifier on every view that
 /// needs to enforce a scheme (root + each sheet).
 enum ColorSchemePreference: String, CaseIterable, Identifiable {
-    case system, light, dark
+    case light, dark
     var id: String { rawValue }
 
     var label: String {
         switch self {
-        case .system: return "System"
-        case .light:  return "Light"
-        case .dark:   return "Dark"
+        case .light: return "Light"
+        case .dark:  return "Dark"
         }
     }
 
-    /// Resolves to the SwiftUI scheme to apply (`nil` = follow system).
-    var scheme: ColorScheme? {
+    /// Resolves to the SwiftUI scheme to apply.
+    var scheme: ColorScheme {
         switch self {
-        case .system: return nil
-        case .light:  return .light
-        case .dark:   return .dark
+        case .light: return .light
+        case .dark:  return .dark
         }
     }
 }
 
 private struct BHColorSchemeModifier: ViewModifier {
-    @AppStorage("colorSchemePref") private var pref: String = ColorSchemePreference.dark.rawValue
+    @AppStorage("colorSchemePref") private var pref: String = ""
     func body(content: Content) -> some View {
-        let resolved = ColorSchemePreference(rawValue: pref) ?? .dark
-        return content.preferredColorScheme(resolved.scheme)
+        // Unknown/empty pref (first launch, or old "system" value) → follow system.
+        let resolved = ColorSchemePreference(rawValue: pref)
+        return content.preferredColorScheme(resolved?.scheme)
     }
 }
 

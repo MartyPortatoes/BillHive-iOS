@@ -257,6 +257,44 @@ class AppViewModel: ObservableObject {
                                           options: [.prettyPrinted, .sortedKeys])
     }
 
+    /// Imports a backup JSON file, replacing all current data.
+    /// Format: `{ "state": ..., "monthly": ..., "exportedAt": "..." }`.
+    func importBackup(_ data: Data) async throws {
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw NSError(domain: "BillHive", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid backup format."])
+        }
+        guard let stateObj = json["state"] else {
+            throw NSError(domain: "BillHive", code: 2, userInfo: [NSLocalizedDescriptionKey: "Backup is missing state data."])
+        }
+
+        let decoder = JSONDecoder()
+        let stateData = try JSONSerialization.data(withJSONObject: stateObj)
+        let importedState = try decoder.decode(AppState.self, from: stateData)
+
+        var importedMonthly: [String: MonthData] = [:]
+        if let monthlyObj = json["monthly"] as? [String: Any] {
+            for (key, value) in monthlyObj {
+                let monthData = try JSONSerialization.data(withJSONObject: value)
+                importedMonthly[key] = try decoder.decode(MonthData.self, from: monthData)
+            }
+        }
+
+        if isLocal {
+            state = importedState
+            monthly = importedMonthly
+            #if BILLHIVE_LOCAL
+            CloudStorageManager.shared.saveState(state)
+            CloudStorageManager.shared.saveAllMonths(monthly)
+            #else
+            LocalStorageManager.shared.saveState(state)
+            LocalStorageManager.shared.saveAllMonths(monthly)
+            #endif
+        } else {
+            try await api.importBackup(data)
+        }
+        await load()
+    }
+
     /// Resets state and monthly data to empty defaults and persists.
     /// Works for both local (iCloud / Documents) and remote (server) modes.
     func clearAllData() async {

@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 // MARK: - Currency Settings Sheet
 
@@ -264,6 +265,10 @@ struct PrivacyDataSheet: View {
     @State private var showClearConfirm = false
     @State private var backupFileURL: URL? = nil
     @State private var backupBuildError: String? = nil
+    @State private var showImportPicker = false
+    @State private var showImportConfirm = false
+    @State private var pendingImportData: Data? = nil
+    @State private var isImporting = false
 
     var body: some View {
         NavigationStack {
@@ -273,6 +278,11 @@ struct PrivacyDataSheet: View {
                     VStack(spacing: 16) {
                         // App Lock
                         SettingsSection(title: "App Lock") {
+                            Text("When enabled, the app requires \(AppLockManager.biometryDisplayName) to open on cold start and after returning from the background.")
+                                .font(.bhCaption)
+                                .foregroundColor(.bhMuted)
+                                .padding(.bottom, 8)
+
                             Toggle(isOn: Binding(
                                 get: { lock.isEnabled },
                                 set: { newValue in handleLockToggle(newValue) }
@@ -316,13 +326,6 @@ struct PrivacyDataSheet: View {
                             }
                         }
 
-                        Text("When enabled, the app requires \(AppLockManager.biometryDisplayName) to open on cold start and after returning from the background.")
-                            .font(.bhCaption)
-                            .foregroundColor(.bhMuted)
-                            .multilineTextAlignment(.leading)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 8)
-
                         // Backup
                         backupSection
 
@@ -356,6 +359,43 @@ struct PrivacyDataSheet: View {
             } message: {
                 Text("This will delete all bills, people, and monthly data. This cannot be undone.")
             }
+            .confirmationDialog("Import backup?", isPresented: $showImportConfirm, titleVisibility: .visible) {
+                Button("Replace All Data", role: .destructive) {
+                    guard let data = pendingImportData else { return }
+                    isImporting = true
+                    Task {
+                        do {
+                            try await vm.importBackup(data)
+                            vm.toast("Backup imported")
+                        } catch {
+                            vm.toast("Import failed: \(error.localizedDescription)")
+                        }
+                        pendingImportData = nil
+                        isImporting = false
+                    }
+                }
+                Button("Cancel", role: .cancel) { pendingImportData = nil }
+            } message: {
+                Text("This will replace all bills, people, and monthly data with the contents of the backup file.")
+            }
+            .fileImporter(isPresented: $showImportPicker, allowedContentTypes: [.json]) { result in
+                switch result {
+                case .success(let url):
+                    guard url.startAccessingSecurityScopedResource() else {
+                        vm.toast("Couldn't access the selected file.")
+                        return
+                    }
+                    defer { url.stopAccessingSecurityScopedResource() }
+                    do {
+                        pendingImportData = try Data(contentsOf: url)
+                        showImportConfirm = true
+                    } catch {
+                        vm.toast("Couldn't read file: \(error.localizedDescription)")
+                    }
+                case .failure(let error):
+                    vm.toast("File picker error: \(error.localizedDescription)")
+                }
+            }
             .onAppear {
                 if vm.isLocal { rebuildBackupFile() }
             }
@@ -387,7 +427,7 @@ struct PrivacyDataSheet: View {
     private var backupSection: some View {
         SettingsSection(title: "Backup") {
             if vm.isLocal {
-                Text("Your data is automatically synced across your devices via iCloud. Use this to save an offline copy of all bills, people, and monthly data.")
+                Text("Export or restore a JSON backup of all bills, people, and monthly data.")
                     .font(.bhCaption)
                     .foregroundColor(.bhMuted)
                     .padding(.bottom, 8)
@@ -411,7 +451,7 @@ struct PrivacyDataSheet: View {
                         .padding(.vertical, 8)
                 }
             } else {
-                Text("Download a JSON backup of all bills, people, and monthly data from your server.")
+                Text("Export or restore a JSON backup of all bills, people, and monthly data from your server.")
                     .font(.bhCaption)
                     .foregroundColor(.bhMuted)
                     .padding(.bottom, 8)
@@ -431,6 +471,21 @@ struct PrivacyDataSheet: View {
                         .foregroundColor(.bhMuted)
                 }
             }
+
+            Button {
+                showImportPicker = true
+            } label: {
+                HStack {
+                    if isImporting {
+                        ProgressView().tint(.bhText).scaleEffect(0.7)
+                    }
+                    Image(systemName: "square.and.arrow.down")
+                    Text(isImporting ? "Importing..." : "Import Backup")
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(BHSecondaryButtonStyle())
+            .disabled(isImporting)
         }
     }
 
@@ -501,20 +556,24 @@ struct AboutUpgradeSheet: View {
                                 .font(.bhCaption)
                                 .foregroundColor(.bhMuted)
                         }
-                        .padding(.top, 32)
 
                         Text("\(PurchaseManager.brandName) helps a household track recurring bills, split them between people, and collect what's owed.")
                             .font(.bhCaption)
                             .foregroundColor(.bhMuted)
                             .multilineTextAlignment(.center)
-                            .padding(.horizontal, 24)
 
-                        // Subscription
-                        PurchaseSettingsSection()
-                            .padding(.horizontal, 16)
+                        // Purchase card
+                        SettingsSection(title: "Purchase") {
+                            PurchaseSettingsSection()
+                        }
 
-                        // Links
-                        VStack(spacing: 10) {
+                        // Links card
+                        SettingsSection(title: "Links") {
+                            Text("Guides, release notes, and support at the official website.")
+                                .font(.bhCaption)
+                                .foregroundColor(.bhMuted)
+                                .padding(.bottom, 8)
+
                             if let url = URL(string: "https://billhiveapp.com") {
                                 Link(destination: url) {
                                     HStack(spacing: 6) {
@@ -525,22 +584,12 @@ struct AboutUpgradeSheet: View {
                                 }
                                 .buttonStyle(BHSecondaryButtonStyle())
                             }
-
-                            if let url = URL(string: "https://github.com/MartyPortatoes/BillHive") {
-                                Link(destination: url) {
-                                    HStack(spacing: 6) {
-                                        Image(systemName: "chevron.left.forwardslash.chevron.right")
-                                        Text("GitHub Repository")
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                }
-                                .buttonStyle(BHSecondaryButtonStyle())
-                            }
                         }
-                        .padding(.horizontal, 24)
 
                         Spacer(minLength: 40)
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
                 }
             }
             .navigationTitle("About")

@@ -12,7 +12,7 @@ struct SettingsView: View {
     @EnvironmentObject var vm: AppViewModel
     @AppStorage("serverURL") private var serverURL: String = ""
     @AppStorage("backupServerURL") private var backupServerURL: String = ""
-    @AppStorage("colorSchemePref") private var colorSchemePref: String = ColorSchemePreference.dark.rawValue
+    @AppStorage("colorSchemePref") private var colorSchemePref: String = ""
 
     // Category sheets
     @State private var showCurrency = false
@@ -802,6 +802,11 @@ struct ServerEditSheet: View {
 
                             if showConnection {
                                 VStack(alignment: .leading, spacing: 12) {
+                                    Text("The app will use the primary server when reachable and automatically fall back to the backup otherwise.")
+                                        .font(.bhCaption)
+                                        .foregroundColor(.bhMuted)
+                                        .multilineTextAlignment(.leading)
+
                                     urlField(
                                         title: "Primary Server URL",
                                         placeholder: "http://192.168.1.100:8080",
@@ -823,11 +828,6 @@ struct ServerEditSheet: View {
                                         isTesting: isTestingBackup,
                                         onTest: { Task { await test(primary: false) } }
                                     )
-
-                                    Text("The app will use the primary server when reachable and automatically fall back to the backup otherwise.")
-                                        .font(.bhCaption)
-                                        .foregroundColor(.bhMuted)
-                                        .multilineTextAlignment(.leading)
                                 }
                                 .padding(.top, 12)
                                 .transition(.opacity.combined(with: .move(edge: .top)))
@@ -918,6 +918,10 @@ struct ServerEditSheet: View {
     @ViewBuilder
     private var apiKeyContent: some View {
         VStack(alignment: .leading, spacing: 8) {
+            Text("Generate one in BillHive web → Settings → Connected Devices. Stored in iOS Keychain, not iCloud.")
+                .font(.bhCaption)
+                .foregroundColor(.bhMuted)
+
             HStack {
                 Text("Optional")
                     .font(.bhCaption)
@@ -944,10 +948,6 @@ struct ServerEditSheet: View {
                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.bhBorder, lineWidth: 1))
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
-
-            Text("Generate one in BillHive web → Settings → Connected Devices. Stored in iOS Keychain, not iCloud.")
-                .font(.bhCaption)
-                .foregroundColor(.bhMuted)
         }
     }
 
@@ -1022,14 +1022,13 @@ struct ServerEditSheet: View {
 // MARK: - Purchase Settings Section
 
 /// Shows trial status, purchase button, and restore link in Settings.
+/// Card styling is provided by the parent SettingsSection — this view renders content only.
 struct PurchaseSettingsSection: View {
     @ObservedObject var pm = PurchaseManager.shared
     @EnvironmentObject var vm: AppViewModel
 
     var body: some View {
         if pm.isPurchased {
-            // Full-width banner when purchased, with a Restore link for users
-            // who reinstall or change devices and need to re-fetch their entitlement.
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 8) {
                     Image(systemName: "checkmark.seal.fill")
@@ -1054,13 +1053,7 @@ struct PurchaseSettingsSection: View {
                         .foregroundColor(.bhRed)
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(Color.bhSurface)
-            .cornerRadius(10)
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.bhBorder, lineWidth: 1))
         } else {
-            // Full card when not purchased
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 8) {
                     Image(systemName: trialStatusIcon)
@@ -1111,8 +1104,6 @@ struct PurchaseSettingsSection: View {
                         .foregroundColor(.bhRed)
                 }
             }
-            .padding(14)
-            .bhCard()
         }
     }
 
@@ -1233,6 +1224,11 @@ struct NotificationsSheet: View {
                 ScrollView {
                     VStack(spacing: 16) {
                         SettingsSection(title: "Due Date Reminders") {
+                            Text("Get a notification the day before each bill is due. Bills need a due date set to be tracked.")
+                                .font(.bhCaption)
+                                .foregroundColor(.bhMuted)
+                                .padding(.bottom, 8)
+
                             Toggle(isOn: Binding(
                                 get: { notifManager.dueDateRemindersEnabled },
                                 set: { _ in
@@ -1374,12 +1370,22 @@ struct AppearancePickerCard: View {
                 }
             }
             .pickerStyle(.segmented)
-            .frame(maxWidth: 200)
+            .frame(width: 140)
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.vertical, 12)
+        .frame(minHeight: 44)
+        .contentShape(Rectangle())
         .background(Color.bhSurface)
         .cornerRadius(10)
         .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.bhBorder, lineWidth: 1))
+        .onAppear {
+            // On first launch or migration from the old "system" value, detect the
+            // actual system preference and write it as an explicit choice.
+            guard selection != ColorSchemePreference.light.rawValue,
+                  selection != ColorSchemePreference.dark.rawValue else { return }
+            let isDark = UITraitCollection.current.userInterfaceStyle == .dark
+            selection = isDark ? ColorSchemePreference.dark.rawValue : ColorSchemePreference.light.rawValue
+        }
     }
 }
