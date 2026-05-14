@@ -11,6 +11,11 @@ struct OnboardingView: View {
     @State private var currentPage = 0
 
     private static let totalPages = 6
+    #if BILLHIVE_LOCAL
+    private let appName = "Welcome to BillHive"
+    #else
+    private let appName = "Welcome to SelfHive"
+    #endif
     /// Constrains content width on iPad so the carousel doesn't stretch.
     private let maxContentWidth: CGFloat = 520
 
@@ -170,7 +175,7 @@ struct OnboardingView: View {
             Spacer()
             TriHexLogoMark(size: 96)
                 .padding(.bottom, 32)
-            Text("Welcome to BillHive")
+            Text(appName)
                 .font(.largeTitle.weight(.black))
                 .foregroundColor(.bhText)
                 .multilineTextAlignment(.center)
