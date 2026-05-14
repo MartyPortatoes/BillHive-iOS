@@ -67,17 +67,23 @@ class CloudStorageManager: NSObject {
 
     // MARK: - Public API
 
-    /// Loads the app state from iCloud, falling back to local storage if unavailable.
-    func loadState() -> AppState {
+    /// Loads the app state from iCloud, falling back to the local backup if
+    /// iCloud is unavailable, not yet downloaded, or holds an unreadable file.
+    ///
+    /// Throws only when the local backup itself is corrupt — i.e. no recovery
+    /// path remains. Cloud-only corruption falls through silently because
+    /// `saveState()` always writes a local backup, and the cloud copy will be
+    /// overwritten on the next save.
+    func loadState() throws -> AppState {
         guard let fileURL = cloudStateURL else {
-            return LocalStorageManager.shared.loadState()
+            return try LocalStorageManager.shared.loadState()
         }
         triggerDownloadIfNeeded(fileURL)
-        guard let data = coordinatedRead(at: fileURL),
-              let state = try? JSONDecoder().decode(AppState.self, from: data) else {
-            return LocalStorageManager.shared.loadState()
+        if let data = coordinatedRead(at: fileURL),
+           let state = try? JSONDecoder().decode(AppState.self, from: data) {
+            return state
         }
-        return state
+        return try LocalStorageManager.shared.loadState()
     }
 
     /// Saves the app state to both iCloud and local storage (backup).
@@ -91,28 +97,35 @@ class CloudStorageManager: NSObject {
         coordinatedWrite(data: encoded, to: fileURL)
     }
 
-    /// Loads all monthly data from iCloud, falling back to local storage if unavailable.
-    func loadMonths() -> [String: MonthData] {
+    /// Loads all monthly data from iCloud, falling back to the local backup
+    /// if iCloud is unavailable, not yet downloaded, or holds an unreadable
+    /// file. Throws only when the local backup is also unreadable.
+    func loadMonths() throws -> [String: MonthData] {
         guard let fileURL = cloudMonthlyURL else {
-            return LocalStorageManager.shared.loadMonths()
+            return try LocalStorageManager.shared.loadMonths()
         }
         triggerDownloadIfNeeded(fileURL)
-        guard let data = coordinatedRead(at: fileURL),
-              let months = try? JSONDecoder().decode([String: MonthData].self, from: data) else {
-            return LocalStorageManager.shared.loadMonths()
+        if let data = coordinatedRead(at: fileURL),
+           let months = try? JSONDecoder().decode([String: MonthData].self, from: data) {
+            return months
         }
-        return months
+        return try LocalStorageManager.shared.loadMonths()
     }
 
     /// Saves a single month's data, merging it into the existing monthly file.
     ///
     /// Reads the current months from iCloud, updates the entry for `key`,
     /// and rewrites the file. Also saves to local storage as backup.
-    func saveMonth(_ key: String, data: MonthData) {
-        LocalStorageManager.shared.saveMonth(key, data: data)
+    ///
+    /// If the existing months file is corrupt, throws — overwriting would
+    /// destroy every other month. `LocalStorageManager.saveMonth` parks a
+    /// recovery sidecar before throwing, so the new value isn't lost.
+    func saveMonth(_ key: String, data: MonthData) throws {
+        try LocalStorageManager.shared.saveMonth(key, data: data)
 
         guard let fileURL = cloudMonthlyURL else { return }
-        var months = loadMonths()
+        let existing = try loadMonths()
+        var months = existing
         months[key] = data
         guard let encoded = try? JSONEncoder().encode(months) else { return }
         ensureCloudDocsDir()
@@ -133,19 +146,42 @@ class CloudStorageManager: NSObject {
 
     // MARK: - Migration (Local → iCloud)
 
+    /// Result of a `migrateLocalToCloudIfNeeded` call.
+    enum MigrationResult {
+        /// iCloud is unavailable on this device — nothing to do.
+        case cloudUnavailable
+        /// iCloud already has a state file; migration was unnecessary.
+        case alreadyMigrated
+        /// No meaningful local data to migrate (fresh install).
+        case nothingToMigrate
+        /// Migration completed successfully.
+        case migrated
+        /// Local data exists but couldn't be read — left in place for
+        /// recovery. The user should be informed so they know their data
+        /// hasn't synced to iCloud.
+        case localCorrupt
+    }
+
     /// Copies existing local data into iCloud if the cloud container is empty.
     ///
     /// Should be called once at app launch, before loading data. Only migrates
     /// if there's meaningful local data (non-empty people array) and iCloud
-    /// doesn't already have a state file.
-    func migrateLocalToCloudIfNeeded() {
-        guard let stateURL = cloudStateURL else { return }
+    /// doesn't already have a state file. Returns a result code so the caller
+    /// can surface a message in the corrupt-local case.
+    @discardableResult
+    func migrateLocalToCloudIfNeeded() -> MigrationResult {
+        guard let stateURL = cloudStateURL else { return .cloudUnavailable }
 
         // Only migrate if iCloud doesn't already have a state file
-        if FileManager.default.fileExists(atPath: stateURL.path) { return }
+        if FileManager.default.fileExists(atPath: stateURL.path) { return .alreadyMigrated }
 
-        let localState = LocalStorageManager.shared.loadState()
-        guard !localState.people.isEmpty else { return }
+        let localState: AppState
+        do {
+            localState = try LocalStorageManager.shared.loadState()
+        } catch {
+            return .localCorrupt
+        }
+        guard !localState.people.isEmpty else { return .nothingToMigrate }
 
         ensureCloudDocsDir()
 
@@ -153,11 +189,12 @@ class CloudStorageManager: NSObject {
             coordinatedWrite(data: data, to: stateURL)
         }
 
-        let months = LocalStorageManager.shared.loadMonths()
+        let months = (try? LocalStorageManager.shared.loadMonths()) ?? [:]
         if !months.isEmpty, let monthlyURL = cloudMonthlyURL,
            let data = try? JSONEncoder().encode(months) {
             coordinatedWrite(data: data, to: monthlyURL)
         }
+        return .migrated
     }
 
     // MARK: - NSFileCoordinator Helpers

@@ -322,26 +322,25 @@ struct BillSummaryStatsCard: View {
     let chartData: [BillTrendsView.BillPoint]
     let monthKeys: [String]
 
+    @ViewBuilder
     var body: some View {
         let billNames = Array(Set(chartData.map(\.billName))).sorted()
-        guard !billNames.isEmpty, !monthKeys.isEmpty else { return AnyView(EmptyView()) }
+        if !billNames.isEmpty && !monthKeys.isEmpty {
+            let monthCount = Double(monthKeys.count)
 
-        let monthCount = Double(monthKeys.count)
+            // Compute average per bill
+            let billAverages: [(name: String, avg: Double, color: Color)] = billNames.compactMap { name in
+                let points = chartData.filter { $0.billName == name }
+                guard !points.isEmpty else { return nil }
+                let total = points.reduce(0) { $0 + $1.amount }
+                let color = points.first?.color ?? .bhAmber
+                return (name: name, avg: total / monthCount, color: color)
+            }.sorted(by: { $0.avg > $1.avg })
 
-        // Compute average per bill
-        let billAverages: [(name: String, avg: Double, color: Color)] = billNames.compactMap { name in
-            let points = chartData.filter { $0.billName == name }
-            guard !points.isEmpty else { return nil }
-            let total = points.reduce(0) { $0 + $1.amount }
-            let color = points.first?.color ?? .bhAmber
-            return (name: name, avg: total / monthCount, color: color)
-        }.sorted(by: { $0.avg > $1.avg })
+            // Overall household average
+            let householdTotal = chartData.reduce(0) { $0 + $1.amount }
+            let householdAvg = householdTotal / monthCount
 
-        // Overall household average
-        let householdTotal = chartData.reduce(0) { $0 + $1.amount }
-        let householdAvg = householdTotal / monthCount
-
-        return AnyView(
             VStack(alignment: .leading, spacing: 10) {
                 Text("Averages (\(monthKeys.count) months)")
                     .bhSectionTitle()
@@ -373,7 +372,7 @@ struct BillSummaryStatsCard: View {
             }
             .padding(16)
             .bhCard()
-        )
+        }
     }
 }
 

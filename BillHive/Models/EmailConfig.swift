@@ -78,4 +78,16 @@ struct EmailConfig: Codable, Sendable {
     func isMasked(_ value: String?) -> Bool {
         value?.contains("••••") == true
     }
+
+    /// Returns a copy with masked secret fields cleared to `nil` so a save
+    /// PUT doesn't overwrite the server's real credentials with the literal
+    /// "••••" placeholder. The server treats a missing field as "no change".
+    func sanitizedForSave() -> EmailConfig {
+        var copy = self
+        if isMasked(copy.smtpPass) { copy.smtpPass = nil }
+        if isMasked(copy.mailgunApiKey) { copy.mailgunApiKey = nil }
+        if isMasked(copy.sendgridApiKey) { copy.sendgridApiKey = nil }
+        if isMasked(copy.resendApiKey) { copy.resendApiKey = nil }
+        return copy
+    }
 }

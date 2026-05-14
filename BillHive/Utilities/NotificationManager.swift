@@ -122,16 +122,31 @@ final class NotificationManager: ObservableObject {
         dueComps.day = dueDay
 
         guard let dueDate = cal.date(from: dueComps) else { return }
-
         guard let reminderDate = cal.date(byAdding: .day, value: -reminderDaysBefore, to: dueDate) else { return }
 
-        if reminderDate < Date() { return }
-
+        // Build the 9 AM fire moment for the reminder day in the user's
+        // current calendar / timezone. Explicit to avoid surprises if the
+        // OS re-interprets components later (DST gaps, traveling, etc.).
         var triggerComps = cal.dateComponents([.year, .month, .day], from: reminderDate)
+        triggerComps.calendar = cal
+        triggerComps.timeZone = TimeZone.current
         triggerComps.hour = 9
         triggerComps.minute = 0
 
-        let trigger = UNCalendarNotificationTrigger(dateMatching: triggerComps, repeats: false)
+        let now = Date()
+        guard let fireDate = cal.date(from: triggerComps) else { return }
+
+        let trigger: UNNotificationTrigger
+        if fireDate > now {
+            trigger = UNCalendarNotificationTrigger(dateMatching: triggerComps, repeats: false)
+        } else {
+            // 9 AM has already passed today (or earlier). Don't silently
+            // drop a same-day reminder — the user still wants to know the
+            // bill is due. Skip only if the *due date* itself is in the past.
+            let startOfToday = cal.startOfDay(for: now)
+            guard cal.startOfDay(for: dueDate) >= startOfToday else { return }
+            trigger = UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
+        }
 
         let content = UNMutableNotificationContent()
         let dayLabel = bill.dueDayLabel ?? "\(dueDay)"

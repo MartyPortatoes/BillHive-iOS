@@ -606,15 +606,24 @@ struct EmailConfigSection: View {
 
     private func loadConfig() async {
         isLoading = true
-        if let cfg = try? await APIClient.shared.getEmailConfig() {
-            config = cfg
+        do {
+            if let cfg = try await APIClient.shared.getEmailConfig() {
+                config = cfg
+            }
+        } catch {
+            // Surface load errors so users don't stare at a blank form
+            // wondering whether their config was lost.
+            statusOK = false
+            statusMsg = "Couldn't load email config: \(error.localizedDescription)"
         }
         isLoading = false
     }
 
     private func saveConfig() async {
         do {
-            try await APIClient.shared.saveEmailConfig(config)
+            // Strip masked "••••" placeholders before PUT so unchanged
+            // secrets aren't overwritten on the server.
+            try await APIClient.shared.saveEmailConfig(config.sanitizedForSave())
             statusOK = true; statusMsg = "Saved!"
         } catch {
             statusOK = false; statusMsg = error.localizedDescription

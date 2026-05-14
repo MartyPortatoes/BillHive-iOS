@@ -53,9 +53,13 @@ class AppViewModel: ObservableObject {
     /// Context string for the paywall (e.g. "Unlock Trends to see analytics").
     @Published var paywallContext: String? = nil
     /// Currently selected year in the month picker.
-    @Published var selectedYear: Int
+    @Published var selectedYear: Int {
+        didSet { invalidateComputeCache() }
+    }
     /// Currently selected month (1–12) in the month picker.
-    @Published var selectedMonth: Int
+    @Published var selectedMonth: Int {
+        didSet { invalidateComputeCache() }
+    }
 
     // MARK: - Private
 
@@ -65,6 +69,24 @@ class AppViewModel: ObservableObject {
     private let api = APIClient.shared
     /// Observer token for iCloud file-change notifications (local mode only).
     private var cloudChangeObserver: Any?
+
+    // MARK: - Compute Cache
+    //
+    // `computePersonOwes()` and `computeMyTotal()` are called many times per
+    // render across Summary, SendReceive, and Trends — and each walks every
+    // bill × line. We cache the no-argument (current month) results and bump
+    // a generation counter on any mutation that would change them.
+
+    private var computeCacheGen: Int = 0
+    private var cachedOwes: (gen: Int, value: [String: PersonOwes])? = nil
+    private var cachedMyTotal: (gen: Int, value: Double)? = nil
+
+    /// Invalidates the current-month owes/myTotal cache. Call this from any
+    /// mutation that touches `state.bills`, `state.people`, or the currently
+    /// selected month's data.
+    private func invalidateComputeCache() {
+        computeCacheGen &+= 1
+    }
 
     // MARK: - Init / Deinit
 
@@ -124,13 +146,35 @@ class AppViewModel: ObservableObject {
         isLoading = true
         error = nil
         if isLocal {
-            #if BILLHIVE_LOCAL
-            state = CloudStorageManager.shared.loadState()
-            monthly = CloudStorageManager.shared.loadMonths()
-            #else
-            state = LocalStorageManager.shared.loadState()
-            monthly = LocalStorageManager.shared.loadMonths()
-            #endif
+            var stateCorrupt = false
+            var monthlyCorrupt = false
+            do {
+                #if BILLHIVE_LOCAL
+                state = try CloudStorageManager.shared.loadState()
+                #else
+                state = try LocalStorageManager.shared.loadState()
+                #endif
+            } catch {
+                state = AppState()
+                stateCorrupt = true
+            }
+            do {
+                #if BILLHIVE_LOCAL
+                monthly = try CloudStorageManager.shared.loadMonths()
+                #else
+                monthly = try LocalStorageManager.shared.loadMonths()
+                #endif
+            } catch {
+                monthly = [:]
+                monthlyCorrupt = true
+            }
+            if stateCorrupt && monthlyCorrupt {
+                toast("Saved data couldn't be read — files may be corrupt. Restore from a backup if you have one.")
+            } else if stateCorrupt {
+                toast("Bills & settings couldn't be read — state.json may be corrupt.")
+            } else if monthlyCorrupt {
+                toast("Monthly data couldn't be read — monthly.json may be corrupt.")
+            }
             normalizeStatePeople()
             normalizePctLines()
             autoFillPreservedBills()
@@ -216,8 +260,15 @@ class AppViewModel: ObservableObject {
     /// Compares with current in-memory state to avoid unnecessary re-renders.
     func reloadFromCloud() async {
         guard isLocal else { return }
-        let newState = CloudStorageManager.shared.loadState()
-        let newMonthly = CloudStorageManager.shared.loadMonths()
+        let newState: AppState
+        let newMonthly: [String: MonthData]
+        do {
+            newState = try CloudStorageManager.shared.loadState()
+            newMonthly = try CloudStorageManager.shared.loadMonths()
+        } catch {
+            toast("Couldn't reload from iCloud — saved data may be corrupt.")
+            return
+        }
 
         if newState != state {
             state = newState
@@ -298,6 +349,7 @@ class AppViewModel: ObservableObject {
     /// Resets state and monthly data to empty defaults and persists.
     /// Works for both local (iCloud / Documents) and remote (server) modes.
     func clearAllData() async {
+        let existingMonthKeys = Array(monthly.keys)
         state = AppState()
         monthly = [:]
         if isLocal {
@@ -310,15 +362,23 @@ class AppViewModel: ObservableObject {
             #endif
         } else {
             try? await api.saveState(state)
-            // For remote, individual months are kept as the server already
-            // has them — `getAllMonths()` will reflect this empty state.
+            for key in existingMonthKeys {
+                try? await api.deleteMonth(key)
+            }
         }
         await load()
     }
 
     func save() {
+        invalidateComputeCache()
+
         // Reschedule due date notifications when bills change
         NotificationManager.shared.reschedule(bills: state.bills)
+
+        // Any change to state.bills or state.people invalidates the cached
+        // _myTotal / _owes snapshots in every historical month. Rebuild them
+        // before persisting so Trends doesn't show stale figures.
+        recomputeAllSnapshots()
 
         if isLocal {
             #if BILLHIVE_LOCAL
@@ -340,6 +400,25 @@ class AppViewModel: ObservableObject {
         }
     }
 
+    /// Forces any pending debounced save to commit immediately.
+    ///
+    /// The remote-mode `save()` debounces for 600 ms. If the user dismisses
+    /// an editor sheet or backgrounds the app inside that window, the edit
+    /// never reaches the server — the local in-memory state still reflects
+    /// it, so the user thinks it saved, until the next launch overwrites
+    /// from the stale server copy. Call this from scene-phase transitions
+    /// and editor `onDisappear` to close that window.
+    func flushPendingSave() async {
+        guard !isLocal else { return }
+        saveDebounceTask?.cancel()
+        saveDebounceTask = nil
+        do {
+            try await api.saveState(state)
+        } catch {
+            self.toast("Save failed: \(error.localizedDescription)")
+        }
+    }
+
     /// Immediately persists the specified month's data.
     ///
     /// - Parameter key: The month key to save. Defaults to the currently selected month.
@@ -347,11 +426,18 @@ class AppViewModel: ObservableObject {
         let key = key ?? monthKey
         guard let data = monthly[key] else { return }
         if isLocal {
-            #if BILLHIVE_LOCAL
-            CloudStorageManager.shared.saveMonth(key, data: data)
-            #else
-            LocalStorageManager.shared.saveMonth(key, data: data)
-            #endif
+            do {
+                #if BILLHIVE_LOCAL
+                try CloudStorageManager.shared.saveMonth(key, data: data)
+                #else
+                try LocalStorageManager.shared.saveMonth(key, data: data)
+                #endif
+            } catch {
+                // monthly.json is corrupt — the new value was parked in a
+                // recovery sidecar inside Documents/. Tell the user instead
+                // of silently destroying the other months by overwriting.
+                self.toast("Monthly data file is corrupt. Your latest edit was saved to a recovery file; restore from backup to continue.")
+            }
             return
         }
         Task {
@@ -391,6 +477,7 @@ class AppViewModel: ObservableObject {
     func setBillTotal(_ billId: String, value: Double) {
         if monthly[monthKey] == nil { monthly[monthKey] = MonthData() }
         monthly[monthKey]!.totals[billId] = value
+        invalidateComputeCache()
         saveMonthSnapshot()
     }
 
@@ -406,37 +493,43 @@ class AppViewModel: ObservableObject {
             monthly[monthKey]!.amounts[billId] = [:]
         }
         monthly[monthKey]!.amounts[billId]![lineId] = value
+        invalidateComputeCache()
         saveMonthSnapshot()
     }
 
     // MARK: - Business Logic (Split Calculations)
 
-    /// Computes how the bill total is split among payers for the current month.
+    /// Computes how the bill total is split among payers.
     ///
     /// Returns a dictionary of `[personId: dollarAmount]`. The "payer" is
     /// `coveredById` if set, otherwise the line's own `personId`.
     ///
-    /// - Parameter bill: The bill to compute the split for.
+    /// - Parameters:
+    ///   - bill: The bill to compute the split for.
+    ///   - md: Optional explicit month data. Defaults to the current month
+    ///     when nil. Pass an explicit value when recomputing historical
+    ///     snapshots so the Trends views see the same numbers the editor
+    ///     sees on the relevant month.
     /// - Returns: A mapping of person IDs to their dollar share of this bill.
-    func computeBillSplit(_ bill: Bill) -> [String: Double] {
+    func computeBillSplit(_ bill: Bill, using md: MonthData? = nil) -> [String: Double] {
+        let monthData = md ?? currentMonthData
         var result: [String: Double] = [:]
-        let md = currentMonthData
 
         for line in bill.lines {
             let amount: Double
             if bill.splitType == .pct {
-                let total = md.totals[bill.id] ?? 0
+                let total = monthData.totals[bill.id] ?? 0
                 amount = total * line.value / 100.0
             } else {
                 if line.id == bill.remainderLineId {
                     // Remainder line gets total minus the sum of all other fixed lines
                     let allOthers = bill.lines
                         .filter { $0.id != bill.remainderLineId }
-                        .reduce(0.0) { $0 + (md.amounts[bill.id]?[$1.id] ?? 0) }
-                    let billTotal = md.totals[bill.id] ?? allOthers
+                        .reduce(0.0) { $0 + (monthData.amounts[bill.id]?[$1.id] ?? 0) }
+                    let billTotal = monthData.totals[bill.id] ?? allOthers
                     amount = max(0, billTotal - allOthers)
                 } else {
-                    amount = md.amounts[bill.id]?[line.id] ?? 0
+                    amount = monthData.amounts[bill.id]?[line.id] ?? 0
                 }
             }
 
@@ -451,7 +544,12 @@ class AppViewModel: ObservableObject {
     /// Returns a dictionary of `[personId: PersonOwes]` with a per-bill breakdown.
     /// Duplicate bill entries for the same person (e.g. when they cover someone else's
     /// share on the same bill) are consolidated into a single entry.
-    func computePersonOwes() -> [String: PersonOwes] {
+    func computePersonOwes(using md: MonthData? = nil) -> [String: PersonOwes] {
+        // Serve from cache only when called for the current month (no explicit md).
+        if md == nil, let cached = cachedOwes, cached.gen == computeCacheGen {
+            return cached.value
+        }
+        let monthData = md ?? currentMonthData
         var result: [String: PersonOwes] = [:]
 
         for bill in state.bills {
@@ -461,16 +559,16 @@ class AppViewModel: ObservableObject {
 
                 let amount: Double
                 if bill.splitType == .pct {
-                    let total = currentMonthData.totals[bill.id] ?? 0
+                    let total = monthData.totals[bill.id] ?? 0
                     amount = total * line.value / 100.0
                 } else if line.id == bill.remainderLineId {
                     let allOthers = bill.lines
                         .filter { $0.id != bill.remainderLineId }
-                        .reduce(0.0) { $0 + (currentMonthData.amounts[bill.id]?[$1.id] ?? 0) }
-                    let billTotal = currentMonthData.totals[bill.id] ?? allOthers
+                        .reduce(0.0) { $0 + (monthData.amounts[bill.id]?[$1.id] ?? 0) }
+                    let billTotal = monthData.totals[bill.id] ?? allOthers
                     amount = max(0, billTotal - allOthers)
                 } else {
-                    amount = currentMonthData.amounts[bill.id]?[line.id] ?? 0
+                    amount = monthData.amounts[bill.id]?[line.id] ?? 0
                 }
 
                 if result[payerId] == nil {
@@ -510,17 +608,75 @@ class AppViewModel: ObservableObject {
             result[pid]?.bills = Array(consolidated.values).sorted { $0.billName < $1.billName }
         }
 
+        if md == nil {
+            cachedOwes = (computeCacheGen, result)
+        }
         return result
     }
 
     /// Computes the primary user's ("me") total share across all bills.
-    func computeMyTotal() -> Double {
+    func computeMyTotal(using md: MonthData? = nil) -> Double {
+        if md == nil, let cached = cachedMyTotal, cached.gen == computeCacheGen {
+            return cached.value
+        }
         var total = 0.0
         for bill in state.bills {
-            let split = computeBillSplit(bill)
+            let split = computeBillSplit(bill, using: md)
             total += split["me"] ?? 0
         }
+        if md == nil {
+            cachedMyTotal = (computeCacheGen, total)
+        }
         return total
+    }
+
+    /// Rebuilds the cached `_myTotal` / `_owes` snapshots on every month
+    /// using the current `state.bills` and `state.people`.
+    ///
+    /// Trends and the historical log read these caches rather than
+    /// recomputing — so when the user edits a bill (changes the split,
+    /// adds/removes a line, changes who's covered) or removes a person,
+    /// every other month's cache becomes stale. Call this after any
+    /// `state.bills` or `state.people` mutation.
+    ///
+    /// In remote mode the per-month PUTs are issued in parallel via a
+    /// task group rather than serially to avoid stalling the UI.
+    func recomputeAllSnapshots() {
+        let validPersonIds = Set(state.people.map { $0.id })
+        for (key, _) in monthly {
+            var md = monthly[key] ?? MonthData()
+            md._myTotal = computeMyTotal(using: md)
+            var owes: [String: Double] = [:]
+            for (pid, info) in computePersonOwes(using: md) {
+                guard validPersonIds.contains(pid) else { continue }
+                owes[pid] = info.total
+            }
+            md._owes = owes
+            monthly[key] = md
+        }
+        // Persist the updated snapshots.
+        if isLocal {
+            for key in monthly.keys {
+                if let data = monthly[key] {
+                    #if BILLHIVE_LOCAL
+                    try? CloudStorageManager.shared.saveMonth(key, data: data)
+                    #else
+                    try? LocalStorageManager.shared.saveMonth(key, data: data)
+                    #endif
+                }
+            }
+        } else {
+            let snapshot = monthly
+            Task {
+                await withTaskGroup(of: Void.self) { group in
+                    for (key, data) in snapshot {
+                        group.addTask {
+                            try? await self.api.saveMonth(key, data: data)
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// Copies the previous month's amounts into the current month for bills
@@ -550,7 +706,10 @@ class AppViewModel: ObservableObject {
             }
         }
 
-        if changed { saveMonthNow(key) }
+        if changed {
+            invalidateComputeCache()
+            saveMonthNow(key)
+        }
     }
 
     // MARK: - Month Navigation
@@ -597,6 +756,18 @@ class AppViewModel: ObservableObject {
     }
 
     // MARK: - Bill Management
+
+    /// Looks up a bill by ID and applies the mutation, then saves.
+    ///
+    /// Use this in view bindings instead of capturing an array index — an
+    /// index captured at view-evaluation time can point at the wrong bill
+    /// (or out of bounds) if a refresh or delete from another path runs
+    /// before the binding's setter fires.
+    func updateBill(_ id: String, mutate: (inout Bill) -> Void) {
+        guard let idx = state.bills.firstIndex(where: { $0.id == id }) else { return }
+        mutate(&state.bills[idx])
+        save()
+    }
 
     /// Adds a new bill with a single "My share" line at 100%.
     func addBill() {

@@ -113,6 +113,11 @@ struct ContentView: View {
             if phase == .active && !vm.isLocal && !lock.isLocked {
                 Task { await vm.refresh() }
             }
+            // Flush any in-flight debounced save before the OS may suspend
+            // the app — otherwise the user's last edit can be lost.
+            if phase == .inactive || phase == .background {
+                Task { await vm.flushPendingSave() }
+            }
         }
     }
 }

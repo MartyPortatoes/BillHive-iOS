@@ -25,9 +25,12 @@ struct BillHiveApp: App {
                 .environmentObject(vm)
                 .environmentObject(purchaseManager)
                 .task {
-                    CloudStorageManager.shared.migrateLocalToCloudIfNeeded()
+                    let migration = CloudStorageManager.shared.migrateLocalToCloudIfNeeded()
                     await purchaseManager.setup()
                     await vm.load()
+                    if migration == .localCorrupt {
+                        vm.toast("Local data couldn't be read; it wasn't migrated to iCloud. Restore from a backup if you have one.")
+                    }
                     if !purchaseManager.isUnlocked {
                         showLockedPaywall = true
                     }

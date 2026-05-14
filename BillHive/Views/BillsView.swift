@@ -92,12 +92,21 @@ struct BillsView: View {
             }
             .sheet(isPresented: Binding(
                 get: { editingBillId != nil },
-                set: { if !$0 { editingBillId = nil } }
+                set: { newValue in
+                    if !newValue {
+                        editingBillId = nil
+                        // Flush any in-flight debounced save so edits made
+                        // just before swipe-dismiss aren't lost.
+                        Task { await vm.flushPendingSave() }
+                    }
+                }
             )) {
-                if let id = editingBillId,
-                   let bill = vm.state.bills.first(where: { $0.id == id }) {
-                    BillEditorSheet(bill: bill) { editingBillId = nil }
-                        .environmentObject(vm)
+                if let id = editingBillId {
+                    BillEditorSheet(billId: id) {
+                        editingBillId = nil
+                        Task { await vm.flushPendingSave() }
+                    }
+                    .environmentObject(vm)
                 }
             }
         }

@@ -138,6 +138,7 @@ class APIClient: ObservableObject {
         if !s.lowercased().hasPrefix("http://") && !s.lowercased().hasPrefix("https://") {
             s = APIClient.defaultScheme(forHost: s) + "://" + s
         }
+        s = APIClient.bracketIPv6(s)
         s = s.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         return URL(string: s)
     }
@@ -147,12 +148,18 @@ class APIClient: ObservableObject {
     /// .local Bonjour / loopback (where TLS is rarely available), otherwise
     /// `https` so we never silently downgrade traffic to a public host.
     static func defaultScheme(forHost input: String) -> String {
-        // Strip optional port; we only care about the host portion.
         let hostPart = input.split(separator: "/").first.map(String.init) ?? input
-        let host = hostPart.split(separator: ":").first.map(String.init)?.lowercased() ?? hostPart.lowercased()
+        let host: String
+        if hostPart.hasPrefix("["), let end = hostPart.firstIndex(of: "]") {
+            host = String(hostPart[hostPart.index(after: hostPart.startIndex)...hostPart.index(before: end)]).lowercased()
+        } else if hostPart.filter({ $0 == ":" }).count >= 2 {
+            host = hostPart.lowercased()
+        } else {
+            host = hostPart.split(separator: ":").first.map(String.init)?.lowercased() ?? hostPart.lowercased()
+        }
         if host == "localhost" || host == "127.0.0.1" || host == "::1" { return "http" }
         if host.hasSuffix(".local") { return "http" }
-        // IPv4 dotted-quad check + private/CGNAT range detection.
+        if host.contains(":") { return "http" }
         let parts = host.split(separator: ".").compactMap { Int($0) }
         if parts.count == 4, parts.allSatisfy({ (0...255).contains($0) }) {
             let a = parts[0], b = parts[1]
@@ -164,6 +171,31 @@ class APIClient: ObservableObject {
             if a == 127 { return "http" }                               // loopback
         }
         return "https"
+    }
+
+    /// Wraps bare IPv6 addresses in brackets for valid URL construction.
+    static func bracketIPv6(_ input: String) -> String {
+        var s = input
+        if s.lowercased().hasPrefix("http://") || s.lowercased().hasPrefix("https://") {
+            guard let schemeEnd = s.range(of: "://") else { return s }
+            let afterScheme = String(s[schemeEnd.upperBound...])
+            if afterScheme.first != "[" && afterScheme.filter({ $0 == ":" }).count >= 2 {
+                let hostEnd = afterScheme.firstIndex(of: "/") ?? afterScheme.endIndex
+                let hostPort = String(afterScheme[afterScheme.startIndex..<hostEnd])
+                let rest = String(afterScheme[hostEnd...])
+                s = String(s[s.startIndex..<schemeEnd.upperBound]) + "[\(hostPort)]" + rest
+            }
+            return s
+        }
+        if s.first != "[" && s.filter({ $0 == ":" }).count >= 2 {
+            if let slash = s.firstIndex(of: "/") {
+                let hostPort = String(s[s.startIndex..<slash])
+                let rest = String(s[slash...])
+                return "[\(hostPort)]" + rest
+            }
+            return "[\(s)]"
+        }
+        return s
     }
 
     /// Builds a full request URL by appending `path` to the given server's
@@ -388,6 +420,7 @@ class APIClient: ObservableObject {
         if !s.lowercased().hasPrefix("http://") && !s.lowercased().hasPrefix("https://") {
             s = APIClient.defaultScheme(forHost: s) + "://" + s
         }
+        s = APIClient.bracketIPv6(s)
         s = s.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         guard let url = URL(string: s + "/api/health") else {
             return ConnectionTestResult(success: false, message: "Invalid URL", requiresKey: false)
@@ -507,15 +540,28 @@ class APIClient: ObservableObject {
     // MARK: - Monthly Data
 
     /// Fetches all months' data from the server.
+    ///
+    /// Throws `APIError.decodingError` if the response can't be decoded — a
+    /// silently-empty fallback would cause `AppViewModel.onMonthChange` to
+    /// blow away in-memory data and then auto-fill from a different month.
     func getAllMonths() async throws -> [String: MonthData] {
         let data = try await request(path: "/api/months")
-        return (try? JSONDecoder().decode([String: MonthData].self, from: data)) ?? [:]
+        do {
+            return try JSONDecoder().decode([String: MonthData].self, from: data)
+        } catch {
+            throw APIError.decodingError(error)
+        }
     }
 
-    /// Fetches a single month's data from the server.
+    /// Fetches a single month's data from the server. Throws on decode
+    /// failure for the same reason as `getAllMonths`.
     func getMonth(_ key: String) async throws -> MonthData {
         let data = try await request(path: "/api/months/\(key)")
-        return (try? JSONDecoder().decode(MonthData.self, from: data)) ?? MonthData()
+        do {
+            return try JSONDecoder().decode(MonthData.self, from: data)
+        } catch {
+            throw APIError.decodingError(error)
+        }
     }
 
     /// Saves a single month's data to the server via PUT.
@@ -531,10 +577,20 @@ class APIClient: ObservableObject {
     // MARK: - Email Config
 
     /// Fetches the server-side email relay configuration.
+    ///
+    /// Returns `nil` if the server has no config (response body is "null").
+    /// Throws `APIError.decodingError` for any other decode failure rather
+    /// than silently returning nil — masking the difference between "no
+    /// config" and "broken config" leads to users seeing a blank form with
+    /// no explanation.
     func getEmailConfig() async throws -> EmailConfig? {
         let data = try await request(path: "/api/email/config")
         if data == Data("null".utf8) { return nil }
-        return try? JSONDecoder().decode(EmailConfig.self, from: data)
+        do {
+            return try JSONDecoder().decode(EmailConfig.self, from: data)
+        } catch {
+            throw APIError.decodingError(error)
+        }
     }
 
     /// Saves the email relay configuration to the server.

@@ -36,10 +36,7 @@ struct PersonTrendsView: View {
             // Compute "me" total — use cached value or recompute from splits
             var myTotal = md._myTotal ?? 0
             if myTotal == 0 {
-                for bill in vm.state.bills {
-                    let billSplit = computeSplit(bill: bill, md: md)
-                    myTotal += billSplit["me"] ?? 0
-                }
+                myTotal = vm.computeMyTotal(using: md)
             }
             points.append(DataPoint(month: key, label: label, personId: "me",
                                     personName: "Me", amount: myTotal, color: .bhAmber))
@@ -63,25 +60,6 @@ struct PersonTrendsView: View {
         }
     }
 
-    /// Computes the per-person split for a single bill using a specific month's data.
-    ///
-    /// Mirrors the logic in `AppViewModel.computeBillSplit`, but operates on
-    /// an arbitrary `MonthData` instead of the current month.
-    func computeSplit(bill: Bill, md: MonthData) -> [String: Double] {
-        var result: [String: Double] = [:]
-        for line in bill.lines {
-            let amount: Double
-            if bill.splitType == .pct {
-                let total = md.totals[bill.id] ?? 0
-                amount = total * line.value / 100.0
-            } else {
-                amount = md.amounts[bill.id]?[line.id] ?? 0
-            }
-            let payer = line.coveredById ?? line.personId
-            result[payer, default: 0] += amount
-        }
-        return result
-    }
 
     var body: some View {
         VStack(spacing: 16) {
@@ -254,7 +232,7 @@ struct PersonTrendsView: View {
                                     // Per-bill breakdown when expanded
                                     if expandedLogEntry == key {
                                         ForEach(vm.state.bills) { bill in
-                                            let splits = computeSplit(bill: bill, md: md)
+                                            let splits = vm.computeBillSplit(bill, using: md)
                                             let personAmt = splits[person.id] ?? 0
                                             if personAmt > 0 {
                                                 HStack {
@@ -283,7 +261,7 @@ struct PersonTrendsView: View {
                                         Text(myTotal.asCurrency).font(.bhCaption).foregroundColor(.bhText)
                                     }
                                     ForEach(vm.state.bills) { bill in
-                                        let splits = computeSplit(bill: bill, md: md)
+                                        let splits = vm.computeBillSplit(bill, using: md)
                                         let myAmt = splits["me"] ?? 0
                                         if myAmt > 0 {
                                             HStack {
@@ -328,25 +306,24 @@ struct PersonSummaryStatsCard: View {
         }
     }
 
+    @ViewBuilder
     var body: some View {
         let totals = myTotals
-        guard !totals.isEmpty else { return AnyView(EmptyView()) }
+        if !totals.isEmpty {
+            let amounts = totals.map(\.amount)
+            let avg = amounts.reduce(0, +) / Double(amounts.count)
+            let highest = totals.max(by: { $0.amount < $1.amount })
+            let lowest = totals.min(by: { $0.amount < $1.amount })
 
-        let amounts = totals.map(\.amount)
-        let avg = amounts.reduce(0, +) / Double(amounts.count)
-        let highest = totals.max(by: { $0.amount < $1.amount })
-        let lowest = totals.min(by: { $0.amount < $1.amount })
+            // Month-over-month change
+            let momChange: Double? = {
+                guard totals.count >= 2 else { return nil }
+                let current = totals[totals.count - 1].amount
+                let previous = totals[totals.count - 2].amount
+                guard previous > 0 else { return nil }
+                return ((current - previous) / previous) * 100
+            }()
 
-        // Month-over-month change
-        let momChange: Double? = {
-            guard totals.count >= 2 else { return nil }
-            let current = totals[totals.count - 1].amount
-            let previous = totals[totals.count - 2].amount
-            guard previous > 0 else { return nil }
-            return ((current - previous) / previous) * 100
-        }()
-
-        return AnyView(
             VStack(alignment: .leading, spacing: 10) {
                 Text("Insights")
                     .bhSectionTitle()
@@ -377,6 +354,6 @@ struct PersonSummaryStatsCard: View {
             }
             .padding(16)
             .bhCard()
-        )
+        }
     }
 }
