@@ -1,8 +1,7 @@
-What's new in 1.8.0:
+What's new in 1.9.1:
 
-• Free trial + one-time purchase — new users get 14 days free, then a one-time unlock. Existing paid users are automatically recognized and never see a paywall
-• First-launch onboarding — a guided walkthrough introduces each tab so new users know where everything lives
-• Currency support — auto-detects your region's currency, or pick any currency manually in Settings
-• Trends upgrades — tap any chart point for details, explore 6M/12M/24M/All ranges, and view per-person stats
-• Dual-server failover — primary and backup servers are probed at launch; the fastest one wins
-• Bug fixes and UI polish
+• Reliability — edits are now safely persisted even when the app is backgrounded mid-edit. If your save file is corrupt, the new edit is parked in a recovery file instead of overwriting month history
+• Trends accuracy — historical totals stay correct after you edit bills or remove a person, and remainder lines display correctly in the per-month breakdown
+• Notification fixes — same-day reminders no longer get silently dropped after 9 AM, and triggers handle DST and timezone changes correctly
+• Performance — Summary and Trends views are noticeably faster on larger households
+• Fixed: SelfHive welcome screen now correctly shows "SelfHive" instead of "BillHive"

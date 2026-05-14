@@ -8,7 +8,7 @@ ENV["LC_ALL"] = "en_US.UTF-8"
 
 # Paths
 PROJECT      = "BillHive.xcodeproj"
-APPCONNECT   = File.expand_path("../../_AppConnect", __dir__)
+APPCONNECT   = File.expand_path("../../_AppStoreConnect", __dir__)
 KEY_ID       = "626USZ8VAQ"
 ISSUER_ID    = "cb60c965-0b6c-4c8c-a21c-1290dd674a1e"
 KEY_FILE     = "#{APPCONNECT}/AuthKey_#{KEY_ID}.p8"
@@ -99,6 +99,7 @@ platform :ios do
       app_identifier: BILLHIVE_BUNDLE_ID,
       app_version: project_version_for("BillHive"),
       force: true,
+      reject_if_possible: true,
       skip_binary_upload: true,
       skip_screenshots: true,
       skip_metadata: false,
@@ -122,6 +123,7 @@ platform :ios do
       app_identifier: SELFHIVE_BUNDLE_ID,
       app_version: project_version_for("SelfHive"),
       force: true,
+      reject_if_possible: true,
       skip_binary_upload: true,
       skip_screenshots: true,
       skip_metadata: false,
