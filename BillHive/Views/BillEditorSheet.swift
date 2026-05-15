@@ -98,6 +98,26 @@ struct BillEditorSheet: View {
                             .padding(.horizontal, 16)
                             .padding(.vertical, 10)
 
+                            // MARK: Paid By
+                            HStack {
+                                Text("Paid By")
+                                    .font(.bhBodyName)
+                                    .foregroundColor(.bhMuted)
+                                Spacer()
+                                Picker("", selection: Binding(
+                                    get: { bill.paidById },
+                                    set: { val in vm.updateBill(billId) { $0.paidById = val } }
+                                )) {
+                                    ForEach(vm.state.people) { person in
+                                        Text(person.isMe ? "\(person.name) (you)" : person.name).tag(person.id)
+                                    }
+                                }
+                                .pickerStyle(.menu)
+                                .tint(.bhAmber)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+
                             // MARK: Total Bill Input
                             HStack {
                                 Text("Total Bill")
@@ -368,7 +388,7 @@ struct BillLineRowView: View {
     var computedAmount: Double {
         guard let bill = bill, let line = line else { return 0 }
         if bill.splitType == .pct {
-            return vm.getBillTotal(billId) * line.value / 100.0
+            return vm.pctLineAmount(bill: bill, line: line, total: vm.getBillTotal(billId))
         } else if lineId == bill.remainderLineId {
             let others = bill.lines
                 .filter { $0.id != bill.remainderLineId }

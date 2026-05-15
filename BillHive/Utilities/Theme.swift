@@ -19,11 +19,11 @@ extension Color {
     // ── Surfaces ─────────────────────────────────────────────────────────
     // LIGHT: cream paper.  DARK: rich cocoa (not near-black).
     static let bhBackground = Color.bhDynamic(light: "#f4ecda", dark: "#221810")
-    static let bhSurface    = Color.bhDynamic(light: "#fbf5e8", dark: "#3a2c1c")
-    static let bhSurface2   = Color.bhDynamic(light: "#ede1c6", dark: "#463624")
-    static let bhSurface3   = Color.bhDynamic(light: "#e0d2b1", dark: "#53412c")
-    static let bhBorder     = Color.bhDynamic(light: "#d8c8a4", dark: "#5e4b32")
-    static let bhBorder2    = Color.bhDynamic(light: "#b8a578", dark: "#7a6442")
+    static let bhSurface    = Color.bhDynamic(light: "#fbf5e8", dark: "#332618")
+    static let bhSurface2   = Color.bhDynamic(light: "#ede1c6", dark: "#332618")
+    static let bhSurface3   = Color.bhDynamic(light: "#e0d2b1", dark: "#332618")
+    static let bhBorder     = Color.bhDynamic(light: "#d8c8a4", dark: "#7a6442")
+    static let bhBorder2    = Color.bhDynamic(light: "#b8a578", dark: "#8a7450")
 
     // ── Text ─────────────────────────────────────────────────────────────
     static let bhText       = Color.bhDynamic(light: "#2b1d11", dark: "#f0e6d0")

@@ -132,6 +132,15 @@ struct BillOwed {
     var coveredNote: String?
 }
 
+/// A settlement between two non-primary people (neither is "me").
+struct ThirdPartySettlement: Identifiable {
+    var id: String { "\(fromId)_\(toId)" }
+    var fromId: String
+    var toId: String
+    var amount: Double
+    var bills: [BillOwed]
+}
+
 // MARK: - Month Key Helpers
 
 /// Utility for creating and manipulating month keys in "YYYY-MM" format.

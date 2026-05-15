@@ -19,6 +19,7 @@ struct SummaryView: View {
     @State private var viewMode: SummaryViewMode = .summary
     @State private var showFullBreakdown = false
     @State private var showMyOutlay = true
+    @State private var showBetweenOthers = false
 
     /// Per-person owed amounts for the current month, keyed by person ID.
     var owes: [String: PersonOwes] { vm.computePersonOwes() }
@@ -96,7 +97,7 @@ struct SummaryView: View {
                 HStack(spacing: 10) {
                     Image(systemName: paidCount == owingPeople.count ? "checkmark.seal.fill" : "clock")
                         .font(.subheadline)
-                        .foregroundColor(paidCount == owingPeople.count ? .green : .bhAmber)
+                        .foregroundColor(paidCount == owingPeople.count ? .bhGreen : .bhAmber)
 
                     Text("\(paidCount) of \(owingPeople.count) \(owingPeople.count == 1 ? "person has" : "people have") paid")
                         .font(.bhCaption)
@@ -108,7 +109,7 @@ struct SummaryView: View {
                     HStack(spacing: 4) {
                         ForEach(owingPeople) { person in
                             Circle()
-                                .fill(vm.isPaymentReceived(person.id, for: vm.monthKey) ? Color.green : Color.bhBorder2)
+                                .fill(vm.isPaymentReceived(person.id, for: vm.monthKey) ? Color.bhGreen : Color.bhBorder2)
                                 .frame(width: 8, height: 8)
                         }
                     }
@@ -116,10 +117,10 @@ struct SummaryView: View {
                 .padding(12)
                 .background(
                     RoundedRectangle(cornerRadius: 8)
-                        .fill(paidCount == owingPeople.count ? Color.green.opacity(0.08) : Color.bhSurface2)
+                        .fill(paidCount == owingPeople.count ? Color.bhGreen.opacity(0.08) : Color.bhSurface2)
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
-                                .stroke(paidCount == owingPeople.count ? Color.green.opacity(0.2) : Color.bhBorder, lineWidth: 1)
+                                .stroke(paidCount == owingPeople.count ? Color.bhGreen.opacity(0.2) : Color.bhBorder, lineWidth: 1)
                         )
                 )
             }
@@ -133,6 +134,90 @@ struct SummaryView: View {
                     )
                 }
             }
+
+            // "You Owe" section — people with negative net balance
+            let youOwePeople = nonMePeople.filter { (owes[$0.id]?.total ?? 0) < 0 }
+            if !youOwePeople.isEmpty {
+                Text("You Owe")
+                    .bhSectionTitle()
+                    .padding(.top, 8)
+
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                    ForEach(youOwePeople) { person in
+                        let isPaid = vm.state.checklist[vm.monthKey]?["payback_\(person.id)"] ?? false
+                        YouOweSummaryCard(person: person, amount: abs(owes[person.id]?.total ?? 0), bills: owes[person.id]?.bills ?? [], isPaid: isPaid)
+                    }
+                }
+            }
+        }
+
+        // Between Others — collapsible, third-party settlements
+        let settlements = vm.computeThirdPartySettlements()
+        if !settlements.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        showBetweenOthers.toggle()
+                    }
+                } label: {
+                    HStack {
+                        Text("Between Others")
+                            .bhSectionTitle()
+                        Spacer()
+                        Text("\(settlements.count) \(settlements.count == 1 ? "settlement" : "settlements")")
+                            .font(.bhCaption)
+                            .foregroundColor(.bhMuted2)
+                            .padding(.trailing, 6)
+                        Image(systemName: showBetweenOthers ? "chevron.up" : "chevron.down")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundColor(.bhMuted2)
+                    }
+                }
+                .buttonStyle(.plain)
+
+                if showBetweenOthers {
+                    ForEach(settlements) { settlement in
+                        let fromPerson = vm.getPerson(settlement.fromId)
+                        let toPerson = vm.getPerson(settlement.toId)
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(Color(hex: fromPerson?.color ?? "") ?? .gray)
+                                .frame(width: 8, height: 8)
+                            Text(fromPerson?.name ?? "?")
+                                .font(.bhBodyName)
+                                .foregroundColor(.bhMuted)
+                            Image(systemName: "arrow.right")
+                                .font(.caption2)
+                                .foregroundColor(.bhMuted2)
+                            Circle()
+                                .fill(Color(hex: toPerson?.color ?? "") ?? .gray)
+                                .frame(width: 8, height: 8)
+                            Text(toPerson?.name ?? "?")
+                                .font(.bhBodyName)
+                                .foregroundColor(.bhMuted)
+                            Spacer()
+                            Text(settlement.amount.asCurrency)
+                                .font(.bhMoneySmall)
+                                .foregroundColor(.bhText)
+                        }
+                        .padding(.vertical, 8)
+                        Divider().background(Color.bhBorder)
+                    }
+
+                    HStack(spacing: 4) {
+                        Image(systemName: "info.circle")
+                            .font(.caption2)
+                            .foregroundColor(.bhMuted2)
+                        Text("Settlements between other household members — not involving you.")
+                            .font(.bhCaption)
+                            .foregroundColor(.bhMuted2)
+                    }
+                    .padding(.top, 4)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+            .padding(16)
+            .bhCard()
         }
 
         // My outlay card — collapsible
@@ -240,7 +325,7 @@ struct SummaryView: View {
             HStack(spacing: 10) {
                 Image(systemName: doneCount == items.count ? "checkmark.seal.fill" : "checklist")
                     .font(.subheadline)
-                    .foregroundColor(doneCount == items.count ? .green : .bhAmber)
+                    .foregroundColor(doneCount == items.count ? .bhGreen : .bhAmber)
 
                 Text("\(doneCount) of \(items.count) completed")
                     .font(.bhCaption)
@@ -255,7 +340,7 @@ struct SummaryView: View {
                             .fill(Color.bhBorder)
                             .frame(height: 6)
                         RoundedRectangle(cornerRadius: 3)
-                            .fill(doneCount == items.count ? Color.green : Color.bhAmber)
+                            .fill(doneCount == items.count ? Color.bhGreen : Color.bhAmber)
                             .frame(width: geo.size.width * CGFloat(doneCount) / CGFloat(max(items.count, 1)), height: 6)
                     }
                 }
@@ -264,10 +349,10 @@ struct SummaryView: View {
             .padding(12)
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(doneCount == items.count ? Color.green.opacity(0.08) : Color.bhSurface2)
+                    .fill(doneCount == items.count ? Color.bhGreen.opacity(0.08) : Color.bhSurface2)
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
-                            .stroke(doneCount == items.count ? Color.green.opacity(0.2) : Color.bhBorder, lineWidth: 1)
+                            .stroke(doneCount == items.count ? Color.bhGreen.opacity(0.2) : Color.bhBorder, lineWidth: 1)
                     )
             )
 
@@ -300,7 +385,7 @@ struct PersonSummaryCard: View {
         HStack(spacing: 0) {
             // Left-edge color stripe (more iOS-native than top stripe)
             Rectangle()
-                .fill(isPaymentReceived ? Color.green : (Color(hex: person.color) ?? .bhAmber))
+                .fill(isPaymentReceived ? Color.bhGreen : (Color(hex: person.color) ?? .bhAmber))
                 .frame(width: 4)
 
             VStack(alignment: .leading, spacing: 8) {
@@ -311,7 +396,7 @@ struct PersonSummaryCard: View {
                     if isPaymentReceived {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.caption2)
-                            .foregroundColor(.green)
+                            .foregroundColor(.bhGreen)
                     }
                 }
 
@@ -325,7 +410,7 @@ struct PersonSummaryCard: View {
                 if isPaymentReceived {
                     Text("Payment received")
                         .font(.bhCaption)
-                        .foregroundColor(.green.opacity(0.8))
+                        .foregroundColor(.bhGreen.opacity(0.8))
                 } else if let bills = personOwes?.bills, !bills.isEmpty {
                     Text(bills.map { $0.billName }.joined(separator: " · "))
                         .font(.bhCaption)
@@ -342,9 +427,64 @@ struct PersonSummaryCard: View {
         }
         .background(Color.bhSurface2)
         .cornerRadius(10)
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(isPaymentReceived ? Color.green.opacity(0.3) : Color.bhBorder, lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(isPaymentReceived ? Color.bhGreen.opacity(0.3) : Color.bhBorder, lineWidth: 1))
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(person.name) owes \((personOwes?.total ?? 0).asCurrency)\(isPaymentReceived ? ", paid" : "")")
+    }
+}
+
+// MARK: - You Owe Summary Card
+
+struct YouOweSummaryCard: View {
+    let person: Person
+    let amount: Double
+    let bills: [BillOwed]
+    var isPaid: Bool = false
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Rectangle()
+                .fill(isPaid ? Color.bhGreen : Color.bhRed)
+                .frame(width: 4)
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 6) {
+                    Text(person.name)
+                        .font(.bhBodyName)
+                        .foregroundColor(.bhText)
+                    if isPaid {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.caption2)
+                            .foregroundColor(.bhGreen)
+                    }
+                }
+
+                Text(amount.asCurrency)
+                    .font(.bhMoneyLarge)
+                    .foregroundColor(isPaid ? .bhMuted : .bhRed)
+                    .strikethrough(isPaid, color: .bhMuted)
+                    .minimumScaleFactor(0.6)
+                    .lineLimit(1)
+
+                if isPaid {
+                    Text("Paid")
+                        .font(.bhCaption)
+                        .foregroundColor(.bhGreen.opacity(0.8))
+                } else if !bills.isEmpty {
+                    Text(bills.map { $0.billName }.joined(separator: " · "))
+                        .font(.bhCaption)
+                        .foregroundColor(.bhMuted)
+                        .lineLimit(2)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+        }
+        .background(Color.bhSurface2)
+        .cornerRadius(10)
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(isPaid ? Color.bhGreen.opacity(0.3) : Color.bhRed.opacity(0.3), lineWidth: 1))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("You owe \(person.name) \(amount.asCurrency)\(isPaid ? ", paid" : "")")
     }
 }
 

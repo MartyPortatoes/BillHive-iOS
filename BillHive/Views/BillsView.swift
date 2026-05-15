@@ -34,6 +34,7 @@ struct BillsView: View {
                             .foregroundColor(.bhMuted)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, 16)
+                            .padding(.top, 16)
                             .padding(.bottom, 16)
 
                         if vm.state.bills.isEmpty {

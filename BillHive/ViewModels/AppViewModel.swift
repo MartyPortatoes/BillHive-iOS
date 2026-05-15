@@ -511,6 +511,22 @@ class AppViewModel: ObservableObject {
     ///     snapshots so the Trends views see the same numbers the editor
     ///     sees on the relevant month.
     /// - Returns: A mapping of person IDs to their dollar share of this bill.
+    /// Computes a single pct line's dollar amount with rounding correction.
+    /// The last line absorbs any fractional-cent remainder so the split
+    /// always sums exactly to the bill total.
+    func pctLineAmount(bill: Bill, line: BillLine, total: Double) -> Double {
+        guard let idx = bill.lines.firstIndex(where: { $0.id == line.id }) else {
+            return total * line.value / 100.0
+        }
+        if idx == bill.lines.count - 1 {
+            let othersSum = bill.lines.dropLast().reduce(0.0) { sum, l in
+                sum + ((total * l.value / 100.0 * 100).rounded() / 100)
+            }
+            return ((total - othersSum) * 100).rounded() / 100
+        }
+        return (total * line.value / 100.0 * 100).rounded() / 100
+    }
+
     func computeBillSplit(_ bill: Bill, using md: MonthData? = nil) -> [String: Double] {
         let monthData = md ?? currentMonthData
         var result: [String: Double] = [:]
@@ -519,7 +535,7 @@ class AppViewModel: ObservableObject {
             let amount: Double
             if bill.splitType == .pct {
                 let total = monthData.totals[bill.id] ?? 0
-                amount = total * line.value / 100.0
+                amount = pctLineAmount(bill: bill, line: line, total: total)
             } else {
                 if line.id == bill.remainderLineId {
                     // Remainder line gets total minus the sum of all other fixed lines
@@ -545,7 +561,6 @@ class AppViewModel: ObservableObject {
     /// Duplicate bill entries for the same person (e.g. when they cover someone else's
     /// share on the same bill) are consolidated into a single entry.
     func computePersonOwes(using md: MonthData? = nil) -> [String: PersonOwes] {
-        // Serve from cache only when called for the current month (no explicit md).
         if md == nil, let cached = cachedOwes, cached.gen == computeCacheGen {
             return cached.value
         }
@@ -553,14 +568,15 @@ class AppViewModel: ObservableObject {
         var result: [String: PersonOwes] = [:]
 
         for bill in state.bills {
+            let billPayer = bill.paidById
+
             for line in bill.lines {
                 let payerId = line.coveredById ?? line.personId
-                if payerId == "me" { continue }
 
                 let amount: Double
                 if bill.splitType == .pct {
                     let total = monthData.totals[bill.id] ?? 0
-                    amount = total * line.value / 100.0
+                    amount = pctLineAmount(bill: bill, line: line, total: total)
                 } else if line.id == bill.remainderLineId {
                     let allOthers = bill.lines
                         .filter { $0.id != bill.remainderLineId }
@@ -571,30 +587,51 @@ class AppViewModel: ObservableObject {
                     amount = monthData.amounts[bill.id]?[line.id] ?? 0
                 }
 
-                if result[payerId] == nil {
-                    result[payerId] = PersonOwes(personId: payerId, total: 0, bills: [])
-                }
+                if amount <= 0 { continue }
 
-                var billName = bill.name
-                if line.coveredById != nil && line.coveredById != line.personId {
-                    if let covered = state.people.first(where: { $0.id == line.personId }) {
-                        billName += " (covers \(covered.name))"
+                if billPayer == "me" {
+                    // I paid → non-me shares are owed to me (positive)
+                    if payerId == "me" { continue }
+
+                    if result[payerId] == nil {
+                        result[payerId] = PersonOwes(personId: payerId, total: 0, bills: [])
                     }
-                }
 
-                let billOwed = BillOwed(
-                    billId: bill.id,
-                    billName: billName,
-                    amount: amount,
-                    coveredNote: line.coveredById != nil ? "covers \(line.personId)" : nil
-                )
-                result[payerId]?.total += amount
-                result[payerId]?.bills.append(billOwed)
+                    var billName = bill.name
+                    if line.coveredById != nil && line.coveredById != line.personId {
+                        if let covered = state.people.first(where: { $0.id == line.personId }) {
+                            billName += " (covers \(covered.name))"
+                        }
+                    }
+
+                    result[payerId]?.total += amount
+                    result[payerId]?.bills.append(BillOwed(
+                        billId: bill.id,
+                        billName: billName,
+                        amount: amount,
+                        coveredNote: line.coveredById != nil ? "covers \(line.personId)" : nil
+                    ))
+                } else {
+                    // Someone else paid → my share is owed to them (negative)
+                    if payerId == "me" {
+                        if result[billPayer] == nil {
+                            result[billPayer] = PersonOwes(personId: billPayer, total: 0, bills: [])
+                        }
+                        result[billPayer]?.total -= amount
+                        result[billPayer]?.bills.append(BillOwed(
+                            billId: bill.id,
+                            billName: bill.name,
+                            amount: -amount,
+                            coveredNote: nil
+                        ))
+                    }
+                    // Non-me shares of bills paid by non-me people are between
+                    // them — not tracked from the primary user's perspective.
+                }
             }
         }
 
-        // Consolidate duplicate bill entries per person (e.g. when one person
-        // covers multiple lines on the same bill, merge them into one entry).
+        // Consolidate duplicate bill entries per person
         for (pid, _) in result {
             var consolidated: [String: BillOwed] = [:]
             for bo in result[pid]!.bills {
@@ -612,6 +649,54 @@ class AppViewModel: ObservableObject {
             cachedOwes = (computeCacheGen, result)
         }
         return result
+    }
+
+    /// Computes settlements between non-"me" people for bills paid by
+    /// someone other than the primary user.
+    func computeThirdPartySettlements() -> [ThirdPartySettlement] {
+        let monthData = currentMonthData
+        // [payerId: [debtorId: (amount, bills)]]
+        var map: [String: [String: (Double, [BillOwed])]] = [:]
+
+        for bill in state.bills {
+            let billPayer = bill.paidById
+            if billPayer == "me" { continue }
+
+            for line in bill.lines {
+                let payerId = line.coveredById ?? line.personId
+                if payerId == billPayer || payerId == "me" { continue }
+
+                let amount: Double
+                if bill.splitType == .pct {
+                    let total = monthData.totals[bill.id] ?? 0
+                    amount = pctLineAmount(bill: bill, line: line, total: total)
+                } else if line.id == bill.remainderLineId {
+                    let allOthers = bill.lines
+                        .filter { $0.id != bill.remainderLineId }
+                        .reduce(0.0) { $0 + (monthData.amounts[bill.id]?[$1.id] ?? 0) }
+                    let billTotal = monthData.totals[bill.id] ?? allOthers
+                    amount = max(0, billTotal - allOthers)
+                } else {
+                    amount = monthData.amounts[bill.id]?[line.id] ?? 0
+                }
+
+                if amount <= 0 { continue }
+
+                if map[billPayer] == nil { map[billPayer] = [:] }
+                var entry = map[billPayer]![payerId] ?? (0, [])
+                entry.0 += amount
+                entry.1.append(BillOwed(billId: bill.id, billName: bill.name, amount: amount, coveredNote: nil))
+                map[billPayer]![payerId] = entry
+            }
+        }
+
+        var results: [ThirdPartySettlement] = []
+        for (payerId, debtors) in map {
+            for (debtorId, (amount, bills)) in debtors {
+                results.append(ThirdPartySettlement(fromId: debtorId, toId: payerId, amount: amount, bills: bills))
+            }
+        }
+        return results.sorted { $0.amount > $1.amount }
     }
 
     /// Computes the primary user's ("me") total share across all bills.
@@ -901,8 +986,16 @@ class AppViewModel: ObservableObject {
             items.append((id: emailId, label: "Email bill summary to \(person.name)", done: cl[emailId] ?? false))
         }
 
+        // Per-person "you owe" items (negative balance = I owe them)
+        let youOwePeople = state.people.filter { $0.id != "me" && (owes[$0.id]?.total ?? 0) < 0 }
+        for person in youOwePeople {
+            let id = "payback_\(person.id)"
+            let amount = abs(owes[person.id]?.total ?? 0)
+            items.append((id: id, label: "Pay \(person.name) \(amount.asCurrency)", done: cl[id] ?? false))
+        }
+
         // Per-bill pay items (skip auto-pay, only include bills with a payUrl)
-        for bill in state.bills where !bill.autoPay && !bill.payUrl.isEmpty {
+        for bill in state.bills where !bill.autoPay && bill.paidById == "me" && !bill.payUrl.isEmpty {
             let id = "pay_\(bill.id)"
             items.append((id: id, label: "Pay \(bill.name)", done: cl[id] ?? false))
         }

@@ -1,5 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import ContactsUI
 
 // MARK: - Currency Settings Sheet
 
@@ -178,6 +179,7 @@ struct HouseholdSettingsSheet: View {
     @EnvironmentObject var vm: AppViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var expandedPersonId: String? = nil
+    @State private var showContactPicker = false
 
     var body: some View {
         NavigationStack {
@@ -198,6 +200,28 @@ struct HouseholdSettingsSheet: View {
                                 .fixedSize(horizontal: false, vertical: true)
                                 .padding(.bottom, 4)
 
+                            HStack(spacing: 10) {
+                                Button {
+                                    vm.addPerson()
+                                    if let last = vm.state.people.last {
+                                        withAnimation { expandedPersonId = last.id }
+                                    }
+                                } label: {
+                                    Label("Add Manually", systemImage: "plus")
+                                        .frame(maxWidth: .infinity)
+                                }
+                                .buttonStyle(BHPrimaryButtonStyle())
+
+                                Button {
+                                    showContactPicker = true
+                                } label: {
+                                    Label("From Contacts", systemImage: "person.crop.circle.badge.plus")
+                                        .frame(maxWidth: .infinity)
+                                }
+                                .buttonStyle(BHPrimaryButtonStyle())
+                            }
+                            .padding(.bottom, 4)
+
                             ForEach(Array(vm.state.people.enumerated()), id: \.element.id) { idx, person in
                                 PersonCardView(
                                     idx: idx,
@@ -210,17 +234,6 @@ struct HouseholdSettingsSheet: View {
                                     }
                                 )
                             }
-
-                            Button {
-                                vm.addPerson()
-                                if let last = vm.state.people.last {
-                                    withAnimation { expandedPersonId = last.id }
-                                }
-                            } label: {
-                                Label("Add Person", systemImage: "plus")
-                                    .font(.bhCaption)
-                            }
-                            .buttonStyle(BHSecondaryButtonStyle())
                         }
 
                         Spacer(minLength: 24)
@@ -247,7 +260,61 @@ struct HouseholdSettingsSheet: View {
                 }
             }
         }
+        .sheet(isPresented: $showContactPicker) {
+            ContactPickerView { contact in
+                let colors = Person.personColors
+                let color = colors[vm.state.people.count % colors.count]
+                let name = [contact.givenName, contact.familyName]
+                    .filter { !$0.isEmpty }
+                    .joined(separator: " ")
+                let email = contact.emailAddresses.first?.value as String? ?? ""
+                let phone = contact.phoneNumbers.first?.value.stringValue ?? ""
+
+                var person = Person(
+                    name: name.isEmpty ? "New Person" : name,
+                    color: color,
+                    email: email
+                )
+                if !phone.isEmpty {
+                    person.payMethod = .zelle
+                    person.payId = phone
+                }
+                vm.state.people.append(person)
+                vm.save()
+                withAnimation { expandedPersonId = person.id }
+            }
+        }
         .bhColorScheme()
+    }
+}
+
+// MARK: - Contact Picker
+
+struct ContactPickerView: UIViewControllerRepresentable {
+    let onSelect: (CNContact) -> Void
+
+    func makeUIViewController(context: Context) -> CNContactPickerViewController {
+        let picker = CNContactPickerViewController()
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: CNContactPickerViewController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onSelect: onSelect)
+    }
+
+    class Coordinator: NSObject, CNContactPickerDelegate {
+        let onSelect: (CNContact) -> Void
+
+        init(onSelect: @escaping (CNContact) -> Void) {
+            self.onSelect = onSelect
+        }
+
+        func contactPicker(_ picker: CNContactPickerViewController, didSelect contact: CNContact) {
+            onSelect(contact)
+        }
     }
 }
 
@@ -347,7 +414,7 @@ struct PrivacyDataSheet: View {
                         .foregroundColor(.bhAmber)
                 }
             }
-            .confirmationDialog("Clear all data?", isPresented: $showClearConfirm, titleVisibility: .visible) {
+            .alert("Clear all data?", isPresented: $showClearConfirm) {
                 Button("Reset All Data", role: .destructive) {
                     Task {
                         await vm.clearAllData()

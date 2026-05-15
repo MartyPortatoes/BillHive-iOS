@@ -26,7 +26,7 @@ struct SendReceiveView: View {
             ZStack {
                 HexBGView().ignoresSafeArea()
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 24) {
+                    VStack(alignment: .leading, spacing: 16) {
                         HStack {
                             Text("Pay & Collect")
                                 .font(.title.weight(.bold))
@@ -88,6 +88,39 @@ struct SendReceiveView: View {
                                         }
                                     }
                                 )
+                            }
+                        }
+
+                        // MARK: You Owe Section
+
+                        let youOwePeople = nonMePeople.filter { (owes[$0.id]?.total ?? 0) < 0 }
+                        if !youOwePeople.isEmpty {
+                            VStack(alignment: .leading, spacing: 10) {
+                                HStack(spacing: 10) {
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(Color.bhRed.opacity(0.15))
+                                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.bhRed.opacity(0.25), lineWidth: 1))
+                                            .frame(width: 32, height: 32)
+                                        Text("↑")
+                                            .font(.headline.weight(.bold))
+                                            .foregroundColor(.bhRed)
+                                    }
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("You Owe")
+                                            .font(.headline)
+                                            .foregroundColor(.bhText)
+                                        Text("Bills paid by others — you owe them your share")
+                                            .font(.bhCaption)
+                                            .foregroundColor(.bhMuted)
+                                    }
+                                }
+
+                                ForEach(youOwePeople) { person in
+                                    let amount = abs(owes[person.id]?.total ?? 0)
+                                    let bills = (owes[person.id]?.bills ?? []).filter { $0.amount < 0 }
+                                    YouOweCard(person: person, amount: amount, bills: bills)
+                                }
                             }
                         }
 
@@ -224,10 +257,10 @@ struct ReceiveCard: View {
                             if isPaymentReceived {
                                 Text("Paid")
                                     .font(.system(size: 10, weight: .semibold))
-                                    .foregroundColor(.green)
+                                    .foregroundColor(.bhGreen)
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
-                                    .background(Color.green.opacity(0.15))
+                                    .background(Color.bhGreen.opacity(0.15))
                                     .cornerRadius(4)
                             } else {
                                 Text("Awaiting")
@@ -359,6 +392,49 @@ struct ReceiveCard: View {
         .background(Color.bhSurface)
         .cornerRadius(10)
         .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.bhBorder, lineWidth: 1))
+    }
+}
+
+// MARK: - You Owe Card
+
+struct YouOweCard: View {
+    let person: Person
+    let amount: Double
+    let bills: [BillOwed]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 10) {
+                Circle()
+                    .fill(Color(hex: person.color) ?? .gray)
+                    .frame(width: 10, height: 10)
+                Text(person.name)
+                    .font(.bhBodyName)
+                    .foregroundColor(.bhText)
+                Spacer()
+                Text(amount.asCurrency)
+                    .font(.bhMoneyMedium)
+                    .foregroundColor(.bhRed)
+            }
+
+            if !bills.isEmpty {
+                ForEach(bills, id: \.billId) { bill in
+                    HStack {
+                        Text(bill.billName)
+                            .font(.bhCaption)
+                            .foregroundColor(.bhMuted)
+                        Spacer()
+                        Text(abs(bill.amount).asCurrency)
+                            .font(.bhMoneySmall)
+                            .foregroundColor(.bhText)
+                    }
+                }
+            }
+        }
+        .padding(14)
+        .background(Color.bhSurface)
+        .cornerRadius(10)
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.bhRed.opacity(0.3), lineWidth: 1))
     }
 }
 
@@ -508,15 +584,18 @@ struct ChecklistItemRow: View {
     let item: (id: String, label: String, done: Bool)
     let onToggle: () -> Void
 
+    private var isPayback: Bool { item.id.hasPrefix("payback_") }
+    private var accentColor: Color { isPayback && item.done ? .bhGreen : .bhAmber }
+
     var body: some View {
         Button(action: onToggle) {
             HStack(spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(item.done ? Color.bhAmber : Color.clear)
+                        .fill(item.done ? accentColor : Color.clear)
                         .frame(width: 18, height: 18)
                     RoundedRectangle(cornerRadius: 4)
-                        .stroke(item.done ? Color.bhAmber : Color.bhBorder2, lineWidth: 1)
+                        .stroke(item.done ? accentColor : Color.bhBorder2, lineWidth: 1)
                         .frame(width: 18, height: 18)
                     if item.done {
                         Image(systemName: "checkmark")
@@ -525,16 +604,23 @@ struct ChecklistItemRow: View {
                     }
                 }
 
-                Text(item.label)
-                    .font(.bhBodySecondary)
-                    .foregroundColor(item.done ? .bhMuted : .bhText)
-                    .strikethrough(item.done, color: .bhMuted)
+                if isPayback && item.done {
+                    Text(item.label)
+                        .font(.bhBodySecondary)
+                        .foregroundColor(.bhGreen)
+                        .strikethrough(true, color: .bhGreen)
+                } else {
+                    Text(item.label)
+                        .font(.bhBodySecondary)
+                        .foregroundColor(item.done ? .bhMuted : .bhText)
+                        .strikethrough(item.done, color: .bhMuted)
+                }
 
                 Spacer()
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 11)
-            .opacity(item.done ? 0.6 : 1)
+            .opacity(item.done && !isPayback ? 0.6 : 1)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

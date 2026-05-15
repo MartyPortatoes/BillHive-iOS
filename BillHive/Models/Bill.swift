@@ -84,11 +84,15 @@ struct Bill: Identifiable, Codable, Equatable, Sendable {
     var autoPay: Bool
     /// Day of the month (1–31) when this bill is due. `nil` means no due date set.
     var dueDay: Int?
+    /// Who actually pays this bill to the provider. Defaults to "me".
+    /// When set to another person, their share is self-covered and
+    /// the primary user's share becomes something they owe that person.
+    var paidById: String
     /// The individual share lines for this bill.
     var lines: [BillLine]
 
     enum CodingKeys: String, CodingKey {
-        case id, name, icon, color, splitType, remainderLineId, payUrl, preserve, autoPay, dueDay, lines
+        case id, name, icon, color, splitType, remainderLineId, payUrl, preserve, autoPay, dueDay, paidById, lines
     }
 
     init(from decoder: Decoder) throws {
@@ -103,6 +107,7 @@ struct Bill: Identifiable, Codable, Equatable, Sendable {
         preserve = try c.decodeIfPresent(Bool.self, forKey: .preserve) ?? false
         autoPay = try c.decodeIfPresent(Bool.self, forKey: .autoPay) ?? false
         dueDay = try c.decodeIfPresent(Int.self, forKey: .dueDay)
+        paidById = try c.decodeIfPresent(String.self, forKey: .paidById) ?? "me"
         lines = try c.decode([BillLine].self, forKey: .lines)
     }
 
@@ -121,6 +126,7 @@ struct Bill: Identifiable, Codable, Equatable, Sendable {
         preserve: Bool = false,
         autoPay: Bool = false,
         dueDay: Int? = nil,
+        paidById: String = "me",
         lines: [BillLine] = []
     ) {
         self.id = id
@@ -133,6 +139,7 @@ struct Bill: Identifiable, Codable, Equatable, Sendable {
         self.preserve = preserve
         self.autoPay = autoPay
         self.dueDay = dueDay
+        self.paidById = paidById
         if lines.isEmpty {
             let lineId = "l\(Int(Date().timeIntervalSince1970 * 1000))"
             self.lines = [BillLine(id: lineId, desc: "My share", personId: "me", value: 100)]
