@@ -1,6 +1,9 @@
-What's new in 1.9.1:
+What's new in 2.0.0:
 
-• Reliability — edits are now safely persisted even when the app is backgrounded mid-edit. If your save file is corrupt, the new edit is parked in a recovery file instead of overwriting month history
-• Trends accuracy — historical totals stay correct after you edit bills or remove a person, and remainder lines display correctly in the per-month breakdown
-• Notification fixes — same-day reminders no longer get silently dropped after 9 AM, and triggers handle DST and timezone changes correctly
-• Performance — Summary and Trends views are noticeably faster on larger households
+• Paid By — bills can now be assigned to any household member, not just you. Net balances compute automatically so you can see who owes whom
+• You Owe — new summary section shows what you owe others, with per-bill breakdowns and paid/unpaid status
+• Between Others — view third-party settlements between other household members
+• Import from Contacts — add people directly from your address book with name, email, and phone pre-filled
+• Rounding fix — percentage splits now distribute cents correctly (no more $50.01 on a 3-way $150 split)
+• Checklist improvements — "Pay" items turn green with strikethrough when marked done
+• Refreshed app icons
