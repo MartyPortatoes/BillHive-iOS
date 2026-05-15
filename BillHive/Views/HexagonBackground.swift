@@ -11,7 +11,7 @@ struct HexagonBackground: View {
             let tileH: CGFloat = 225
             let cols = Int(ceil(size.width  / tileW)) + 2
             let rows = Int(ceil(size.height / tileH)) + 2
-            let color = Color.bhAmber.opacity(0.04)
+            let color = Color.bhAmber.opacity(0.09)
 
             var path = Path()
 
@@ -40,7 +40,7 @@ struct HexagonBackground: View {
                 }
             }
 
-            context.stroke(path, with: .color(color), lineWidth: 0.5)
+            context.stroke(path, with: .color(color), lineWidth: 1)
         }
     }
 }

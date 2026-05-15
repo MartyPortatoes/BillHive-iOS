@@ -27,17 +27,18 @@ struct SendReceiveView: View {
                 HexBGView().ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
-                        MonthPickerBar()
-                            .padding(.top, 12)
-
-                        VStack(alignment: .leading, spacing: 4) {
+                        HStack {
                             Text("Pay & Collect")
-                                .font(.bhViewTitle)
+                                .font(.title.weight(.bold))
                                 .foregroundColor(.bhText)
-                            Text("Collect from others and pay your bills")
-                                .font(.bhSubtitle)
-                                .foregroundColor(.bhMuted)
+                            Spacer()
+                            MonthPickerBar()
                         }
+                        .padding(.top, 12)
+
+                        Text("Collect from others and pay your bills")
+                            .font(.bhSubtitle)
+                            .foregroundColor(.bhMuted)
 
                         // MARK: Collect Section
 
@@ -140,7 +141,7 @@ struct SendReceiveView: View {
                 }
                 .refreshable { await vm.refresh() }
             }
-            .toolbar(.hidden, for: .navigationBar)
+            .navigationBarHidden(true)
         }
     }
 }

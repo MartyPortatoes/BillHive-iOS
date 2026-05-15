@@ -19,26 +19,22 @@ struct BillsView: View {
                 HexBGView().ignoresSafeArea()
                 ScrollView {
                     VStack(spacing: 0) {
-                        MonthPickerBar()
-                            .padding(.horizontal, 16)
-                            .padding(.top, 12)
-
-                        VStack(spacing: 1) {
+                        HStack {
                             Text("Bills")
-                                .font(.bhViewTitle)
+                                .font(.title.weight(.bold))
                                 .foregroundColor(.bhText)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, 16)
-                                .padding(.top, 16)
-                                .padding(.bottom, 4)
-
-                            Text("Add your bills and configure who owes what.")
-                                .font(.bhSubtitle)
-                                .foregroundColor(.bhMuted)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, 16)
-                                .padding(.bottom, 16)
+                            Spacer()
+                            MonthPickerBar()
                         }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
+
+                        Text("Add your bills and configure who owes what.")
+                            .font(.bhSubtitle)
+                            .foregroundColor(.bhMuted)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 16)
 
                         if vm.state.bills.isEmpty {
                             EmptyStateView(
@@ -79,7 +75,7 @@ struct BillsView: View {
                 }
                 .refreshable { await vm.refresh() }
             }
-            .toolbar(.hidden, for: .navigationBar)
+            .navigationBarHidden(true)
             .toolbar {
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
@@ -132,33 +128,30 @@ struct MonthPickerBar: View {
     private static let years = Array(2020...2035)
 
     var body: some View {
-        HStack(spacing: 6) {
-            Spacer()
-            HStack(spacing: 4) {
-                Picker("Month", selection: $vm.selectedMonth) {
-                    ForEach(1...12, id: \.self) { m in
-                        Text(Self.months[m-1]).tag(m)
-                    }
+        HStack(spacing: 4) {
+            Picker("Month", selection: $vm.selectedMonth) {
+                ForEach(1...12, id: \.self) { m in
+                    Text(Self.months[m-1]).tag(m)
                 }
-                .pickerStyle(.menu)
-                .tint(.bhText)
-                .font(.bhBodySecondary)
-
-                Picker("Year", selection: $vm.selectedYear) {
-                    ForEach(Self.years, id: \.self) { y in
-                        Text(String(y)).tag(y)
-                    }
-                }
-                .pickerStyle(.menu)
-                .tint(.bhText)
-                .font(.bhBodySecondary)
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background(Color.bhSurface2)
-            .cornerRadius(8)
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.bhBorder, lineWidth: 1))
+            .pickerStyle(.menu)
+            .tint(.bhText)
+            .font(.bhBodySecondary)
+
+            Picker("Year", selection: $vm.selectedYear) {
+                ForEach(Self.years, id: \.self) { y in
+                    Text(String(y)).tag(y)
+                }
+            }
+            .pickerStyle(.menu)
+            .tint(.bhText)
+            .font(.bhBodySecondary)
         }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
+        .background(Color.bhSurface2)
+        .cornerRadius(8)
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.bhBorder, lineWidth: 1))
         .onChange(of: vm.selectedMonth) { _ in vm.onMonthChange() }
         .onChange(of: vm.selectedYear) { _ in vm.onMonthChange() }
     }

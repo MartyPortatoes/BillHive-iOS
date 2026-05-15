@@ -76,6 +76,12 @@ struct SettingsView: View {
                 HexBGView().ignoresSafeArea()
                 ScrollView {
                     VStack(spacing: 10) {
+                        Text("Settings")
+                            .font(.title.weight(.bold))
+                            .foregroundColor(.bhText)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.top, 4)
+
                         // Inline Appearance picker — single control, no sheet
                         AppearancePickerCard(selection: $colorSchemePref)
 
@@ -134,8 +140,7 @@ struct SettingsView: View {
                 }
                 .refreshable { await vm.refresh() }
             }
-            .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarHidden(true)
             .sheet(isPresented: $showCurrency) {
                 CurrencySettingsSheet().environmentObject(vm)
             }

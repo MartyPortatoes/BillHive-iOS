@@ -58,6 +58,11 @@ struct TrendsView: View {
                 HexBGView().ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
+                        Text("Trends")
+                            .font(.title.weight(.bold))
+                            .foregroundColor(.bhText)
+                            .padding(.top, 4)
+
                         Picker("View", selection: $mode) {
                             ForEach(TrendsViewMode.allCases, id: \.self) { m in
                                 Text(m.rawValue).tag(m)
@@ -96,8 +101,7 @@ struct TrendsView: View {
                 }
                 .refreshable { await vm.refresh() }
             }
-            .navigationTitle("Trends")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarHidden(true)
         }
     }
 }

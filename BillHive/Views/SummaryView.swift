@@ -31,19 +31,20 @@ struct SummaryView: View {
                 HexBGView().ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        MonthPickerBar()
-                            .padding(.top, 12)
-
-                        VStack(alignment: .leading, spacing: 4) {
+                        HStack {
                             Text("Summary")
-                                .font(.bhViewTitle)
+                                .font(.title.weight(.bold))
                                 .foregroundColor(.bhText)
-                            Text(viewMode == .summary
-                                 ? "What everyone owes this month — \(vm.monthLabel)"
-                                 : "Track your monthly to-dos — \(vm.monthLabel)")
-                                .font(.bhSubtitle)
-                                .foregroundColor(.bhMuted)
+                            Spacer()
+                            MonthPickerBar()
                         }
+                        .padding(.top, 12)
+
+                        Text(viewMode == .summary
+                             ? "What everyone owes this month — \(vm.monthLabel)"
+                             : "Track your monthly to-dos — \(vm.monthLabel)")
+                            .font(.bhSubtitle)
+                            .foregroundColor(.bhMuted)
 
                         Picker("View", selection: $viewMode.animation(.easeInOut(duration: 0.2))) {
                             ForEach(SummaryViewMode.allCases, id: \.self) { mode in
@@ -73,7 +74,7 @@ struct SummaryView: View {
                 }
                 .refreshable { await vm.refresh() }
             }
-            .toolbar(.hidden, for: .navigationBar)
+            .navigationBarHidden(true)
         }
     }
 

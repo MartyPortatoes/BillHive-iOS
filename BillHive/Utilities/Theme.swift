@@ -2,40 +2,52 @@ import SwiftUI
 import UIKit
 
 // MARK: - Design Tokens (Colors)
-
-/// App-wide color palette. Surface and text tokens adapt to the current
-/// color scheme (light vs. dark); brand and status colors stay constant.
-///
-/// The dark variant matches the BillHive web app's CSS custom properties.
-/// The light variant uses warm cream surfaces to complement the amber brand.
+//
+// Warm-earthy redesign of the BillHive palette.
+//
+// LIGHT  — cream paper surfaces, espresso text, muted honey brand,
+//          plus an expanded set of earthy semantic accents.
+// DARK   — rich cocoa surfaces (not near-black), warm cream text, and the
+//          brand pivots from honey to LIGHT SKY BLUE. The token names
+//          keep their `bh*` light-mode aliases (`bhAmber`, `bhHoneyDeep`,
+//          `bhHoneySoft`) so consuming views don't have to branch — the
+//          same symbol resolves honey in light mode, sky in dark mode.
+//
+// All hex values are pulled directly from `colors_and_type.css` shipped
+// alongside this file.
 extension Color {
-    /// Primary background — page-level fill behind everything.
-    static let bhBackground = Color.bhDynamic(light: "#faf9f4", dark: "#0c0d0f")
-    /// Card / elevated surface.
-    static let bhSurface    = Color.bhDynamic(light: "#ffffff", dark: "#141518")
-    /// Secondary surface — input backgrounds, segmented controls.
-    static let bhSurface2   = Color.bhDynamic(light: "#f3f1ea", dark: "#1c1e22")
-    /// Tertiary surface — subtle bill icon tints, hover states.
-    static let bhSurface3   = Color.bhDynamic(light: "#e8e6dd", dark: "#242629")
-    /// Standard 1pt border.
-    static let bhBorder     = Color.bhDynamic(light: "#dad7cc", dark: "#2a2c31")
-    /// Emphasized border (active state, selection).
-    static let bhBorder2    = Color.bhDynamic(light: "#bfbcaf", dark: "#34373d")
-    /// Primary text color.
-    static let bhText       = Color.bhDynamic(light: "#0c0d0f", dark: "#e4e5e8")
-    /// Muted text — labels, captions.
-    static let bhMuted      = Color.bhDynamic(light: "#6f717a", dark: "#767880")
-    /// Most muted text — disabled, placeholder.
-    static let bhMuted2     = Color.bhDynamic(light: "#a4a7ad", dark: "#4a4c52")
+    // ── Surfaces ─────────────────────────────────────────────────────────
+    // LIGHT: cream paper.  DARK: rich cocoa (not near-black).
+    static let bhBackground = Color.bhDynamic(light: "#f4ecda", dark: "#221810")
+    static let bhSurface    = Color.bhDynamic(light: "#fbf5e8", dark: "#3a2c1c")
+    static let bhSurface2   = Color.bhDynamic(light: "#ede1c6", dark: "#463624")
+    static let bhSurface3   = Color.bhDynamic(light: "#e0d2b1", dark: "#53412c")
+    static let bhBorder     = Color.bhDynamic(light: "#d8c8a4", dark: "#5e4b32")
+    static let bhBorder2    = Color.bhDynamic(light: "#b8a578", dark: "#7a6442")
 
-    /// Brand amber — same in both schemes.
-    static let bhAmber = Color(hex: "#F5A800") ?? .orange
-    /// Info blue — same in both schemes.
-    static let bhBlue  = Color(hex: "#5bc4f5") ?? .blue
-    /// Error red — same in both schemes.
-    static let bhRed   = Color(hex: "#ef5350") ?? .red
-    /// Success green — same in both schemes.
-    static let bhGreen = Color(hex: "#34c759") ?? .green
+    // ── Text ─────────────────────────────────────────────────────────────
+    static let bhText       = Color.bhDynamic(light: "#2b1d11", dark: "#f0e6d0")
+    static let bhText2      = Color.bhDynamic(light: "#4a3826", dark: "#d4c5a0")
+    static let bhMuted      = Color.bhDynamic(light: "#7a6a52", dark: "#a08e6e")
+    static let bhMuted2     = Color.bhDynamic(light: "#a08e72", dark: "#786750")
+
+    // ── Brand — honey in light, sky blue in dark ─────────────────────────
+    // Symbol names kept (bhAmber / bhHoneyDeep / bhHoneySoft) so existing
+    // call sites don't have to branch — the same token resolves to honey
+    // when the system is light, sky when dark.
+    static let bhAmber      = Color.bhDynamic(light: "#d8923e", dark: "#7eb8d6")
+    static let bhHoneyDeep  = Color.bhDynamic(light: "#b8721e", dark: "#5497b8")
+    static let bhHoneySoft  = Color.bhDynamic(light: "#f0c073", dark: "#b4d5e6")
+
+    // ── Semantic status (existing names kept, hex updated) ───────────────
+    static let bhBlue       = Color.bhDynamic(light: "#6fa5c4", dark: "#8fc4dd")
+    static let bhRed        = Color.bhDynamic(light: "#a04a2e", dark: "#c46a4a")
+    static let bhGreen      = Color.bhDynamic(light: "#5b6f3f", dark: "#8aa468")
+
+    // ── New earthy semantic accents ──────────────────────────────────────
+    static let bhClay       = Color.bhDynamic(light: "#b8654a", dark: "#d18570")
+    static let bhOlive      = Color.bhDynamic(light: "#7e8556", dark: "#a3ad78")
+    static let bhPlum       = Color.bhDynamic(light: "#8b5a6f", dark: "#b58496")
 
     /// Builds a `Color` whose value is resolved at render time based on the
     /// current `UITraitCollection.userInterfaceStyle`. Lets the same token
@@ -48,14 +60,30 @@ extension Color {
     }
 }
 
-// MARK: - Design Tokens (Fonts)
+// MARK: - Bill Category Fills
+//
+// Fills used behind bill emoji glyphs. These are NEW — the previous palette
+// re-used `bhAmber` and a couple of system colors. The redesign gives each
+// utility category its own warm hue so the bill grid reads as a varied
+// landscape, not a wall of amber.
+enum BHBillFill {
+    static let electric  = Color(hex: "#c87a2e") ?? .orange   // burnt orange
+    static let gas       = Color(hex: "#c4933a") ?? .yellow   // gold
+    static let water     = Color(hex: "#6fa5c4") ?? .blue     // sky
+    static let internet  = Color(hex: "#8b6f9b") ?? .purple   // dusty plum
+    static let mortgage  = Color(hex: "#7e8556") ?? .green    // olive
+    static let mobile    = Color(hex: "#5b8a8a") ?? .teal     // teal slate
+    static let trash     = Color(hex: "#846f56") ?? .brown    // taupe
+    static let other     = Color(hex: "#a89880") ?? .gray     // sand
+}
 
-/// Semantic font tokens used throughout the app.
-///
-/// All fonts scale with Dynamic Type. The `.monospacedDigit()` modifier
-/// keeps decimal alignment without forcing a full monospaced design on
-/// non-numeric text. Use `.monospaced()` only where glyph-grid alignment
-/// matters (section labels, code-like text).
+// MARK: - Design Tokens (Fonts)
+//
+// UNCHANGED in this redesign. The iOS app renders via SwiftUI's Font.title3 /
+// .subheadline / etc., which resolve to SF Pro on-device. The HTML mocks ship
+// with a `-apple-system, "SF Pro Display"…` stack so they match. Earlier
+// preview screenshots that showed a Vollkorn serif were a redesign-time
+// substitution and have been reverted.
 extension Font {
     /// Large view header title (e.g. "Bills", "Summary").
     static let bhViewTitle = Font.title3.weight(.bold)
@@ -101,7 +129,18 @@ extension View {
             .tracking(1.5)
             .foregroundColor(.bhMuted)
     }
+
+    // ── Warm shadow stack (NEW — optional polish) ────────────────────────
+    // Umber-tinted shadows that match the cream surfaces. Drop in wherever a
+    // pure-black SwiftUI `.shadow(...)` is currently used.
+    func bhShadow1() -> some View { shadow(color: bhShadowUmber.opacity(0.06), radius: 2,  y: 1)  }
+    func bhShadow2() -> some View { shadow(color: bhShadowUmber.opacity(0.08), radius: 12, y: 4)  }
+    func bhShadow3() -> some View { shadow(color: bhShadowUmber.opacity(0.12), radius: 32, y: 12) }
+    /// Honey glow — for hero CTAs and highlighted hex tiles.
+    func bhHoneyGlow() -> some View { shadow(color: Color.bhAmber.opacity(0.28), radius: 28, y: 8) }
 }
+
+private let bhShadowUmber = Color(red: 0.29, green: 0.22, blue: 0.15)
 
 // MARK: - Color Scheme Preference
 

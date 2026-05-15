@@ -71,7 +71,7 @@ struct ContentView: View {
                         }
                         .tag(4)
                 }
-                .tint(Color(hex: "#F5A800"))
+                .tint(.bhAmber)
             }
 
             // Toast overlay — positioned above the tab bar
