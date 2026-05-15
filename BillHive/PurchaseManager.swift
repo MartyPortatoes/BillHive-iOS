@@ -322,8 +322,15 @@ class PurchaseManager: ObservableObject {
     }
 
     /// Button label that includes the price when available, or just the
-    /// brand name while the product is still loading.
+    /// brand name while the product is still loading. The price comes
+    /// straight from StoreKit (`Product.displayPrice`), so changing the
+    /// IAP price in App Store Connect updates the label automatically
+    /// without an app release.
     var unlockButtonLabel: String {
-        "Unlock \(Self.brandName)"
+        let base = "Unlock \(Self.brandName)"
+        if let price = product?.displayPrice {
+            return "\(base) — \(price)"
+        }
+        return base
     }
 }
