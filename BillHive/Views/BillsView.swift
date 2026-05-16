@@ -148,6 +148,7 @@ struct MonthPickerBar: View {
             .tint(.bhText)
             .font(.bhBodySecondary)
         }
+        .fixedSize()
         .padding(.horizontal, 10)
         .padding(.vertical, 4)
         .background(Color.bhSurface2)
