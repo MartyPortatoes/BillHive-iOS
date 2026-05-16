@@ -376,46 +376,68 @@ class AppViewModel: ObservableObject {
         NotificationManager.shared.reschedule(bills: state.bills)
 
         // Any change to state.bills or state.people invalidates the cached
-        // _myTotal / _owes snapshots in every historical month. Rebuild them
-        // before persisting so Trends doesn't show stale figures.
-        recomputeAllSnapshots()
+        // _myTotal / _owes snapshots in every historical month. Rebuild the
+        // in-memory snapshots synchronously so views (including Trends) see
+        // consistent figures immediately; the disk write is debounced below.
+        recomputeAllSnapshotsInMemory()
 
-        if isLocal {
-            #if BILLHIVE_LOCAL
-            CloudStorageManager.shared.saveState(state)
-            #else
-            LocalStorageManager.shared.saveState(state)
-            #endif
-            return
-        }
+        // Debounce the actual persistence in both local and remote modes.
+        // Without this, every keystroke / picker tick during bill editing
+        // triggered a full state + all-months write — which on the iCloud
+        // target meant 60 coordinated reads + writes per edit once a few
+        // years of history were present.
+        let delay: Duration = isLocal ? .milliseconds(400) : .milliseconds(600)
         saveDebounceTask?.cancel()
-        saveDebounceTask = Task {
-            try? await Task.sleep(for: .milliseconds(600))
-            guard !Task.isCancelled else { return }
-            do {
-                try await api.saveState(state)
-            } catch {
-                self.toast("Save failed: \(error.localizedDescription)")
-            }
+        saveDebounceTask = Task { [weak self] in
+            try? await Task.sleep(for: delay)
+            guard !Task.isCancelled, let self else { return }
+            await self.persistAll()
         }
     }
 
     /// Forces any pending debounced save to commit immediately.
     ///
-    /// The remote-mode `save()` debounces for 600 ms. If the user dismisses
+    /// `save()` debounces persistence in both modes. If the user dismisses
     /// an editor sheet or backgrounds the app inside that window, the edit
-    /// never reaches the server — the local in-memory state still reflects
-    /// it, so the user thinks it saved, until the next launch overwrites
-    /// from the stale server copy. Call this from scene-phase transitions
-    /// and editor `onDisappear` to close that window.
+    /// won't reach storage — the in-memory state still reflects it, so the
+    /// user thinks it saved, until the next launch overwrites from the
+    /// stale on-disk copy. Call this from scene-phase transitions and
+    /// editor `onDisappear` to close that window.
     func flushPendingSave() async {
-        guard !isLocal else { return }
+        guard saveDebounceTask != nil else { return }
         saveDebounceTask?.cancel()
         saveDebounceTask = nil
+        await persistAll()
+    }
+
+    /// Writes the current `state` and all `monthly` data to the active backend.
+    ///
+    /// Local mode uses a single batched `saveAllMonths` write (one coordinated
+    /// iCloud round-trip) rather than N per-month writes. Remote mode fans the
+    /// per-month PUTs out in parallel via a task group.
+    private func persistAll() async {
+        if isLocal {
+            #if BILLHIVE_LOCAL
+            CloudStorageManager.shared.saveState(state)
+            CloudStorageManager.shared.saveAllMonths(monthly)
+            #else
+            LocalStorageManager.shared.saveState(state)
+            LocalStorageManager.shared.saveAllMonths(monthly)
+            #endif
+            return
+        }
         do {
             try await api.saveState(state)
         } catch {
             self.toast("Save failed: \(error.localizedDescription)")
+        }
+        let snapshot = monthly
+        await withTaskGroup(of: Void.self) { group in
+            for (key, data) in snapshot {
+                group.addTask { [api] in
+                    try? await api.saveMonth(key, data: data)
+                }
+            }
         }
     }
 
@@ -724,9 +746,10 @@ class AppViewModel: ObservableObject {
     /// every other month's cache becomes stale. Call this after any
     /// `state.bills` or `state.people` mutation.
     ///
-    /// In remote mode the per-month PUTs are issued in parallel via a
-    /// task group rather than serially to avoid stalling the UI.
-    func recomputeAllSnapshots() {
+    /// In-memory only — `save()` schedules a debounced `persistAll()` that
+    /// writes the updated `monthly` dictionary to disk in a single batched
+    /// write rather than per-month.
+    private func recomputeAllSnapshotsInMemory() {
         let validPersonIds = Set(state.people.map { $0.id })
         for (key, _) in monthly {
             var md = monthly[key] ?? MonthData()
@@ -738,29 +761,6 @@ class AppViewModel: ObservableObject {
             }
             md._owes = owes
             monthly[key] = md
-        }
-        // Persist the updated snapshots.
-        if isLocal {
-            for key in monthly.keys {
-                if let data = monthly[key] {
-                    #if BILLHIVE_LOCAL
-                    try? CloudStorageManager.shared.saveMonth(key, data: data)
-                    #else
-                    try? LocalStorageManager.shared.saveMonth(key, data: data)
-                    #endif
-                }
-            }
-        } else {
-            let snapshot = monthly
-            Task {
-                await withTaskGroup(of: Void.self) { group in
-                    for (key, data) in snapshot {
-                        group.addTask {
-                            try? await self.api.saveMonth(key, data: data)
-                        }
-                    }
-                }
-            }
         }
     }
 
