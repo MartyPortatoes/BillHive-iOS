@@ -334,8 +334,8 @@ class AppViewModel: ObservableObject {
             state = importedState
             monthly = importedMonthly
             #if BILLHIVE_LOCAL
-            CloudStorageManager.shared.saveState(state)
-            CloudStorageManager.shared.saveAllMonths(monthly)
+            await CloudStorageManager.shared.saveState(state)
+            await CloudStorageManager.shared.saveAllMonths(monthly)
             #else
             LocalStorageManager.shared.saveState(state)
             LocalStorageManager.shared.saveAllMonths(monthly)
@@ -354,8 +354,8 @@ class AppViewModel: ObservableObject {
         monthly = [:]
         if isLocal {
             #if BILLHIVE_LOCAL
-            CloudStorageManager.shared.saveState(state)
-            CloudStorageManager.shared.saveAllMonths(monthly)
+            await CloudStorageManager.shared.saveState(state)
+            await CloudStorageManager.shared.saveAllMonths(monthly)
             #else
             LocalStorageManager.shared.saveState(state)
             LocalStorageManager.shared.saveAllMonths(monthly)
@@ -369,17 +369,28 @@ class AppViewModel: ObservableObject {
         await load()
     }
 
-    func save() {
+    /// Persist the current `state` (debounced).
+    ///
+    /// - Parameter affectsTotals: Whether this mutation could change any
+    ///   bill's split / total / per-person breakdown. Pass `false` for
+    ///   purely cosmetic mutations (name, icon, color, dueDay, preserve,
+    ///   autoPay, payUrl) so we skip the per-month snapshot recompute.
+    func save(affectsTotals: Bool = true) {
         invalidateComputeCache()
 
-        // Reschedule due date notifications when bills change
+        // Reschedule due date notifications when bills change (debounced
+        // inside NotificationManager — many edits coalesce into one
+        // UNUserNotificationCenter round-trip).
         NotificationManager.shared.reschedule(bills: state.bills)
 
-        // Any change to state.bills or state.people invalidates the cached
-        // _myTotal / _owes snapshots in every historical month. Rebuild the
-        // in-memory snapshots synchronously so views (including Trends) see
-        // consistent figures immediately; the disk write is debounced below.
-        recomputeAllSnapshotsInMemory()
+        if affectsTotals {
+            // Any change to bill structure or people membership invalidates
+            // the cached `_myTotal` / `_owes` snapshots in every historical
+            // month. Rebuild the in-memory snapshots synchronously so views
+            // (including Trends) see consistent figures immediately; the
+            // disk write is debounced below.
+            recomputeAllSnapshotsInMemory()
+        }
 
         // Debounce the actual persistence in both local and remote modes.
         // Without this, every keystroke / picker tick during bill editing
@@ -418,8 +429,8 @@ class AppViewModel: ObservableObject {
     private func persistAll() async {
         if isLocal {
             #if BILLHIVE_LOCAL
-            CloudStorageManager.shared.saveState(state)
-            CloudStorageManager.shared.saveAllMonths(monthly)
+            await CloudStorageManager.shared.saveState(state)
+            await CloudStorageManager.shared.saveAllMonths(monthly)
             #else
             LocalStorageManager.shared.saveState(state)
             LocalStorageManager.shared.saveAllMonths(monthly)
@@ -749,10 +760,14 @@ class AppViewModel: ObservableObject {
     /// In-memory only — `save()` schedules a debounced `persistAll()` that
     /// writes the updated `monthly` dictionary to disk in a single batched
     /// write rather than per-month.
+    ///
+    /// Builds a new dictionary locally and assigns once so SwiftUI sees a
+    /// single `objectWillChange` notification rather than one per month.
     private func recomputeAllSnapshotsInMemory() {
         let validPersonIds = Set(state.people.map { $0.id })
-        for (key, _) in monthly {
-            var md = monthly[key] ?? MonthData()
+        var rebuilt = monthly
+        for key in rebuilt.keys {
+            var md = rebuilt[key] ?? MonthData()
             md._myTotal = computeMyTotal(using: md)
             var owes: [String: Double] = [:]
             for (pid, info) in computePersonOwes(using: md) {
@@ -760,8 +775,9 @@ class AppViewModel: ObservableObject {
                 owes[pid] = info.total
             }
             md._owes = owes
-            monthly[key] = md
+            rebuilt[key] = md
         }
+        monthly = rebuilt
     }
 
     /// Copies the previous month's amounts into the current month for bills
@@ -848,10 +864,14 @@ class AppViewModel: ObservableObject {
     /// index captured at view-evaluation time can point at the wrong bill
     /// (or out of bounds) if a refresh or delete from another path runs
     /// before the binding's setter fires.
-    func updateBill(_ id: String, mutate: (inout Bill) -> Void) {
+    ///
+    /// - Parameter affectsTotals: Pass `false` for cosmetic-only mutations
+    ///   (name, icon, color, dueDay, preserve, autoPay, payUrl) to skip
+    ///   the per-month snapshot recompute inside `save()`.
+    func updateBill(_ id: String, affectsTotals: Bool = true, mutate: (inout Bill) -> Void) {
         guard let idx = state.bills.firstIndex(where: { $0.id == id }) else { return }
         mutate(&state.bills[idx])
-        save()
+        save(affectsTotals: affectsTotals)
     }
 
     /// Adds a new bill with a single "My share" line at 100%.

@@ -87,14 +87,19 @@ class CloudStorageManager: NSObject {
     }
 
     /// Saves the app state to both iCloud and local storage (backup).
-    func saveState(_ state: AppState) {
-        // Always keep a local copy as backup in case iCloud becomes unavailable
+    ///
+    /// The iCloud write hops off the main thread because `NSFileCoordinator`
+    /// is synchronous and can stall the caller for tens to hundreds of ms
+    /// while it talks to the iCloud daemon on ubiquity-tracked files.
+    func saveState(_ state: AppState) async {
+        // Always keep a local copy as backup in case iCloud becomes unavailable.
+        // Local disk writes are quick, so we do them on the calling thread.
         LocalStorageManager.shared.saveState(state)
 
         guard let fileURL = cloudStateURL else { return }
         guard let encoded = try? JSONEncoder().encode(state) else { return }
         ensureCloudDocsDir()
-        coordinatedWrite(data: encoded, to: fileURL)
+        await Self.coordinatedWriteOffMain(data: encoded, to: fileURL)
     }
 
     /// Loads all monthly data from iCloud, falling back to the local backup
@@ -133,15 +138,19 @@ class CloudStorageManager: NSObject {
     }
 
     /// Overwrites the entire monthly file with the given dictionary.
-    /// Used by the bulk-clear path so we don't have to enumerate keys.
-    /// Also overwrites local storage to keep the two in sync.
-    func saveAllMonths(_ months: [String: MonthData]) {
+    /// Used by the debounced save path and the bulk-clear path so we don't
+    /// have to enumerate keys. Also overwrites local storage to keep the
+    /// two in sync.
+    ///
+    /// The iCloud write hops off the main thread for the same reason as
+    /// `saveState(_:)`.
+    func saveAllMonths(_ months: [String: MonthData]) async {
         LocalStorageManager.shared.saveAllMonths(months)
 
         guard let fileURL = cloudMonthlyURL else { return }
         guard let encoded = try? JSONEncoder().encode(months) else { return }
         ensureCloudDocsDir()
-        coordinatedWrite(data: encoded, to: fileURL)
+        await Self.coordinatedWriteOffMain(data: encoded, to: fileURL)
     }
 
     // MARK: - Migration (Local → iCloud)
@@ -217,6 +226,20 @@ class CloudStorageManager: NSObject {
         coordinator.coordinate(writingItemAt: url, options: .forReplacing, error: &error) { coordURL in
             try? data.write(to: coordURL)
         }
+    }
+
+    /// Async wrapper around `coordinatedWrite` that runs the coordinator on
+    /// a background task. `NSFileCoordinator` is thread-safe and is meant
+    /// to be invoked off the main thread — Apple's own docs warn against
+    /// blocking the main thread on ubiquity-tracked file coordination.
+    private static func coordinatedWriteOffMain(data: Data, to url: URL) async {
+        await Task.detached(priority: .utility) {
+            var error: NSError?
+            let coordinator = NSFileCoordinator()
+            coordinator.coordinate(writingItemAt: url, options: .forReplacing, error: &error) { coordURL in
+                try? data.write(to: coordURL)
+            }
+        }.value
     }
 
     /// Creates the Documents directory inside the iCloud container if needed.

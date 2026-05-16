@@ -31,6 +31,12 @@ final class NotificationManager: ObservableObject {
     /// Authorization status for notifications.
     @Published var authorizationStatus: UNAuthorizationStatus = .notDetermined
 
+    /// Debounce task for `reschedule(bills:)`. The view model calls this from
+    /// every `save()`, but each invocation removes + re-adds dozens of
+    /// `UNUserNotificationCenter` requests over XPC — coalescing them stops
+    /// us from doing that work on every keystroke.
+    private var rescheduleTask: Task<Void, Never>?
+
     private init() {
         dueDateRemindersEnabled = UserDefaults.standard.bool(forKey: "dueDateRemindersEnabled")
         let stored = UserDefaults.standard.object(forKey: "reminderDaysBefore") as? Int
@@ -63,10 +69,32 @@ final class NotificationManager: ObservableObject {
 
     /// Reschedules all due date notifications based on the current bills.
     ///
-    /// Clears existing bill-related notifications, then schedules one
-    /// notification per bill that has a `dueDay` set — fired at 9:00 AM
-    /// the day before the due date.
+    /// Debounced (500 ms) — called from `AppViewModel.save()` on every
+    /// mutation, but only the last call within the debounce window
+    /// actually issues `UNUserNotificationCenter` requests.
     func reschedule(bills: [Bill]) {
+        let snapshot = bills
+        rescheduleTask?.cancel()
+        rescheduleTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(500))
+            guard !Task.isCancelled, let self else { return }
+            self.performReschedule(bills: snapshot)
+        }
+    }
+
+    /// Force the pending debounced reschedule to run immediately.
+    /// Used when the user toggles the feature on/off so they see the
+    /// change without waiting out the debounce.
+    func flushPendingReschedule(bills: [Bill]) {
+        rescheduleTask?.cancel()
+        rescheduleTask = nil
+        performReschedule(bills: bills)
+    }
+
+    /// The actual scheduling work — clears existing bill-related
+    /// notifications and adds one per bill that has a `dueDay` set,
+    /// fired at 9:00 AM the configured number of days before the due date.
+    private func performReschedule(bills: [Bill]) {
         guard dueDateRemindersEnabled else {
             removeAllBillNotifications()
             return
@@ -194,7 +222,9 @@ final class NotificationManager: ObservableObject {
             let granted = await requestAuthorization()
             if granted {
                 dueDateRemindersEnabled = true
-                reschedule(bills: bills)
+                // User-facing toggle — skip the debounce so the schedule
+                // appears in the system immediately.
+                flushPendingReschedule(bills: bills)
             }
         } else {
             // Turning off

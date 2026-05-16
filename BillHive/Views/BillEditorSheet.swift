@@ -46,7 +46,7 @@ struct BillEditorSheet: View {
 
                                 TextField("Bill name", text: Binding(
                                     get: { bill.name },
-                                    set: { val in vm.updateBill(billId) { $0.name = val } }
+                                    set: { val in vm.updateBill(billId, affectsTotals: false) { $0.name = val } }
                                 ))
                                 .font(.bhBodyName)
                                 .foregroundColor(.bhText)
@@ -60,7 +60,7 @@ struct BillEditorSheet: View {
                                     get: { Color(hex: bill.color) ?? .bhAmber },
                                     set: { newColor in
                                         guard let hex = newColor.toHex() else { return }
-                                        vm.updateBill(billId) { $0.color = hex }
+                                        vm.updateBill(billId, affectsTotals: false) { $0.color = hex }
                                     }
                                 ))
                                 .labelsHidden()
@@ -183,7 +183,7 @@ struct BillEditorSheet: View {
                             // MARK: Preserve Toggle
                             Toggle(isOn: Binding(
                                 get: { bill.preserve },
-                                set: { val in vm.updateBill(billId) { $0.preserve = val } }
+                                set: { val in vm.updateBill(billId, affectsTotals: false) { $0.preserve = val } }
                             )) {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("Auto-carry forward")
@@ -200,7 +200,7 @@ struct BillEditorSheet: View {
 
                             Toggle(isOn: Binding(
                                 get: { bill.autoPay },
-                                set: { val in vm.updateBill(billId) { $0.autoPay = val } }
+                                set: { val in vm.updateBill(billId, affectsTotals: false) { $0.autoPay = val } }
                             )) {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("Auto-pay")
@@ -229,7 +229,7 @@ struct BillEditorSheet: View {
                                 Picker("", selection: Binding(
                                     get: { bill.dueDay ?? 0 },
                                     set: { val in
-                                        vm.updateBill(billId) { $0.dueDay = val == 0 ? nil : val }
+                                        vm.updateBill(billId, affectsTotals: false) { $0.dueDay = val == 0 ? nil : val }
                                     }
                                 )) {
                                     Text("None").tag(0)
@@ -278,7 +278,7 @@ struct BillEditorSheet: View {
             }
             .sheet(isPresented: $showIconPicker) {
                 EmojiPickerSheet(selected: bill?.icon ?? "") { newIcon in
-                    vm.updateBill(billId) { $0.icon = newIcon }
+                    vm.updateBill(billId, affectsTotals: false) { $0.icon = newIcon }
                 }
             }
             .confirmationDialog("Remove \"\(bill?.name ?? "")\"?", isPresented: $showRemoveConfirm, titleVisibility: .visible) {
