@@ -547,7 +547,7 @@ struct SendCard: View {
                         set: { val in
                             guard let idx = billIndex else { return }
                             vm.state.bills[idx].payUrl = val
-                            vm.save()
+                            vm.save(affectsTotals: false)
                         }
                     ))
                     .font(.bhCaption)

@@ -38,6 +38,19 @@ class CloudStorageManager: NSObject {
     /// Metadata query that monitors iCloud for file changes from other devices.
     private var metadataQuery: NSMetadataQuery?
 
+    /// Timestamp of the last write this process issued. Used by
+    /// `queryDidUpdate` to suppress the feedback loop where our own
+    /// iCloud writes echo back through `NSMetadataQuery` and trigger a
+    /// redundant `reloadFromCloud()` (which is two coordinated reads
+    /// every time, even when state hasn't actually changed).
+    private var lastSelfWriteAt: Date = .distantPast
+    /// How long after a self-write to treat metadata updates as our own
+    /// echo and ignore them. A genuine cross-device change arriving in
+    /// this window will be missed until the next scene-active reload
+    /// (`BillHiveApp.swift`); the trade-off is worth it because the
+    /// feedback fires after every keystroke during editing.
+    private let selfWriteSuppressionWindow: TimeInterval = 2.0
+
     private override init() {
         super.init()
         // url(forUbiquityContainerIdentifier:) returns nil if iCloud is unavailable
@@ -99,6 +112,7 @@ class CloudStorageManager: NSObject {
         guard let fileURL = cloudStateURL else { return }
         guard let encoded = try? JSONEncoder().encode(state) else { return }
         ensureCloudDocsDir()
+        lastSelfWriteAt = Date()
         await Self.coordinatedWriteOffMain(data: encoded, to: fileURL)
     }
 
@@ -134,6 +148,7 @@ class CloudStorageManager: NSObject {
         months[key] = data
         guard let encoded = try? JSONEncoder().encode(months) else { return }
         ensureCloudDocsDir()
+        lastSelfWriteAt = Date()
         coordinatedWrite(data: encoded, to: fileURL)
     }
 
@@ -150,6 +165,7 @@ class CloudStorageManager: NSObject {
         guard let fileURL = cloudMonthlyURL else { return }
         guard let encoded = try? JSONEncoder().encode(months) else { return }
         ensureCloudDocsDir()
+        lastSelfWriteAt = Date()
         await Self.coordinatedWriteOffMain(data: encoded, to: fileURL)
     }
 
@@ -194,6 +210,7 @@ class CloudStorageManager: NSObject {
 
         ensureCloudDocsDir()
 
+        lastSelfWriteAt = Date()
         if let data = try? JSONEncoder().encode(localState) {
             coordinatedWrite(data: data, to: stateURL)
         }
@@ -282,6 +299,15 @@ class CloudStorageManager: NSObject {
         guard let query = metadataQuery else { return }
         query.disableUpdates()
         defer { query.enableUpdates() }
+
+        // Suppress the feedback loop: every iCloud write we issue eventually
+        // echoes back through this query. Without this guard, every
+        // debounced save during editing triggers a `reloadFromCloud()`
+        // (two coordinated reads + full state compare) for a change we
+        // already have in memory.
+        if Date().timeIntervalSince(lastSelfWriteAt) < selfWriteSuppressionWindow {
+            return
+        }
 
         for i in 0..<query.resultCount {
             guard let item = query.result(at: i) as? NSMetadataItem,

@@ -317,7 +317,7 @@ struct PersonBodyView: View {
                         set: { newColor in
                             guard let idx = currentIdx, let hex = newColor.toHex() else { return }
                             vm.state.people[idx].color = hex
-                            vm.save()
+                            vm.save(affectsTotals: false)
                         }
                     ))
                     .frame(width: 26, height: 26)
@@ -331,7 +331,7 @@ struct PersonBodyView: View {
                         set: { newValue in
                             guard let idx = currentIdx else { return }
                             vm.state.people[idx].name = newValue
-                            vm.save()
+                            vm.save(affectsTotals: false)
                         }
                     ))
                     .font(.bhBodySecondary)
@@ -351,7 +351,7 @@ struct PersonBodyView: View {
                     set: { newValue in
                         guard let idx = currentIdx else { return }
                         vm.state.people[idx].payMethod = newValue
-                        vm.save()
+                        vm.save(affectsTotals: false)
                     }
                 )) {
                     ForEach(PayMethod.allCases, id: \.self) { m in
@@ -379,7 +379,7 @@ struct PersonBodyView: View {
                         set: { newValue in
                             guard let idx = currentIdx else { return }
                             vm.state.people[idx].payId = newValue
-                            vm.save()
+                            vm.save(affectsTotals: false)
                         }
                     ))
                     .font(.bhBodySecondary)
@@ -407,7 +407,7 @@ struct PersonBodyView: View {
                             guard let idx = currentIdx else { return }
                             let v = newValue.trimmingCharacters(in: .whitespaces)
                             vm.state.people[idx].zelleUrl = v.isEmpty ? nil : v
-                            vm.save()
+                            vm.save(affectsTotals: false)
                         }
                     ))
                     .font(.bhBodySecondary)
@@ -433,7 +433,7 @@ struct PersonBodyView: View {
                     set: { newValue in
                         guard let idx = currentIdx else { return }
                         vm.state.people[idx].email = newValue
-                        vm.save()
+                        vm.save(affectsTotals: false)
                     }
                 ))
                 .font(.bhBodySecondary)
@@ -459,7 +459,7 @@ struct PersonBodyView: View {
                         set: { newValue in
                             guard let idx = currentIdx else { return }
                             vm.state.people[idx].greeting = newValue
-                            vm.save()
+                            vm.save(affectsTotals: false)
                         }
                     ))
                     .font(.bhBodySecondary)

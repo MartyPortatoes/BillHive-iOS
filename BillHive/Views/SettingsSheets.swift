@@ -144,7 +144,7 @@ struct CurrencySettingsSheet: View {
         Button {
             vm.state.settings.currencyCode = code
             CurrencyManager.currencyCode = code
-            vm.save()
+            vm.save(affectsTotals: false)
         } label: {
             HStack(spacing: 12) {
                 Text(label)
