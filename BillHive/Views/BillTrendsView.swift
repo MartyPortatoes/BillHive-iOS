@@ -8,21 +8,22 @@ import Charts
 /// Each segment is a `DonutSegment` with a small gap between slices for visual clarity.
 struct DonutChartView: View {
     let items: [(name: String, amount: Double, color: Color)]
+    @State private var selectedIndex: Int? = nil
 
-    /// Sum of all item amounts.
     private var total: Double { items.reduce(0) { $0 + $1.amount } }
 
-    /// Pre-computed arc segments with start/end angles and fill color.
-    private var segments: [(start: Angle, end: Angle, color: Color)] {
-        var result: [(start: Angle, end: Angle, color: Color)] = []
+    private var segments: [(start: Angle, end: Angle, midAngle: Angle, color: Color)] {
+        var result: [(start: Angle, end: Angle, midAngle: Angle, color: Color)] = []
         var current: Double = -90
         for item in items {
             let fraction = total > 0 ? item.amount / total : 0
             let sweep = fraction * 360
             let gap = 2.0
+            let mid = Angle(degrees: current + sweep / 2)
             result.append((
                 start: Angle(degrees: current),
                 end:   Angle(degrees: current + max(0, sweep - gap)),
+                midAngle: mid,
                 color: item.color
             ))
             current += sweep
@@ -36,17 +37,35 @@ struct DonutChartView: View {
             let outer = size / 2
             let inner = size * 0.30
             ZStack {
-                ForEach(Array(segments.enumerated()), id: \.offset) { _, seg in
+                ForEach(Array(segments.enumerated()), id: \.offset) { idx, seg in
                     DonutSegment(
                         startAngle: seg.start,
                         endAngle:   seg.end,
                         innerRadius: inner,
                         outerRadius: outer
                     )
-                    .fill(seg.color)
+                    .fill(seg.color.opacity(selectedIndex == nil || selectedIndex == idx ? 1.0 : 0.35))
+                    .onTapGesture { withAnimation(.easeInOut(duration: 0.2)) { selectedIndex = selectedIndex == idx ? nil : idx } }
+                }
+
+                if let idx = selectedIndex, idx < items.count {
+                    let pct = total > 0 ? (items[idx].amount / total) * 100 : 0
+                    VStack(spacing: 2) {
+                        Text(items[idx].name)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(.bhText)
+                        Text(String(format: "%.1f%%", pct))
+                            .font(.system(size: 16, weight: .bold).monospacedDigit())
+                            .foregroundColor(items[idx].color)
+                        Text(items[idx].amount.asCurrency)
+                            .font(.system(size: 10, weight: .medium).monospacedDigit())
+                            .foregroundColor(.bhMuted)
+                    }
                 }
             }
             .frame(width: geo.size.width, height: geo.size.height)
+            .contentShape(Rectangle())
+            .onTapGesture { withAnimation(.easeInOut(duration: 0.2)) { selectedIndex = nil } }
         }
     }
 }

@@ -51,13 +51,22 @@ struct PersonTrendsView: View {
         return points
     }
 
-    /// Current month's per-bill totals for the donut chart.
-    var currentMonthBillData: [(name: String, amount: Double, color: Color)] {
-        vm.state.bills.compactMap { bill in
-            let total = vm.monthly[vm.monthKey]?.totals[bill.id] ?? 0
-            guard total > 0 else { return nil }
-            return (name: bill.name, amount: total, color: Color(hex: bill.color) ?? .bhAmber)
+    /// Current month's per-person totals for the donut chart.
+    var currentMonthPersonData: [(name: String, amount: Double, color: Color)] {
+        var result: [(name: String, amount: Double, color: Color)] = []
+        let md = vm.monthly[vm.monthKey]
+        let myTotal = md?._myTotal ?? vm.computeMyTotal(using: md)
+        if myTotal > 0 {
+            result.append((name: "Me", amount: myTotal, color: .bhAmber))
         }
+        let owes = md?._owes ?? [:]
+        for person in vm.state.people where person.id != "me" {
+            let amt = owes[person.id] ?? 0
+            if amt > 0 {
+                result.append((name: person.name, amount: amt, color: Color(hex: person.color) ?? .bhBlue))
+            }
+        }
+        return result
     }
 
 
@@ -152,21 +161,21 @@ struct PersonTrendsView: View {
             // MARK: Donut Chart
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("This Month — By Bill")
+                Text("This Month — By Person")
                     .bhSectionTitle()
 
-                if currentMonthBillData.isEmpty {
+                if currentMonthPersonData.isEmpty {
                     Text("No data this month")
                         .font(.bhCaption)
                         .foregroundColor(.bhMuted2)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 40)
                 } else {
-                    DonutChartView(items: currentMonthBillData)
+                    DonutChartView(items: currentMonthPersonData)
                         .frame(height: 180)
-                        .accessibilityHidden(true)
+                        .accessibilityHidden(false)
 
-                    ForEach(currentMonthBillData, id: \.name) { item in
+                    ForEach(currentMonthPersonData, id: \.name) { item in
                         HStack(spacing: 4) {
                             Circle().fill(item.color).frame(width: 6, height: 6)
                             Text(item.name).font(.bhCaption).foregroundColor(.bhMuted)

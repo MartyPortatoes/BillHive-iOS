@@ -80,7 +80,13 @@ struct SettingsView: View {
                             .font(.title.weight(.bold))
                             .foregroundColor(.bhText)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.top, 4)
+                            .padding(.top, 12)
+
+                        Text("Customize your app and manage your data.")
+                            .font(.bhSubtitle)
+                            .foregroundColor(.bhMuted)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.bottom, 4)
 
                         // Inline Appearance picker — single control, no sheet
                         AppearancePickerCard(selection: $colorSchemePref)
