@@ -66,6 +66,7 @@ struct TrendsView: View {
                         Text("Track your spending patterns over time.")
                             .font(.bhSubtitle)
                             .foregroundColor(.bhMuted)
+                            .padding(.top, -6)
 
                         Picker("View", selection: $mode) {
                             ForEach(TrendsViewMode.allCases, id: \.self) { m in
