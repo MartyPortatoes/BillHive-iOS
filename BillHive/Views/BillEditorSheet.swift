@@ -281,7 +281,7 @@ struct BillEditorSheet: View {
                     vm.updateBill(billId, affectsTotals: false) { $0.icon = newIcon }
                 }
             }
-            .confirmationDialog("Remove \"\(bill?.name ?? "")\"?", isPresented: $showRemoveConfirm, titleVisibility: .visible) {
+            .alert("Remove \"\(bill?.name ?? "")\"?", isPresented: $showRemoveConfirm) {
                 Button("Remove Bill", role: .destructive) {
                     if let b = bill { vm.removeBill(b) }
                     onDone()

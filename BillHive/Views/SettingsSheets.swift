@@ -426,7 +426,7 @@ struct PrivacyDataSheet: View {
             } message: {
                 Text("This will delete all bills, people, and monthly data. This cannot be undone.")
             }
-            .confirmationDialog("Import backup?", isPresented: $showImportConfirm, titleVisibility: .visible) {
+            .alert("Import backup?", isPresented: $showImportConfirm) {
                 Button("Replace All Data", role: .destructive) {
                     guard let data = pendingImportData else { return }
                     isImporting = true
