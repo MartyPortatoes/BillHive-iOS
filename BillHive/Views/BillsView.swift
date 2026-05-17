@@ -129,7 +129,7 @@ struct MonthPickerBar: View {
     private static let years = Array(2020...2035)
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 0) {
             Picker("Month", selection: $vm.selectedMonth) {
                 ForEach(1...12, id: \.self) { m in
                     Text(Self.months[m-1]).tag(m)
@@ -149,8 +149,8 @@ struct MonthPickerBar: View {
             .font(.bhBodySecondary)
         }
         .fixedSize()
-        .padding(.horizontal, 10)
-        .padding(.vertical, 4)
+        .padding(.horizontal, 4)
+        .padding(.vertical, 1)
         .background(Color.bhSurface2)
         .cornerRadius(8)
         .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.bhBorder, lineWidth: 1))
