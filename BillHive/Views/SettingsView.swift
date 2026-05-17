@@ -142,7 +142,6 @@ struct SettingsView: View {
                         Spacer(minLength: 24)
                     }
                     .padding(.horizontal, 16)
-                    .padding(.top, 8)
                 }
                 .refreshable { await vm.refresh() }
             }
