@@ -400,12 +400,16 @@ struct BillLineRowView: View {
     }
 
     var body: some View {
-        if let bill = bill, let line = line, let bi = billIndex, let li = lineIndex {
+        if let bill = bill, let line = line {
             VStack(spacing: 0) {
                 HStack(spacing: 8) {
                     Picker("", selection: Binding(
-                        get: { vm.state.bills[bi].lines[li].personId },
+                        get: {
+                            guard let bi = billIndex, let li = lineIndex else { return "" }
+                            return vm.state.bills[bi].lines[li].personId
+                        },
                         set: { val in
+                            guard let bi = billIndex, let li = lineIndex else { return }
                             vm.state.bills[bi].lines[li].personId = val
                             if vm.state.bills[bi].lines[li].coveredById == val {
                                 vm.state.bills[bi].lines[li].coveredById = nil
@@ -426,7 +430,10 @@ struct BillLineRowView: View {
 
                     if bill.splitType == .pct {
                         TextField("0", value: Binding(
-                            get: { vm.state.bills[bi].lines[li].value },
+                            get: {
+                                guard let bi = billIndex, let li = lineIndex else { return 0 }
+                                return vm.state.bills[bi].lines[li].value
+                            },
                             set: { val in
                                 vm.setLinePct(billId: billId, lineId: lineId, value: val)
                                 vm.saveMonthSnapshot()
@@ -493,6 +500,7 @@ struct BillLineRowView: View {
                     Picker("", selection: Binding(
                         get: { effectivePayer },
                         set: { val in
+                            guard let bi = billIndex, let li = lineIndex else { return }
                             let selfId = vm.state.bills[bi].lines[li].personId
                             vm.state.bills[bi].lines[li].coveredById = (val == selfId) ? nil : val
                             vm.save()
