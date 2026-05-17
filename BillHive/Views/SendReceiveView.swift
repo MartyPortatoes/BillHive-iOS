@@ -262,6 +262,7 @@ struct ReceiveCard: View {
                                     .padding(.vertical, 2)
                                     .background(Color.bhGreen.opacity(0.15))
                                     .cornerRadius(4)
+                                    .fixedSize()
                             } else {
                                 Text("Awaiting")
                                     .font(.system(size: 10, weight: .semibold))
@@ -270,6 +271,7 @@ struct ReceiveCard: View {
                                     .padding(.vertical, 2)
                                     .background(Color.bhAmber.opacity(0.15))
                                     .cornerRadius(4)
+                                    .fixedSize()
                             }
                         }
                         Text(person.payMethod.displayName)
@@ -495,6 +497,7 @@ struct SendCard: View {
                                     .padding(.vertical, 1)
                                     .background(color.opacity(0.15))
                                     .cornerRadius(3)
+                                    .fixedSize()
                             }
                         }
                     }

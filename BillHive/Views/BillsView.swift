@@ -226,6 +226,7 @@ struct BillCardView: View {
                                     .padding(.vertical, 2)
                                     .background(dueBadgeColor.opacity(0.15))
                                     .cornerRadius(4)
+                                    .fixedSize()
                             }
                         }
                         Text(splitDescription)
