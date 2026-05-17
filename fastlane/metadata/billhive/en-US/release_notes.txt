@@ -1,9 +1,17 @@
-What's new in 2.0.0:
+What's new in 2.0.1:
 
-• Paid By — bills can now be assigned to any household member, not just you. Net balances compute automatically so you can see who owes whom
-• You Owe — new summary section shows what you owe others, with per-bill breakdowns and paid/unpaid status
-• Between Others — view third-party settlements between other household members
-• Import from Contacts — add people directly from your address book with name, email, and phone pre-filled
-• Rounding fix — percentage splits now distribute cents correctly (no more $50.01 on a 3-way $150 split)
-• Checklist improvements — "Pay" items turn green with strikethrough when marked done
-• Refreshed app icons
+Bug fixes & polish:
+• Fixed a crash when removing a bill from the editor
+• Fixed date picker text wrapping on smaller screens (iPhone 15 Pro and similar)
+• Fixed "Awaiting" and "Paid" status badges getting cut off on smaller screens
+• Confirmation popups (import backup, remove bill) now use a consistent centered alert style
+
+UI improvements:
+• Trends donut chart now shows a per-person breakdown — tap a segment to see their name, percentage, and amount
+• Added descriptive subtitles to the Trends and Settings tabs
+• Consistent title positioning and spacing across all tabs
+• More compact date picker with reduced padding
+
+Performance:
+• Faster iCloud sync with off-main-thread writes and debounced scheduling
+• Batched per-month writes to reduce disk I/O in local mode
